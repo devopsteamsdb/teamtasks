@@ -37,8 +37,26 @@ jobs:
         file: Dockerfile
         push: true
 
+    - name: Docker Save
+      run: docker save devopsteamsdb/devopsteamsdb:teamtasks_${{ steps.date.outputs.date }} | gzip > teamtasks_${{ steps.date.outputs.date }}.gz
 
-
-
-
-
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      with:
+        tag_name: ${{ github.run_number }}
+        release_name: Release teamtasks_${{ steps.date.outputs.date }}
+        body: |
+          Release teamtasks_${{ steps.date.outputs.date }}
+      
+    - uses: xresloader/upload-to-github-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        draft: false
+        file: "teamtasks_${{ steps.date.outputs.date }}.gz"
+        release_id: ${{ steps.create_release.outputs.id }}
+        overwrite: true
+        verbose: true
