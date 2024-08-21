@@ -16,6 +16,9 @@
 </head>
 <body>
 <div class="container mt-5">
+    <div align="center">
+        <img src="{{ url_for('static', filename='bootstrap.min.css') }}" />
+    </div>
     <h1 class="mb-4">Team Tasks</h1>
     <form action="{{ url_for('add_task') }}" method="POST" class="mb-4">
         <div class="row">
