@@ -8,6 +8,9 @@
 </head>
 <body>
 <div class="container mt-5">
+    <div align="center">
+        <img src="{{ url_for('static', filename='logo.png') }}" />
+    </div>
     <h1 class="mb-4">Edit Task</h1>
     <form action="{{ url_for('edit_task', id=task.id) }}" method="POST">
         <div class="mb-3">
