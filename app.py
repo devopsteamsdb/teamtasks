@@ -1,6 +1,6 @@
 from flask import Flask, render_template, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import case
+from sqlalchemy import case, distinct
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
@@ -22,15 +22,32 @@ with app.app_context():
 
 @app.route('/')
 def index():
+    # Get filter parameters from the request
+    project_filter = request.args.get('project')
+    member_filter = request.args.get('member')
+
+    # Create the base query
     status_order = case(
         (Task.status == 'Completed', 1),
         (Task.status == 'In Progress', 2),
         (Task.status == 'Frozen', 3),
         (Task.status == 'Not Started', 4),
     )
+    query = Task.query.order_by(Task.project, status_order)
 
-    tasks = Task.query.order_by(Task.project, status_order).all()
-    return render_template('index.html', tasks=tasks)
+    # Apply filters to the query
+    if project_filter:
+        query = query.filter(Task.project == project_filter)
+    if member_filter:
+        query = query.filter(Task.members.contains(member_filter))
+
+    tasks = query.all()
+
+    # Get the distinct list of projects and members for filtering and autofill
+    projects = [project[0] for project in db.session.query(distinct(Task.project)).all()]
+    members = ['Elad', 'Itamar', 'Guy', 'Noam']  # List of members
+
+    return render_template('index.html', tasks=tasks, projects=projects, members=members)
 
 @app.route('/add', methods=['POST'])
 def add_task():
@@ -46,6 +63,7 @@ def add_task():
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit_task(id):
     task = Task.query.get_or_404(id)
+    projects = [project[0] for project in db.session.query(distinct(Task.project)).all()]
     if request.method == 'POST':
         task.project = request.form['project']
         task.task = request.form['task']
@@ -53,7 +71,7 @@ def edit_task(id):
         task.status = request.form['status']
         db.session.commit()
         return redirect(url_for('index'))
-    return render_template('edit.html', task=task)
+    return render_template('edit.html', task=task, projects=projects)
 
 @app.route('/delete/<int:id>')
 def delete_task(id):
