@@ -57,7 +57,7 @@
                 <td>{{ task.task }}</td>
                 <td>
                     {% for member in task.members.split(',') %}
-                        <img src="{{ url_for('static', filename=member.lower() + '.png') }}" alt="{{ member }}" class="circle-img">
+                        <img src="{{ url_for('static', filename='images/' + member.lower() + '.png') }}" alt="{{ member }}" class="circle-img">
                         {{ member }}
                     {% endfor %}
                 </td>
