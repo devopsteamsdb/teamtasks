@@ -37,6 +37,13 @@ jobs:
         file: Dockerfile
         push: true
 
+    - name: Build image
+      uses: docker/build-push-action@v2
+      with:
+        tags: devopsteamsdb/devopsteamsdb:teamtasks_latest
+        file: Dockerfile
+        push: true
+
     - name: Docker Save
       run: docker save devopsteamsdb/devopsteamsdb:teamtasks_${{ steps.date.outputs.date }} | gzip > teamtasks_${{ steps.date.outputs.date }}.gz
 
