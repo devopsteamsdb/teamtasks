@@ -1,6 +1,6 @@
-name: teamtasks
+version: '3'
 services:
-    devopsteamsdb:
-        ports:
-            - 5000:5000
-        image: devopsteamsdb/devopsteamsdb:teamtasks_latest
+  myservice:
+    image: devopsteamsdb/devopsteamsdb:teamtasks_latest
+    ports:
+      - "5000:5000"
