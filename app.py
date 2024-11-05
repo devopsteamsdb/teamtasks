@@ -45,7 +45,7 @@ def index():
 
     # Get the distinct list of projects and members for filtering and autofill
     projects = [project[0] for project in db.session.query(distinct(Task.project)).all()]
-    members = ['Elad', 'Itamar', 'Guy', 'Noam']  # List of members
+    members = ['Elad', 'Itamar', 'Guy', 'Noam', 'David']  # List of members
 
     return render_template('index.html', tasks=tasks, projects=projects, members=members)
 

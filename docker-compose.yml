@@ -1,3 +1,10 @@
+name: teamtasks
+services:
+    devopsteamsdb:
+        ports:
+            - 5000:5000
+        image: devopsteamsdb/devopsteamsdb:teamtasks_latest
+
 version: '3'
 services:
   myservice:
