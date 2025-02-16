@@ -13,6 +13,7 @@ class Task(db.Model):
     task = db.Column(db.String(200), nullable=False)
     members = db.Column(db.String(200), nullable=False)  # Store members as a comma-separated string
     status = db.Column(db.String(50), nullable=False)
+    priority = db.Column(db.Integer, nullable=False, default=1)  # Add priority field
 
     def __repr__(self):
         return f'<Task {self.id}>'
@@ -33,7 +34,7 @@ def index():
         (Task.status == 'Frozen', 3),
         (Task.status == 'Not Started', 4),
     )
-    query = Task.query.order_by(Task.project, status_order)
+    query = Task.query.order_by(Task.priority, Task.project, status_order)  # Order by priority
 
     # Apply filters to the query
     if project_filter:
@@ -55,7 +56,8 @@ def add_task():
     task = request.form['task']
     members = ','.join(request.form.getlist('members'))  # Join selected members into a comma-separated string
     status = request.form['status']
-    new_task = Task(project=project, task=task, members=members, status=status)
+    priority = request.form['priority']  # Get priority from form
+    new_task = Task(project=project, task=task, members=members, status=status, priority=priority)
     db.session.add(new_task)
     db.session.commit()
     return redirect(url_for('index'))
@@ -69,6 +71,7 @@ def edit_task(id):
         task.task = request.form['task']
         task.members = ','.join(request.form.getlist('members'))  # Join selected members into a comma-separated string
         task.status = request.form['status']
+        task.priority = request.form['priority']  # Update priority
         db.session.commit()
         return redirect(url_for('index'))
     return render_template('edit.html', task=task, projects=projects)

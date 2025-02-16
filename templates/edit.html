@@ -38,6 +38,10 @@
                 <option value="Completed" {% if task.status == 'Completed' %}selected{% endif %}>Completed</option>
             </select>
         </div>
+        <div class="mb-3">
+            <label for="priority" class="form-label">Priority</label>
+            <input type="number" class="form-control" id="priority" name="priority" value="{{ task.priority }}" required>
+        </div>
         <button type="submit" class="btn btn-primary">Update Task</button>
     </form>
 </div>

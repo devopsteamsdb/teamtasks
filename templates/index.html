@@ -46,6 +46,7 @@
     <table class="table table-striped">
         <thead>
         <tr>
+            <th>Priority</th> <!-- Add Priority column -->
             <th>Project</th>
             <th>Task</th>
             <th>Members</th>
@@ -56,6 +57,7 @@
         <tbody>
         {% for task in tasks %}
             <tr>
+                <td>{{ task.priority }}</td> <!-- Display Priority -->
                 <td>{{ task.project }}</td>
                 <td>{{ task.task }}</td>
                 <td>
@@ -96,6 +98,10 @@
                     <option value="{{ member }}">{{ member }}</option>
                 {% endfor %}
             </select>
+        </div>
+        <div class="form-group">
+            <label for="priority">Priority:</label>
+            <input type="number" class="form-control" id="priority" name="priority" required>
         </div>
         <div class="form-group">
             <label for="status">Status:</label>
