@@ -24,7 +24,7 @@
         <div class="mb-3">
             <label for="members" class="form-label">Members</label>
             <select class="form-control" id="members" name="members" multiple required>
-                {% for member in ['Elad', 'Itamar', 'Guy', 'Noam', 'David'] %}
+                {% for member in ['Elad', 'Itamar', 'Guy', 'Noam', 'David', 'Matan'] %}
                     <option value="{{ member }}" {% if member in task.members.split(',') %}selected{% endif %}>{{ member }}</option>
                 {% endfor %}
             </select>
