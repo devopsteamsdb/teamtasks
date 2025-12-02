@@ -1,0 +1,5 @@
+# Ignore SQLite database file
+/tasks.db
+
+# Ignore Flask instance folder
+/instance/

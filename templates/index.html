@@ -1,119 +1,281 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
-    <title>Team Tasks</title>
-    <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
-    <style>
-        .circle-img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="30">
+    <title>לוח משימות DevOps</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
 </head>
+
 <body>
-<div class="container mt-4">
-    <div align="center">
-        <img src="{{ url_for('static', filename='logo.png') }}" />
-    </div>
-    <!--<h1 class="mb-4">Team Tasks</h1>-->
-    
-    <!-- Filter Form -->
-    <form method="get" class="form-inline mb-4">
-        <div class="form-group mr-3">
-            <label for="project" class="mr-2">Filter by Project:</label>
-            <select name="project" id="project" class="form-control">
-                <option value="">All Projects</option>
-                {% for project in projects %}
-                    <option value="{{ project }}" {% if project == request.args.get('project') %}selected{% endif %}>{{ project }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group mr-3">
-            <label for="member" class="mr-2">Filter by Member:</label>
-            <select name="member" id="member" class="form-control">
-                <option value="">All Members</option>
-                {% for member in members %}
-                    <option value="{{ member }}" {% if member == request.args.get('member') %}selected{% endif %}>{{ member }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Filter</button>
-    </form>
 
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>Priority</th> <!-- Add Priority column -->
-            <th>Project</th>
-            <th>Task</th>
-            <th>Members</th>
-            <th>Status</th>
-            <th>Actions</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for task in tasks %}
-            <tr>
-                <td>{{ task.priority }}</td> <!-- Display Priority -->
-                <td>{{ task.project }}</td>
-                <td>{{ task.task }}</td>
-                <td>
-                    {% for member in task.members.split(',') %}
-                        <img src="{{ url_for('static', filename='images/' + member.lower() + '.png') }}" alt="{{ member }}" class="circle-img">
-                        {{ member }}
-                    {% endfor %}
-                </td>
-                <td>{{ task.status }}</td>
-                <td>
-                    <a href="{{ url_for('edit_task', id=task.id) }}" class="btn btn-sm btn-warning">Edit</a>
-                    <a href="{{ url_for('delete_task', id=task.id) }}" class="btn btn-sm btn-danger">Delete</a>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <!--<img src="logo.png" alt="DevOps Logo">-->
+            <span>לוח משימות DevOps</span>
+        </div>
+        <div class="navbar-meta">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span id="liveClock"></span>
+        </div>
+    </nav>
 
-    <!-- Add Task Form -->
-    <form method="post" action="{{ url_for('add_task') }}" class="mt-4">
-        <div class="form-group">
-            <label for="project">Project:</label>
-            <input type="text" class="form-control" id="project" name="project" list="project-list">
-            <datalist id="project-list">
-                {% for project in projects %}
-                    <option value="{{ project }}">
-                {% endfor %}
-            </datalist>
-        </div>
-        <div class="form-group">
-            <label for="task">Task:</label>
-            <input type="text" class="form-control" id="task" name="task">
-        </div>
-        <div class="form-group">
-            <label for="members">Members:</label>
-            <select name="members" id="members" class="form-control" multiple>
+    <!-- Main Content -->
+    <div class="main-container">
+
+        <header class="dashboard-header">
+            <div class="dashboard-title">
+                <!--לוח משימות-->
+                <button id="addTaskBtn" class="btn-add-task">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> הוסף משימה
+                </button>
+            </div>
+            <div class="filter-controls">
+                <!--<span style="font-size: 0.9rem; color: var(--secondary); margin-left: 0.5rem;">סינון לפי:</span>-->
+                {% set hebrew_names = {'elad': 'אלעד', 'guy': 'גיא', 'itamar': 'איתמר', 'noam': 'נועם', 'david': 'דוד'} %}
                 {% for member in members %}
-                    <option value="{{ member }}">{{ member }}</option>
+                <button class="filter-avatar-btn" data-member="{{ member|lower }}" title="{{ hebrew_names.get(member|lower, member) }}">
+                    <img src="{{ url_for('static', filename='images/' + member|lower + '.png') }}" class="filter-avatar">
+                </button>
                 {% endfor %}
-            </select>
+                <!--
+                <button class="btn-clear-filter" id="clearFilter">
+                    <span style="font-size:1.1em;vertical-align:middle;">✖️</span> נקה
+                </button>
+                -->
+            </div>
+        </header>
+
+        <div class="projects-grid">
+            {% for project in projects %}
+            <div class="project-card">
+                <div class="project-header">
+                    <span class="project-title">{{ project }}</span>
+                    {% set project_colors = [
+                        {'bg': '#EEF2FF', 'color': '#4F46E5'},
+                        {'bg': '#ECFDF5', 'color': '#10B981'},
+                        {'bg': '#FFF7ED', 'color': '#F97316'},
+                        {'bg': '#FEF2F2', 'color': '#EF4444'},
+                        {'bg': '#F0F9FF', 'color': '#0EA5E9'},
+                        {'bg': '#FDF2FF', 'color': '#A21CAF'},
+                        {'bg': '#F1F5F9', 'color': '#0F172A'},
+                        {'bg': '#FFFBEB', 'color': '#CA8A04'},
+                        {'bg': '#E0F2FE', 'color': '#0369A1'},
+                        {'bg': '#F3F4F6', 'color': '#7C3AED'},
+                        {'bg': '#FDE68A', 'color': '#B45309'},
+                        {'bg': '#D1FAE5', 'color': '#047857'},
+                        {'bg': '#FECACA', 'color': '#B91C1C'},
+                        {'bg': '#EDE9FE', 'color': '#7C3AED'},
+                        {'bg': '#C7D2FE', 'color': '#1D4ED8'}
+                    ] %}
+                    {# Priority colors: high=red, medium=orange, low=yellow, none/empty=gray #}
+                    {% set priority_colors = {
+                        'high': '#ef4444',
+                        'medium': '#f59e0b',
+                        'low': '#fde047',
+                        'none': '#cbd5e1',
+                        '': '#cbd5e1'
+                    } %}
+                    {% set color = project_colors[(loop.index0) % project_colors|length] %}
+                    <span class="project-badge" style="background-color: {{ color.bg }}; color: {{ color.color }};">פרויקט {{ loop.index }}</span>
+                </div>
+                <div class="project-body">
+                    <ul class="task-list">
+                        {% for task in tasks if task.project == project %}
+                        <li class="task-item" data-id="{{ task.id }}" data-notes="{{ task.notes|default('') }}" data-priority="{{ task.priority|default('none') }}">
+                            <div class="task-info">
+                                <span class="task-marker" style="background-color: {{ priority_colors.get(task.priority, '#cbd5e1') }};"></span>
+                                <span class="task-name">{{ task.task }}</span>
+                                <span class="note-icon{% if not task.notes %} hidden{% endif %}" title="מכיל הערות" style="vertical-align:middle;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+                                </span>
+                            </div>
+                            <div class="task-actions">
+                                <button class="btn-icon edit-btn" title="ערוך"></button>
+                            </div>
+                            <div class="task-meta">
+                                <div class="avatar-group">
+                                    {% set member_list = task.members.split(',') if task.members else [] %}
+                                    {% set hebrew_names = {'elad': 'אלעד', 'guy': 'גיא', 'itamar': 'איתמר', 'noam': 'נועם', 'david': 'דוד'} %}
+                                    {% for member in member_list %}
+                                        {% set member_key = member|lower|trim %}
+                                        {% if member_key %}
+                                            <img src="{{ url_for('static', filename='images/' + member_key + '.png') }}" class="avatar" title="{{ hebrew_names.get(member_key, member) }}">
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <span class="status-badge {{ task.status }}">{{ task.status|replace('status-inprogress', 'בתהליך')|replace('status-done', 'הסתיים')|replace('status-notstarted', 'טרם החל')|replace('status-delayed', 'בעיכוב') }}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
         </div>
-        <div class="form-group">
-            <label for="priority">Priority:</label>
-            <input type="number" class="form-control" id="priority" name="priority" required>
+
+
+
+        <!-- Create Task Modal -->
+        <div id="createTaskModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal-create">&times;</span>
+                <h2 id="createModalTitle">יצירת משימה חדשה</h2>
+                <div class="form-group">
+                    <label for="createProjectNameInput">שם הפרויקט:</label>
+                    <input type="text" id="createProjectNameInput" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="createTaskNameInput">שם המשימה:</label>
+                    <input type="text" id="createTaskNameInput" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>חברי צוות:</label>
+                    <div class="members-select">
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="elad" data-img="{{ url_for('static', filename='images/elad.png') }}">
+                            <img src="{{ url_for('static', filename='images/elad.png') }}" class="avatar-sm"> אלעד
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="guy" data-img="{{ url_for('static', filename='images/guy.png') }}">
+                            <img src="{{ url_for('static', filename='images/guy.png') }}" class="avatar-sm"> גיא
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="itamar" data-img="{{ url_for('static', filename='images/itamar.png') }}">
+                            <img src="{{ url_for('static', filename='images/itamar.png') }}" class="avatar-sm"> איתמר
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="noam" data-img="{{ url_for('static', filename='images/noam.png') }}">
+                            <img src="{{ url_for('static', filename='images/noam.png') }}" class="avatar-sm"> נועם
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="david" data-img="{{ url_for('static', filename='images/david.png') }}">
+                            <img src="{{ url_for('static', filename='images/david.png') }}" class="avatar-sm"> דוד
+                        </label>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="createTaskStatus">סטטוס:</label>
+                        <select id="createTaskStatus" class="form-control">
+                            <option value="status-inprogress">בתהליך</option>
+                            <option value="status-done">הסתיים</option>
+                            <option value="status-notstarted">טרם החל</option>
+                            <option value="status-delayed">בעיכוב</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label for="createTaskPriority">עדיפות:</label>
+                        <select id="createTaskPriority" class="form-control">
+                            <option value="none">ללא</option>
+                            <option value="low">נמוכה</option>
+                            <option value="medium">בינונית</option>
+                            <option value="high">גבוהה</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="createTaskNotes">הערות:</label>
+                    <textarea id="createTaskNotes" rows="4" placeholder="הוסף הערות כאן..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button id="createSaveBtn" class="btn btn-primary">צור משימה</button>
+                </div>
+            </div>
         </div>
-        <div class="form-group">
-            <label for="status">Status:</label>
-            <select name="status" id="status" class="form-control">
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Frozen">Frozen</option>
-                <option value="Completed">Completed</option>
-            </select>
+
+        <!-- Edit Task Modal -->
+        <div id="taskModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2 id="modalTitle">עריכת משימה</h2>
+                <div class="form-group">
+                    <label for="projectNameInput">שם הפרויקט:</label>
+                    <input type="text" id="projectNameInput" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="taskNameInput">שם המשימה:</label>
+                    <input type="text" id="taskNameInput" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>חברי צוות:</label>
+                    <div class="members-select">
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="elad" data-img="{{ url_for('static', filename='images/elad.png') }}">
+                            <img src="{{ url_for('static', filename='images/elad.png') }}" class="avatar-sm"> אלעד
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="guy" data-img="{{ url_for('static', filename='images/guy.png') }}">
+                            <img src="{{ url_for('static', filename='images/guy.png') }}" class="avatar-sm"> גיא
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="itamar" data-img="{{ url_for('static', filename='images/itamar.png') }}">
+                            <img src="{{ url_for('static', filename='images/itamar.png') }}" class="avatar-sm"> איתמר
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="noam" data-img="{{ url_for('static', filename='images/noam.png') }}">
+                            <img src="{{ url_for('static', filename='images/noam.png') }}" class="avatar-sm"> נועם
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="david" data-img="{{ url_for('static', filename='images/david.png') }}">
+                            <img src="{{ url_for('static', filename='images/david.png') }}" class="avatar-sm"> דוד
+                        </label>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="taskStatus">סטטוס:</label>
+                        <select id="taskStatus" class="form-control">
+                            <option value="status-inprogress">בתהליך</option>
+                            <option value="status-done">הסתיים</option>
+                            <option value="status-notstarted">טרם החל</option>
+                            <option value="status-delayed">בעיכוב</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label for="taskPriority">עדיפות:</label>
+                        <select id="taskPriority" class="form-control">
+                            <option value="none">ללא</option>
+                            <option value="low">נמוכה</option>
+                            <option value="medium">בינונית</option>
+                            <option value="high">גבוהה</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="taskNotes">הערות:</label>
+                    <textarea id="taskNotes" rows="4" placeholder="הוסף הערות כאן..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button id="saveBtn" class="btn btn-primary">שמור שינויים</button>
+                    <button id="deleteBtn" class="btn btn-danger">מחק משימה</button>
+                </div>
+            </div>
         </div>
-        <button type="submit" class="btn btn-success">Add Task</button>
-    </form>
-</div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
+<script>
+// Live clock for navbar
+function updateClock() {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    // Format: dd/mm/yyyy hh:mm:ss
+    const formatted = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    const el = document.getElementById('liveClock');
+    if (el) el.textContent = `${formatted}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+</body>
+
 </html>
