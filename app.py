@@ -119,5 +119,28 @@ def delete_task(id):
     db.session.commit()
     return redirect(url_for('index'))
 
+@app.route('/print')
+def print_view():
+    project_filter = request.args.get('project')
+    member_filter = request.args.get('member')
+
+    priority_order = case(
+        (Task.priority == 'high', 1),
+        (Task.priority == 'medium', 2),
+        (Task.priority == 'low', 3),
+        (Task.priority == 'none', 4),
+    )
+    query = Task.query.order_by(priority_order, Task.project)
+
+    if project_filter:
+        query = query.filter(Task.project == project_filter)
+    if member_filter:
+        query = query.filter(Task.members.contains(member_filter))
+
+    tasks = query.all()
+    projects = [project[0] for project in db.session.query(distinct(Task.project)).all()]
+    members = ['Elad', 'Guy', 'Itamar', 'Noam', 'David']
+    return render_template('printable.html', tasks=tasks, projects=projects, members=members)
+
 if __name__ == '__main__':
     app.run(debug=True)

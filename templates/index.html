@@ -18,7 +18,44 @@
             <span>לוח משימות DevOps</span>
         </div>
         <div class="navbar-meta">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span id="liveClock"></span>
+                                    <a href="/print" title="גרסה להדפסה" style="margin-left:16px;vertical-align:middle;display:inline-block;float:right;">
+                                        <svg width="20" height="20" viewBox="0 0 512 512" fill="#888" style="vertical-align:middle;">
+                                                <g>
+                                                    <g>
+                                                        <path d="M495.304,144.696h-83.478v-128C411.826,7.475,404.351,0,395.13,0H116.87c-9.22,0-16.696,7.475-16.696,16.696v128H16.696
+                                                            C7.475,144.696,0,152.171,0,161.391V395.13c0,9.22,7.475,16.696,16.696,16.696h83.478v83.478c0,9.22,7.475,16.696,16.696,16.696
+                                                            H395.13c9.22,0,16.696-7.475,16.696-16.696v-83.478h83.478c9.22,0,16.696-7.475,16.696-16.696V161.391
+                                                            C512,152.171,504.525,144.696,495.304,144.696z M133.565,33.391h244.87v111.304h-244.87V33.391z M378.435,478.609h-244.87V311.652
+                                                            h244.87V478.609z M478.609,378.435h-66.783v-83.478c0-9.22-7.475-16.696-16.696-16.696H116.87c-9.22,0-16.696,7.475-16.696,16.696
+                                                            v83.478H33.391V178.087h83.478H395.13h83.478V378.435z"/>
+                                                    </g>
+                                                </g>
+                                                <g>
+                                                    <g>
+                                                        <path d="M329.461,346.156H184.765c-9.22,0-16.696,7.475-16.696,16.696s7.475,16.696,16.696,16.696h144.696
+                                                            c9.22,0,16.696-7.475,16.696-16.696S338.681,346.156,329.461,346.156z"/>
+                                                    </g>
+                                                </g>
+                                                <g>
+                                                    <g>
+                                                        <path d="M262.678,412.939h-77.913c-9.22,0-16.696,7.475-16.696,16.696s7.475,16.696,16.696,16.696h77.913
+                                                            c9.22,0,16.696-7.475,16.696-16.696S271.899,412.939,262.678,412.939z"/>
+                                                    </g>
+                                                </g>
+                                                <g>
+                                                    <g>
+                                                        <circle cx="362.852" cy="229.287" r="16.696"/>
+                                                    </g>
+                                                </g>
+                                                <g>
+                                                    <g>
+                                                        <circle cx="429.635" cy="229.287" r="16.696"/>
+                                                    </g>
+                                                </g>
+                                            </svg>
+                                    </a>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span id="liveClock" style="padding-right: 1px;"></span>
         </div>
     </nav>
 
@@ -303,7 +340,7 @@ function updateClock() {
     // Format: dd/mm/yyyy hh:mm:ss
     const formatted = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
     const el = document.getElementById('liveClock');
-    if (el) el.textContent = `${formatted}`;
+    if (el) el.textContent = ` ${formatted} `;
 }
 setInterval(updateClock, 1000);
 updateClock();

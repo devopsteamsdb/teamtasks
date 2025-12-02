@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>גרסה להדפסה - לוח משימות DevOps</title>
+    <link href="{{ url_for('static', filename='printable.css') }}" rel="stylesheet" media="all">
+    <style>
+        @media print {
+            body { background: #fff !important; color: #222 !important; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-header">
+        <h1>לוח משימות DevOps - גרסה להדפסה</h1>
+        <div class="print-meta">הופק בתאריך: <span id="printDate"></span></div>
+    </div>
+    <div class="print-projects">
+        {% for project in projects %}
+        <div class="print-project">
+            <h2 class="print-project-title">{{ project }}</h2>
+            <table class="print-tasks">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">משימה</th>
+                        <th>חברים</th>
+                        <th style="width: 10%;">סטטוס</th>
+                        <th style="width: 30%;">הערות</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for task in tasks if task.project == project %}
+                    <tr>
+                        <td>{{ task.task }}</td>
+                        <td>
+                            {% set member_list = task.members.split(',') if task.members else [] %}
+                            {% set hebrew_names = {'elad': 'אלעד', 'guy': 'גיא', 'itamar': 'איתמר', 'noam': 'נועם', 'david': 'דוד'} %}
+                            {% for member in member_list %}
+                                {% set member_key = member|lower|trim %}
+                                {% if member_key %}
+                                    <span class="print-member">{{ hebrew_names.get(member_key, member) }}</span>{% if not loop.last %}, {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {{ task.status|replace('status-inprogress', 'בתהליך')|replace('status-done', 'הסתיים')|replace('status-notstarted', 'טרם החל')|replace('status-delayed', 'בעיכוב') }}
+                        </td>
+                        <td>
+                            {% if task.notes %}
+                                <div class="print-notes">{{ task.notes }}</div>
+                            {% else %}
+                                <span class="print-no-notes">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+    // Print date
+    document.addEventListener('DOMContentLoaded', function() {
+        var d = new Date();
+        var dateStr = d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL');
+        document.getElementById('printDate').textContent = dateStr;
+    });
+    </script>
+</body>
+</html>
