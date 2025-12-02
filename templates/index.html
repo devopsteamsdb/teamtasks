@@ -52,7 +52,12 @@
             {% for project in projects %}
             <div class="project-card">
                 <div class="project-header">
-                    <span class="project-title">{{ project }}</span>
+                    <span class="project-title">
+                    <button class="add-task-project-btn" data-project="{{ project }}" title="הוסף משימה לפרויקט זה" style="background:none;border:none;cursor:pointer;padding:0 0 0 6px;vertical-align:middle;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                    {{ project }}
+                    </span>
                     {% set project_colors = [
                         {'bg': '#EEF2FF', 'color': '#4F46E5'},
                         {'bg': '#ECFDF5', 'color': '#10B981'},
@@ -256,6 +261,33 @@
         </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+// Add-task-per-project button logic
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.add-task-project-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var projectName = btn.getAttribute('data-project');
+            var modal = document.getElementById('createTaskModal');
+            var projectInput = document.getElementById('createProjectNameInput');
+            if (projectInput) projectInput.value = projectName;
+            // Clear other fields
+            var nameInput = document.getElementById('createTaskNameInput');
+            if (nameInput) nameInput.value = '';
+            var statusInput = document.getElementById('createTaskStatus');
+            if (statusInput) statusInput.value = 'status-inprogress';
+            var priorityInput = document.getElementById('createTaskPriority');
+            if (priorityInput) priorityInput.value = 'none';
+            var notesInput = document.getElementById('createTaskNotes');
+            if (notesInput) notesInput.value = '';
+            document.querySelectorAll('#createTaskModal .members-select input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+            modal.style.display = 'block';
+            modal.style.zIndex = 2000;
+            modal.style.visibility = 'visible';
+        });
+    });
+});
+</script>
 </body>
 
 <script>
