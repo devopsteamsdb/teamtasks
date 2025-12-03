@@ -17,24 +17,7 @@
             <!--<img src="logo.png" alt="DevOps Logo">-->
             <span>לוח משימות DevOps</span>
         </div>
-        <div class="search-container"
-            style="display: inline-block; vertical-align: middle; margin-left: 20px; position: relative;">
-            <input type="text" id="searchBox" placeholder="חיפוש משימות..."
-                style="padding: 0.4rem 2rem 0.4rem 1rem; border: 1px solid #ddd; border-radius: 20px; font-size: 0.9rem; width: 250px;">
-            <button id="clearSearch"
-                style="position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; display: none; color: #888; font-size: 1.1rem;">×</button>
-        </div>
         <div class="navbar-meta">
-            <a href="/admin" title="ממשק ניהול"
-                style="margin-left:16px;vertical-align:middle;display:inline-block;color:#555;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path
-                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                    </path>
-                </svg>
-            </a>
             <a href="/print" title="גרסת הדפסה"
                 style="margin-left:16px;vertical-align:middle;display:inline-block;float:right;">
                 <svg width="20" height="20" viewBox="0 0 512 512" fill="#888" style="vertical-align:middle;">
@@ -99,9 +82,13 @@
             </div>
             <div class="filter-controls">
                 <!--<span style="font-size: 0.9rem; color: var(--secondary); margin-left: 0.5rem;">╫í╫ש╫á╫ץ╫ƒ ╫£╫ñ╫ש:</span>-->
+                {% set hebrew_names = {'elad': 'אלעד', 'guy': 'גיא', 'itamar': 'איתמר', 'noam': 'נועם', 'david': 'דוד'}
+                %}
                 {% for member in members %}
-                <button class="filter-avatar-btn" data-member="{{ member.name_en }}" title="{{ member.name_he }}">
-                    <img src="{{ url_for('static', filename='images/' + member.avatar_path) }}" class="filter-avatar">
+                <button class="filter-avatar-btn" data-member="{{ member|lower }}"
+                    title="{{ hebrew_names.get(member|lower, member) }}">
+                    <img src="{{ url_for('static', filename='images/' + member|lower + '.png') }}"
+                        class="filter-avatar">
                 </button>
                 {% endfor %}
                 <!--
@@ -224,14 +211,32 @@
                 <div class="form-group">
                     <label>חברי צוות:</label>
                     <div class="members-select">
-                        <!-- Populated dynamically by JavaScript -->
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="elad"
+                                data-img="{{ url_for('static', filename='images/elad.png') }}">
+                            <img src="{{ url_for('static', filename='images/elad.png') }}" class="avatar-sm"> אלעד
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="guy"
+                                data-img="{{ url_for('static', filename='images/guy.png') }}">
+                            <img src="{{ url_for('static', filename='images/guy.png') }}" class="avatar-sm"> גיא
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="itamar"
+                                data-img="{{ url_for('static', filename='images/itamar.png') }}">
+                            <img src="{{ url_for('static', filename='images/itamar.png') }}" class="avatar-sm"> איתמר
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="noam"
+                                data-img="{{ url_for('static', filename='images/noam.png') }}">
+                            <img src="{{ url_for('static', filename='images/noam.png') }}" class="avatar-sm"> נועם
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="david"
+                                data-img="{{ url_for('static', filename='images/david.png') }}">
+                            <img src="{{ url_for('static', filename='images/david.png') }}" class="avatar-sm"> דוד
+                        </label>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="createTaskTeam">צוות:</label>
-                    <select id="createTaskTeam" class="form-control">
-                        <!-- Populated dynamically by JavaScript -->
-                    </select>
                 </div>
                 <div class="form-row">
                     <div class="form-group half">
@@ -279,14 +284,32 @@
                 <div class="form-group">
                     <label>חברי צוות:</label>
                     <div class="members-select">
-                        <!-- Populated dynamically by JavaScript -->
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="elad"
+                                data-img="{{ url_for('static', filename='images/elad.png') }}">
+                            <img src="{{ url_for('static', filename='images/elad.png') }}" class="avatar-sm"> אלעד
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="guy"
+                                data-img="{{ url_for('static', filename='images/guy.png') }}">
+                            <img src="{{ url_for('static', filename='images/guy.png') }}" class="avatar-sm"> גיא
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="itamar"
+                                data-img="{{ url_for('static', filename='images/itamar.png') }}">
+                            <img src="{{ url_for('static', filename='images/itamar.png') }}" class="avatar-sm"> איתמר
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="noam"
+                                data-img="{{ url_for('static', filename='images/noam.png') }}">
+                            <img src="{{ url_for('static', filename='images/noam.png') }}" class="avatar-sm"> נועם
+                        </label>
+                        <label class="member-checkbox">
+                            <input type="checkbox" value="david"
+                                data-img="{{ url_for('static', filename='images/david.png') }}">
+                            <img src="{{ url_for('static', filename='images/david.png') }}" class="avatar-sm"> דוד
+                        </label>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="taskTeam">צוות:</label>
-                    <select id="taskTeam" class="form-control">
-                        <!-- Populated dynamically by JavaScript -->
-                    </select>
                 </div>
                 <div class="form-row">
                     <div class="form-group half">
