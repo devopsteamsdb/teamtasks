@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול צוותים - DevOps</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='admin.css') }}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <span>ניהול צוותים</span>
+        </div>
+        <div class="navbar-meta">
+            <a href="/" class="btn-back">חזרה ללוח משימות</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="admin-container">
+        
+        <header class="admin-header">
+            <h1>ניהול צוותים וחברי צוות</h1>
+            <button id="addTeamBtn" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                הוסף צוות חדש
+            </button>
+        </header>
+
+        <div id="teamsContainer" class="teams-grid">
+            <!-- Teams will be loaded here dynamically -->
+        </div>
+
+    </div>
+
+    <!-- Add/Edit Team Modal -->
+    <div id="teamModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="teamModalTitle">הוסף צוות חדש</h2>
+            <div class="form-group">
+                <label for="teamNameEn">שם באנגלית (קוד):</label>
+                <input type="text" id="teamNameEn" class="form-control" placeholder="devops">
+                <small>השם באנגלית ישמש בקוד ובמערכת (אותיות קטנות בלבד)</small>
+            </div>
+            <div class="form-group">
+                <label for="teamNameHe">שם בעברית (תצוגה):</label>
+                <input type="text" id="teamNameHe" class="form-control" placeholder="צוות DevOps">
+                <small>השם בעברית יוצג בממשק המשתמש</small>
+            </div>
+            <div class="modal-actions">
+                <button id="saveTeamBtn" class="btn btn-primary">שמור</button>
+                <button id="cancelTeamBtn" class="btn btn-secondary">ביטול</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Member Modal -->
+    <div id="memberModal" class="modal">
+        <div class="modal-content">
+            <span class="close-member-modal">&times;</span>
+            <h2 id="memberModalTitle">הוסף חבר צוות</h2>
+            <div class="form-group">
+                <label for="memberNameEn">שם באנגלית (קוד):</label>
+                <input type="text" id="memberNameEn" class="form-control" placeholder="john">
+                <small>השם באנגלית ישמש בקוד (אותיות קטנות בלבד)</small>
+            </div>
+            <div class="form-group">
+                <label for="memberNameHe">שם בעברית (תצוגה):</label>
+                <input type="text" id="memberNameHe" class="form-control" placeholder="ג'ון">
+                <small>השם בעברית יוצג בממשק המשתמש</small>
+            </div>
+            <div class="form-group">
+                <label for="memberAvatar">תמונת פרופיל:</label>
+                <div class="avatar-upload">
+                    <img id="avatarPreview" src="{{ url_for('static', filename='images/default.png') }}" class="avatar-preview">
+                    <input type="file" id="memberAvatar" accept="image/png,image/jpeg,image/jpg,image/gif">
+                    <label for="memberAvatar" class="btn btn-secondary">בחר תמונה</label>
+                </div>
+                <small>גודל מקסימלי: 5MB. פורמטים נתמכים: PNG, JPG, GIF</small>
+            </div>
+            <div class="modal-actions">
+                <button id="saveMemberBtn" class="btn btn-primary">שמור</button>
+                <button id="cancelMemberBtn" class="btn btn-secondary">ביטול</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script src="{{ url_for('static', filename='admin.js') }}"></script>
+</body>
+
+</html>

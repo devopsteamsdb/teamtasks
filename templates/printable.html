@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +8,18 @@
     <link href="{{ url_for('static', filename='printable.css') }}" rel="stylesheet" media="all">
     <style>
         @media print {
-            body { background: #fff !important; color: #222 !important; }
-            .no-print { display: none !important; }
+            body {
+                background: #fff !important;
+                color: #222 !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="print-header">
         <h1>לוח משימות DevOps - גרסה להדפסה</h1>
@@ -19,8 +27,17 @@
     </div>
     <div class="print-projects">
         {% for project in projects %}
+        {% set project_tasks = tasks|selectattr('project', 'equalto', project)|list %}
+        {% set first_task = project_tasks|first %}
+        {% set team_name = first_task.team.name_he if first_task and first_task.team else '' %}
+
         <div class="print-project">
-            <h2 class="print-project-title">{{ project }}</h2>
+            <h2 class="print-project-title">
+                {{ project }}
+                {% if team_name %}
+                <span class="print-project-team">{{ team_name }}</span>
+                {% endif %}
+            </h2>
             <table class="print-tasks">
                 <thead>
                     <tr>
@@ -31,43 +48,43 @@
                     </tr>
                 </thead>
                 <tbody>
-                {% for task in tasks if task.project == project %}
+                    {% for task in project_tasks %}
                     <tr>
                         <td>{{ task.task }}</td>
                         <td>
                             {% set member_list = task.members.split(',') if task.members else [] %}
-                            {% set hebrew_names = {'elad': 'אלעד', 'guy': 'גיא', 'itamar': 'איתמר', 'noam': 'נועם', 'david': 'דוד'} %}
-                            {% for member in member_list %}
-                                {% set member_key = member|lower|trim %}
-                                {% if member_key %}
-                                    <span class="print-member">{{ hebrew_names.get(member_key, member) }}</span>{% if not loop.last %}, {% endif %}
-                                {% endif %}
+                            {% for member_key in member_list %}
+                            {% set member_obj = members|selectattr('name_en', 'equalto', member_key|trim)|first %}
+                            <span class="print-member">{{ member_obj.name_he if member_obj else member_key }}</span>{%
+                            if not loop.last %}, {% endif %}
                             {% endfor %}
                         </td>
                         <td>
-                            {{ task.status|replace('status-inprogress', 'בתהליך')|replace('status-done', 'הסתיים')|replace('status-notstarted', 'טרם החל')|replace('status-delayed', 'בעיכוב') }}
+                            {{ task.status|replace('status-inprogress', 'בתהליך')|replace('status-done',
+                            'הסתיים')|replace('status-notstarted', 'טרם החל')|replace('status-delayed', 'בעיכוב') }}
                         </td>
                         <td>
                             {% if task.notes %}
-                                <div class="print-notes">{{ task.notes }}</div>
+                            <div class="print-notes">{{ task.notes }}</div>
                             {% else %}
-                                <span class="print-no-notes">-</span>
+                            <span class="print-no-notes">-</span>
                             {% endif %}
                         </td>
                     </tr>
-                {% endfor %}
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
         {% endfor %}
     </div>
     <script>
-    // Print date
-    document.addEventListener('DOMContentLoaded', function() {
-        var d = new Date();
-        var dateStr = d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL');
-        document.getElementById('printDate').textContent = dateStr;
-    });
+        // Print date
+        document.addEventListener('DOMContentLoaded', function () {
+            var d = new Date();
+            var dateStr = d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL');
+            document.getElementById('printDate').textContent = dateStr;
+        });
     </script>
 </body>
+
 </html>

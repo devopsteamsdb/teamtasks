@@ -1,199 +1,262 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Edit modal
+    // State
+    let teams = [];
+    let members = [];
+    let currentTaskItem = null;
+    let activeTeamFilter = null;
+    let activeMemberFilter = null;
+    let searchTimeout;
+
+    // DOM Elements - Modals
     const modal = document.getElementById('taskModal');
+    const createModal = document.getElementById('createTaskModal');
     const closeModal = document.querySelector('.close-modal');
+    const closeCreateModal = document.querySelector('.close-modal-create');
+
+    // DOM Elements - Forms
     const saveBtn = document.getElementById('saveBtn');
     const deleteBtn = document.getElementById('deleteBtn');
-    const modalTitle = document.getElementById('modalTitle');
+    const createSaveBtn = document.getElementById('createSaveBtn');
+
+    // DOM Elements - Inputs (Edit)
     const taskNameInput = document.getElementById('taskNameInput');
-    const taskNotes = document.getElementById('taskNotes');
+    const projectNameInput = document.getElementById('projectNameInput');
     const taskStatus = document.getElementById('taskStatus');
     const taskPriority = document.getElementById('taskPriority');
-    const memberCheckboxes = document.querySelectorAll('#taskModal .members-select input[type="checkbox"]');
-    const projectNameInput = document.getElementById('projectNameInput');
+    const taskNotes = document.getElementById('taskNotes');
+    const taskTeam = document.getElementById('taskTeam');
 
-    // Create modal
-    const createModal = document.getElementById('createTaskModal');
-    const closeCreateModal = document.querySelector('.close-modal-create');
-    const createSaveBtn = document.getElementById('createSaveBtn');
+    // DOM Elements - Inputs (Create)
     const createTaskNameInput = document.getElementById('createTaskNameInput');
     const createProjectNameInput = document.getElementById('createProjectNameInput');
     const createTaskStatus = document.getElementById('createTaskStatus');
     const createTaskPriority = document.getElementById('createTaskPriority');
     const createTaskNotes = document.getElementById('createTaskNotes');
-    const createMemberCheckboxes = document.querySelectorAll('#createTaskModal .members-select input[type="checkbox"]');
+    const createTaskTeam = document.getElementById('createTaskTeam');
 
-    let currentTaskItem = null;
+    // DOM Elements - Search & Filter
+    const searchBox = document.getElementById('searchBox');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const teamFilterButtons = document.querySelectorAll('.filter-team-btn');
+    const memberFilterButtons = document.querySelectorAll('.filter-avatar-btn');
 
-    // Helper: Get Status Text from Class
-    function getStatusFromClass(className) {
-        if (className.includes('status-inprogress')) return 'status-inprogress';
-        if (className.includes('status-done')) return 'status-done';
-        if (className.includes('status-notstarted')) return 'status-notstarted';
-        if (className.includes('status-delayed')) return 'status-delayed';
-        return 'status-inprogress';
+    // Initialize
+    init();
+
+    async function init() {
+        await Promise.all([loadTeams(), loadMembers()]);
+        populateDropdowns();
+        populateMemberCheckboxes();
+        attachEventListeners();
+
+        // Check URL for team filter
+        const urlParams = new URLSearchParams(window.location.search);
+        const teamId = urlParams.get('team');
+        if (teamId) {
+            const btn = document.querySelector(`.filter-team-btn[data-team-id="${teamId}"]`);
+            if (btn) btn.click();
+        }
     }
 
-    // Helper: Get Dropdown Text
-    function getDropdownText(selectElement) {
-        return selectElement.options[selectElement.selectedIndex].text;
+    // Data Loading
+    async function loadTeams() {
+        try {
+            const response = await fetch('/api/teams');
+            teams = await response.json();
+        } catch (error) {
+            console.error('Error loading teams:', error);
+        }
     }
 
-    // Open Modal
-    function openModal(taskItem) {
-        currentTaskItem = taskItem;
+    async function loadMembers() {
+        try {
+            const response = await fetch('/api/members');
+            members = await response.json();
+        } catch (error) {
+            console.error('Error loading members:', error);
+        }
+    }
 
-        const taskName = taskItem.querySelector('.task-name').textContent;
-        taskNameInput.value = taskName;
-        modalTitle.textContent = `עריכת משימה`;
+    // UI Population
+    function populateDropdowns() {
+        const options = teams.map(team =>
+            `<option value="${team.id}">${team.name_he}</option>`
+        ).join('');
 
-        const notes = taskItem.getAttribute('data-notes') || '';
-        taskNotes.value = notes;
+        const defaultOption = '<option value="">בחר צוות...</option>';
 
-        const statusBadge = taskItem.querySelector('.status-badge');
-        const currentStatusClass = statusBadge.classList[1];
-        taskStatus.value = getStatusFromClass(currentStatusClass);
+        if (createTaskTeam) createTaskTeam.innerHTML = defaultOption + options;
+        if (taskTeam) taskTeam.innerHTML = defaultOption + options;
+    }
 
-        const priority = taskItem.getAttribute('data-priority') || 'none';
-        taskPriority.value = priority;
+    function populateMemberCheckboxes() {
+        const containers = document.querySelectorAll('.members-select');
 
-        memberCheckboxes.forEach(cb => cb.checked = false);
-        const avatars = taskItem.querySelectorAll('.avatar');
-        avatars.forEach(img => {
-            const src = img.getAttribute('src');
-            memberCheckboxes.forEach(cb => {
-                if (cb.getAttribute('data-img') === src) {
-                    cb.checked = true;
-                }
-            });
+        containers.forEach(container => {
+            container.innerHTML = members.map(member => `
+                <label class="member-checkbox">
+                    <input type="checkbox" value="${member.name_en}" 
+                           data-img="/static/images/${member.avatar_path}">
+                    <img src="/static/images/${member.avatar_path}" class="avatar-sm"> ${member.name_he}
+                </label>
+            `).join('');
+        });
+    }
+
+    // Event Listeners
+    function attachEventListeners() {
+        // Modals
+        if (closeModal) closeModal.addEventListener('click', () => modal.style.display = 'none');
+        if (closeCreateModal) closeCreateModal.addEventListener('click', () => createModal.style.display = 'none');
+
+        window.addEventListener('click', (e) => {
+            if (e.target == modal) modal.style.display = 'none';
+            if (e.target == createModal) createModal.style.display = 'none';
         });
 
-        if (!taskItem) {
-            projectNameInput.value = '';
-        } else {
-            const projectCard = taskItem.closest('.project-card');
-            const projectName = projectCard.querySelector('.project-title').textContent.trim();
-            projectNameInput.value = projectName;
-        }
-
-        modal.style.display = 'block';
-    }
-
-    // Close Modal
-    function closeModalFunc() {
-        modal.style.display = 'none';
-        currentTaskItem = null;
-    }
-
-    // Event Listeners for Tasks
-    document.querySelectorAll('.task-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            openModal(item);
-        });
-
-        const editBtn = item.querySelector('.edit-btn');
-        if (editBtn) {
-            editBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                openModal(item);
-            });
-        }
-    });
-
-    closeModal.addEventListener('click', closeModalFunc);
-    window.addEventListener('click', (e) => {
-        if (e.target == modal) closeModalFunc();
-    });
-
-    // Save Changes
-    saveBtn.addEventListener('click', () => {
-        const isEdit = !!currentTaskItem;
-        const payload = {
-            project: projectNameInput.value.trim(),
-            task: taskNameInput.value.trim(),
-            members: Array.from(memberCheckboxes).filter(cb => cb.checked).map(cb => cb.value),
-            status: taskStatus.value,
-            priority: taskPriority.value,
-            notes: taskNotes.value.trim()
-        };
-        if (isEdit) {
-            // Edit existing task
-            const taskId = currentTaskItem.getAttribute('data-id');
-            fetch(`/api/tasks/${taskId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    // Optionally, update UI or reload
-                    location.reload();
-                }
-            });
-        } else {
-            // Add new task
-            fetch('/api/tasks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                }
-            });
-        }
-    });
-
-    // Helper: Sort tasks by priority
-    function sortTasksByPriority(taskList) {
-        const priorityOrder = { 'high': 0, 'medium': 1, 'low': 2, 'none': 3 };
-        const tasks = Array.from(taskList.querySelectorAll('.task-item'));
-        tasks.sort((a, b) => {
-            const priorityA = a.getAttribute('data-priority') || 'none';
-            const priorityB = b.getAttribute('data-priority') || 'none';
-            return priorityOrder[priorityA] - priorityOrder[priorityB];
-        });
-        tasks.forEach(task => taskList.appendChild(task));
-    }
-
-    // Team Member Filtering
-    let activeFilter = null;
-    const filterButtons = document.querySelectorAll('.filter-avatar-btn');
-    const clearFilterBtn = document.getElementById('clearFilter');
-
-    filterButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const member = btn.getAttribute('data-member');
-            if (activeFilter === member) {
-                clearFilter();
-            } else {
-                activeFilter = member;
-                applyFilter(member);
-                filterButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        // Task Items
+        document.querySelectorAll('.task-item').forEach(item => {
+            item.addEventListener('click', () => openEditModal(item));
+            const editBtn = item.querySelector('.edit-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openEditModal(item);
+                });
             }
         });
-    });
 
-    if (clearFilterBtn) {
-        clearFilterBtn.addEventListener('click', clearFilter);
+        // Add Task Button
+        const addTaskBtn = document.getElementById('addTaskBtn');
+        if (addTaskBtn) {
+            addTaskBtn.addEventListener('click', openCreateModal);
+        }
+
+        // Add Task to Project Buttons
+        document.querySelectorAll('.add-task-project-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openCreateModal(null, btn.dataset.project);
+            });
+        });
+
+        // Save Buttons
+        if (saveBtn) saveBtn.addEventListener('click', saveTask);
+        if (createSaveBtn) createSaveBtn.addEventListener('click', createTask);
+        if (deleteBtn) deleteBtn.addEventListener('click', deleteTask);
+
+        // Search
+        if (searchBox) {
+            searchBox.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                clearSearchBtn.style.display = query ? 'block' : 'none';
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => performSearch(query), 300);
+            });
+        }
+
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', () => {
+                searchBox.value = '';
+                clearSearchBtn.style.display = 'none';
+                performSearch('');
+            });
+        }
+
+        // Team Filters
+        teamFilterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const teamId = btn.dataset.teamId;
+                if (activeTeamFilter === teamId) {
+                    activeTeamFilter = null;
+                    btn.classList.remove('active');
+                    updateUrlParams('team', null);
+                } else {
+                    activeTeamFilter = teamId;
+                    teamFilterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    updateUrlParams('team', teamId);
+                }
+                applyFilters();
+            });
+        });
+
+        // Member Filters
+        memberFilterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const member = btn.dataset.member;
+                if (activeMemberFilter === member) {
+                    activeMemberFilter = null;
+                    btn.classList.remove('active');
+                    // updateUrlParams('member', null);
+                } else {
+                    activeMemberFilter = member;
+                    memberFilterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    // updateUrlParams('member', member);
+                }
+                applyFilters();
+            });
+        });
     }
 
-    function applyFilter(member) {
+    function updateUrlParams(key, value) {
+        const url = new URL(window.location);
+        if (value) {
+            url.searchParams.set(key, value);
+        } else {
+            url.searchParams.delete(key);
+        }
+        window.history.pushState({}, '', url);
+    }
+
+    async function applyFilters() {
         const allTasks = document.querySelectorAll('.task-item');
+
         allTasks.forEach(task => {
-            const avatars = task.querySelectorAll('.avatar');
-            let hasMember = false;
-            avatars.forEach(avatar => {
-                const src = avatar.getAttribute('src');
-                if (src.includes(`${member}.png`)) {
-                    hasMember = true;
+            let visible = true;
+
+            // Team Filter
+            if (activeTeamFilter) {
+                // Check if we have data-team-id on the task item.
+                // If not, we need to rely on the project badge or fetch it.
+                // Assuming we will add data-team-id to the task item in index.html.
+                // For now, let's try to match by project name if we have team info loaded.
+                // But wait, the task item doesn't have team info directly.
+                // We need to add data-team-id to the task item in index.html.
+                const taskTeamId = task.dataset.teamId;
+                if (taskTeamId && taskTeamId !== activeTeamFilter) {
+                    visible = false;
+                } else if (!taskTeamId) {
+                    // If no team ID on task, maybe it's a legacy task or we forgot to add the attribute.
+                    // Let's assume it doesn't match if we are filtering by team.
+                    // visible = false; 
+                    // Actually, let's try to be smart.
+                    // We can check the project badge in the same card? No, tasks can be in different projects.
+                    // The project card has the badge.
+                    // Let's check the project card's team.
+                    const projectCard = task.closest('.project-card');
+                    const badge = projectCard.querySelector('.project-badge');
+                    // This is hard because badge text is Hebrew name.
+                    // We need the ID.
+                    // Best solution: Add data-team-id to task-item in index.html.
                 }
-            });
-            if (hasMember) {
+            }
+
+            // Member Filter
+            if (activeMemberFilter && visible) {
+                const avatars = task.querySelectorAll('.avatar');
+                let hasMember = false;
+                avatars.forEach(avatar => {
+                    const src = avatar.getAttribute('src');
+                    if (src.toLowerCase().includes(activeMemberFilter.toLowerCase())) {
+                        hasMember = true;
+                    }
+                });
+                if (!hasMember) visible = false;
+            }
+
+            if (visible) {
                 task.classList.remove('filtered-hidden');
             } else {
                 task.classList.add('filtered-hidden');
@@ -201,9 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Hide project cards with no visible tasks
-        const projectCards = document.querySelectorAll('.project-card');
-        projectCards.forEach(card => {
-            const visibleTasks = card.querySelectorAll('.task-item:not(.filtered-hidden)');
+        document.querySelectorAll('.project-card').forEach(card => {
+            const visibleTasks = card.querySelectorAll('.task-item:not(.filtered-hidden):not(.search-hidden)');
             if (visibleTasks.length === 0) {
                 card.classList.add('filtered-hidden');
             } else {
@@ -212,82 +274,198 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function clearFilter() {
-        activeFilter = null;
-        const allTasks = document.querySelectorAll('.task-item');
-        allTasks.forEach(task => task.classList.remove('filtered-hidden'));
-        const projectCards = document.querySelectorAll('.project-card');
-        projectCards.forEach(card => card.classList.remove('filtered-hidden'));
-        filterButtons.forEach(b => b.classList.remove('active'));
+    // Modal Logic
+    function openEditModal(taskItem) {
+        currentTaskItem = taskItem;
+        const taskId = taskItem.dataset.id;
+
+        taskNameInput.value = taskItem.querySelector('.task-name').textContent;
+        taskNotes.value = taskItem.dataset.notes || '';
+
+        const statusBadge = taskItem.querySelector('.status-badge');
+        taskStatus.value = getStatusFromClass(statusBadge.classList[1]);
+
+        taskPriority.value = taskItem.dataset.priority || 'none';
+
+        const projectCard = taskItem.closest('.project-card');
+        projectNameInput.value = projectCard.querySelector('.project-title').textContent.trim();
+
+        // Reset checkboxes
+        document.querySelectorAll('#taskModal .members-select input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+        // Check members based on avatars
+        const avatars = taskItem.querySelectorAll('.avatar');
+        avatars.forEach(img => {
+            const src = img.getAttribute('src');
+            const checkbox = document.querySelector(`#taskModal .members-select input[data-img="${src}"]`);
+            if (checkbox) checkbox.checked = true;
+
+            const filename = src.split('/').pop();
+            const checkboxByFile = document.querySelector(`#taskModal .members-select input[data-img$="${filename}"]`);
+            if (checkboxByFile) checkboxByFile.checked = true;
+        });
+
+        // Set Team
+        // We need to set the team dropdown.
+        // If we have data-team-id on task item, use it.
+        if (taskItem.dataset.teamId) {
+            taskTeam.value = taskItem.dataset.teamId;
+        } else {
+            taskTeam.value = '';
+        }
+
+        modal.style.display = 'block';
     }
 
-    // Delete Task
-    deleteBtn.addEventListener('click', () => {
-        if (currentTaskItem && confirm('האם אתה בטוח שברצונך למחוק משימה זו?')) {
-            const taskId = currentTaskItem.getAttribute('data-id');
-            fetch(`/api/tasks/${taskId}`, {
-                method: 'DELETE'
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                }
-            });
-        }
-    });
-
-    // Add event listener to "הוסף משימה" button (open create modal)
-    const addTaskBtn = document.getElementById('addTaskBtn');
-    addTaskBtn.addEventListener('click', () => {
-        console.log('Add Task button clicked');
-        // Clear create form fields
+    function openCreateModal(e, projectName = null) {
         createTaskNameInput.value = '';
-        createProjectNameInput.value = '';
+        createProjectNameInput.value = projectName || '';
         createTaskStatus.value = 'status-inprogress';
         createTaskPriority.value = 'none';
         createTaskNotes.value = '';
-        createMemberCheckboxes.forEach(cb => cb.checked = false);
-        // Show create modal and force z-index/visibility
+        createTaskTeam.value = '';
+
+        document.querySelectorAll('#createTaskModal .members-select input[type="checkbox"]').forEach(cb => cb.checked = false);
+
         createModal.style.display = 'block';
         createModal.style.zIndex = 2000;
         createModal.style.visibility = 'visible';
-    });
+    }
 
-    // Close create modal
-    closeCreateModal.addEventListener('click', () => {
-        createModal.style.display = 'none';
-    });
-    window.addEventListener('click', (e) => {
-        if (e.target == createModal) createModal.style.display = 'none';
-    });
+    // CRUD Operations
+    async function saveTask() {
+        if (!currentTaskItem) return;
 
-    // Save new task from create modal
-    createSaveBtn.addEventListener('click', () => {
+        const taskId = currentTaskItem.dataset.id;
+        const payload = {
+            project: projectNameInput.value.trim(),
+            task: taskNameInput.value.trim(),
+            members: getSelectedMembers('taskModal'),
+            status: taskStatus.value,
+            priority: taskPriority.value,
+            notes: taskNotes.value.trim(),
+            team_id: taskTeam.value || null
+        };
+
+        try {
+            const response = await fetch(`/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('שגיאה בשמירת המשימה');
+            }
+        } catch (error) {
+            console.error('Error saving task:', error);
+            alert('שגיאה בשמירת המשימה');
+        }
+    }
+
+    async function createTask() {
         const payload = {
             project: createProjectNameInput.value.trim(),
             task: createTaskNameInput.value.trim(),
-            members: Array.from(createMemberCheckboxes).filter(cb => cb.checked).map(cb => cb.value),
+            members: getSelectedMembers('createTaskModal'),
             status: createTaskStatus.value,
             priority: createTaskPriority.value,
-            notes: createTaskNotes.value.trim()
+            notes: createTaskNotes.value.trim(),
+            team_id: createTaskTeam.value || null
         };
-        fetch('/api/tasks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(res => res.json())
-        .then(data => {
+
+        try {
+            const response = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
             if (data.success) {
-                createModal.style.display = 'none';
                 location.reload();
             } else {
-                alert('שגיאה: לא ניתן להוסיף משימה. ודא שכל השדות מולאו ונסה שוב.');
+                alert('שגיאה ביצירת המשימה');
             }
-        })
-        .catch(err => {
-            alert('שגיאת רשת או שרת: לא ניתן להוסיף משימה.');
-        });
-    });
+        } catch (error) {
+            console.error('Error creating task:', error);
+            alert('שגיאה ביצירת המשימה');
+        }
+    }
+
+    async function deleteTask() {
+        if (!currentTaskItem || !confirm('האם אתה בטוח שברצונך למחוק משימה זו?')) return;
+
+        const taskId = currentTaskItem.dataset.id;
+        try {
+            const response = await fetch(`/api/tasks/${taskId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('שגיאה במחיקת המשימה');
+            }
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            alert('שגיאה במחיקת המשימה');
+        }
+    }
+
+    // Search & Filter Logic
+    async function performSearch(query) {
+        if (!query) {
+            document.querySelectorAll('.task-item, .project-card').forEach(el => {
+                el.classList.remove('search-hidden');
+            });
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+            const results = await response.json();
+            const resultIds = new Set(results.map(r => r.id));
+
+            document.querySelectorAll('.task-item').forEach(task => {
+                const taskId = parseInt(task.dataset.id);
+                if (resultIds.has(taskId)) {
+                    task.classList.remove('search-hidden');
+                } else {
+                    task.classList.add('search-hidden');
+                }
+            });
+
+            document.querySelectorAll('.project-card').forEach(card => {
+                const visibleTasks = card.querySelectorAll('.task-item:not(.search-hidden):not(.filtered-hidden)');
+                if (visibleTasks.length === 0) {
+                    card.classList.add('search-hidden');
+                } else {
+                    card.classList.remove('search-hidden');
+                }
+            });
+        } catch (error) {
+            console.error('Search error:', error);
+        }
+    }
+
+    // Helpers
+    function getStatusFromClass(className) {
+        if (className.includes('status-inprogress')) return 'status-inprogress';
+        if (className.includes('status-done')) return 'status-done';
+        if (className.includes('status-notstarted')) return 'status-notstarted';
+        if (className.includes('status-delayed')) return 'status-delayed';
+        return 'status-inprogress';
+    }
+
+    function getSelectedMembers(modalId) {
+        const checkboxes = document.querySelectorAll(`#${modalId} .members-select input[type="checkbox"]`);
+        return Array.from(checkboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+    }
 });

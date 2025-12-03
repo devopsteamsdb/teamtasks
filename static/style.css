@@ -10,6 +10,7 @@
     justify-content: space-between;
     align-items: flex-start;
 }
+
 /* Add Task Button (like clear filter, but primary color) */
 .btn-add-task {
     background-color: var(--primary);
@@ -28,6 +29,7 @@
     background-color: var(--primary-hover);
     color: #fff;
 }
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
@@ -388,7 +390,8 @@ body {
 }
 
 
-.close-modal, .close-modal-create {
+.close-modal,
+.close-modal-create {
     color: #aaa;
     float: left;
     /* RTL support - close on left */
@@ -606,6 +609,201 @@ body {
     border: none;
     padding: 0.5rem 1rem;
     border-radius: var(--radius-md);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    resize: vertical;
+}
+
+.modal-actions {
+    margin-top: 1.5rem;
+    text-align: left;
+    /* RTL - buttons on left */
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Task Item Interactions */
+.task-item {
+    cursor: pointer;
+    position: relative;
+    transition: opacity 0.2s;
+}
+
+.task-item:hover .task-actions {
+    opacity: 1;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    color: var(--secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.btn-icon:hover {
+    background-color: var(--border);
+    color: var(--primary);
+}
+
+/* New Form Styles */
+.form-control {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.form-group.half {
+    flex: 1;
+}
+
+.members-select {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.member-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-size: 0.85rem;
+    background-color: var(--light);
+    transition: background-color 0.2s;
+}
+
+.member-checkbox:hover {
+    background-color: var(--border);
+}
+
+.member-checkbox input {
+    margin-right: 0.25rem;
+}
+
+.avatar-sm {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Filter Controls */
+.filter-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-avatar-btn {
+    background: none;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-avatar-btn:hover {
+    border-color: var(--primary);
+    transform: scale(1.1);
+}
+
+.filter-avatar-btn.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+.filter-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: block;
+}
+
+.btn-clear-filter {
+    background-color: var(--light);
+    color: var(--secondary);
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+}
+
+.btn-clear-filter:hover {
+    background-color: var(--border);
+}
+
+.note-icon {
+    color: var(--warning);
+    margin-right: 8px;
+    font-size: 0.9em;
+}
+
+.note-icon.hidden {
+    display: none;
+}
+
+.task-actions {
+    margin-right: auto;
+    margin-left: 10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.task-item:hover .task-actions {
+    opacity: 1;
+}
+
+/* Hidden task for filtering */
+.task-item.filtered-hidden,
+.project-card.filtered-hidden {
+    display: none !important;
+}
+
+/* Delete Button */
+.btn-danger {
+    background-color: var(--danger);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-weight: 500;
     margin-right: 0.5rem;
@@ -613,4 +811,100 @@ body {
 
 .btn-danger:hover {
     background-color: #dc2626;
+}
+
+/* Search Box */
+.navbar-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 0 2rem;
+}
+
+.search-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+}
+
+.search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.5rem 2.5rem 0.5rem 2.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.clear-search {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    font-size: 1.125rem;
+}
+
+.clear-search:hover {
+    color: #4b5563;
+}
+
+.search-highlight {
+    background-color: #fef3c7;
+    font-weight: 600;
+}
+
+.task-item.search-hidden,
+.project-card.search-hidden {
+    display: none !important;
+}
+
+/* Team Filters */
+.team-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-team-btn {
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.filter-team-btn:hover {
+    border-color: #4f46e5;
+    background: #f0f0ff;
+}
+
+.filter-team-btn.active {
+    background: #4f46e5;
+    color: white;
+    border-color: #4f46e5;
 }
