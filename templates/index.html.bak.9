@@ -122,7 +122,7 @@
                                 <span class="task-marker"
                                     style="background-color: {{ priority_colors.get(task.priority, '#cbd5e1') }};"></span>
                                 <span class="task-name">{{ task.task }}</span>
-                                <span class="note-icon{% if not task.notes %} hidden{% endif %}" title="מכיל הערות"
+                                <span class="note-icon{% if not task.notes %} hidden{% endif %}" title="קיים הערות"
                                     style="vertical-align:middle;">
                                     <img src="{{ url_for('static', filename='icons/note.svg') }}" width="16" height="16"
                                         alt="Note" style="vertical-align:middle;">
@@ -272,6 +272,158 @@
         </div>
 
         <script src="{{ url_for('static', filename='script.js') }}"></script>
+        <script>
+            // Add-task-per-project button logic
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('.add-task-project-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var projectName = btn.getAttribute('data-project');
+                        var modal = document.getElementById('createTaskModal');
+                        var projectInput = document.getElementById('createProjectNameInput');
+                        if (projectInput) projectInput.value = projectName;
+                        // Clear other fields
+                        var nameInput = document.getElementById('createTaskNameInput');
+                        if (nameInput) nameInput.value = '';
+                        var statusInput = document.getElementById('createTaskStatus');
+                        if (statusInput) statusInput.value = 'status-inprogress';
+                        var priorityInput = document.getElementById('createTaskPriority');
+                        if (priorityInput) priorityInput.value = 'none';
+                        var notesInput = document.getElementById('createTaskNotes');
+                        if (notesInput) notesInput.value = '';
+                        document.querySelectorAll('#createTaskModal .members-select input[type="checkbox"]').forEach(function (cb) { cb.checked = false; });
+                        modal.style.display = 'block';
+                        modal.style.zIndex = 2000;
+                        modal.style.visibility = 'visible';
+                    });
+                });
+            });
+        </script>
+</body>
+
+<script>
+    // Live clock for navbar
+    function updateClock() {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        // Format: dd/mm/yyyy hh:mm:ss
+        const formatted = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+        const el = document.getElementById('liveClock');
+        if (el) el.textContent = ` ${formatted} `;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+</script>
+
+<script>
+    // Make member filter reset accessible globally
+    window.resetMemberFilter = function () {
+        const memberButtons = document.querySelectorAll('.filter-avatar-btn');
+        memberButtons.forEach(mb => {
+            mb.classList.remove('active');
+        });
+        const allTasks = document.querySelectorAll('.task-item');
+        allTasks.forEach(task => {
+            task.style.display = '';
+        });
+        // Trigger custom event to notify script.js
+        window.dispatchEvent(new CustomEvent('resetMemberFilter'));
+    };
+</script>
+
+<script>
+    // Team filtering logic
+    document.addEventListener('DOMContentLoaded', function () {
+        const teamButtons = document.querySelectorAll('.filter-team-btn');
+        const clearTeamBtn = document.getElementById('clearTeamFilter');
+        const projectCards = document.querySelectorAll('.project-card');
+        const memberButtons = document.querySelectorAll('.filter-avatar-btn');
+
+        teamButtons.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const teamId = this.getAttribute('data-team-id');
+
+                // Update team button styles
+                teamButtons.forEach(b => {
+                    b.style.background = 'white';
+                    b.style.borderColor = '#ddd';
+                    b.style.color = 'inherit';
+                    b.style.fontWeight = 'normal';
+                });
+                this.style.background = '#4F46E5';
+                this.style.color = 'white';
+                this.style.borderColor = '#4F46E5';
+                this.style.fontWeight = 'bold';
+                clearTeamBtn.style.background = '#f5f5f5';
+                clearTeamBtn.style.color = 'inherit';
+
+                // Clear any active member filter and reset task visibility
+                if (typeof window.resetMemberFilter === 'function') {
+                    window.resetMemberFilter();
+                }
+
+                // Filter member buttons - show only members from selected team
+                memberButtons.forEach(mb => {
+                    const memberTeamId = mb.getAttribute('data-team-id');
+                    if (memberTeamId === teamId) {
+                        mb.style.display = 'inline-block';
+                    } else {
+                        mb.style.display = 'none';
+                    }
+                });
+
+                // Filter project cards
+                projectCards.forEach(card => {
+                    const cardTeamId = card.getAttribute('data-team-id');
+                    if (cardTeamId === teamId) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        clearTeamBtn.addEventListener('click', function () {
+            // Reset all team buttons
+            teamButtons.forEach(b => {
+                b.style.background = 'white';
+                b.style.borderColor = '#ddd';
+                b.style.color = 'inherit';
+                b.style.fontWeight = 'normal';
+            });
+            this.style.background = '#4F46E5';
+            this.style.color = 'white';
+
+            // Clear any active member filter
+            memberButtons.forEach(mb => {
+                mb.classList.remove('active');
+            });
+
+            // Reset task filtering - show all tasks
+            const taskItems = document.querySelectorAll('.task-item');
+            taskItems.forEach(task => {
+                task.style.display = 'list-item';
+            });
+
+            // Show all member buttons
+            memberButtons.forEach(mb => {
+                mb.style.display = 'inline-block';
+            });
+
+            // Show all project cards
+            projectCards.forEach(card => {
+                card.style.display = 'block';
+            });
+        });
+    });
+</script>
+</script>
 </body>
 
 </html>
