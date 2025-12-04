@@ -166,6 +166,12 @@
                 <span class="close-modal-create">&times;</span>
                 <h2 id="createModalTitle">יצירת משימה חדשה</h2>
                 <div class="form-group">
+                    <label for="createTaskTeam">צוות:</label>
+                    <select id="createTaskTeam" class="form-control">
+                        <!-- Populated dynamically by JavaScript -->
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="createProjectNameInput">שם הפרויקט:</label>
                     <input type="text" id="createProjectNameInput" class="form-control">
                 </div>
@@ -179,19 +185,13 @@
                         <!-- Populated dynamically by JavaScript -->
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="createTaskTeam">צוות:</label>
-                    <select id="createTaskTeam" class="form-control">
-                        <!-- Populated dynamically by JavaScript -->
-                    </select>
-                </div>
                 <div class="form-row">
                     <div class="form-group half">
                         <label for="createTaskStatus">סטטוס:</label>
                         <select id="createTaskStatus" class="form-control">
+                            <option value="status-notstarted">טרם החל</option>
                             <option value="status-inprogress">בתהליך</option>
                             <option value="status-done">הושלם</option>
-                            <option value="status-notstarted">טרם החל</option>
                             <option value="status-delayed">מעוכב</option>
                         </select>
                     </div>
@@ -221,32 +221,32 @@
                 <span class="close-modal">&times;</span>
                 <h2 id="modalTitle">עריכת משימה</h2>
                 <div class="form-group">
-                    <label for="projectNameInput">שם הפרויקט:</label>
-                    <input type="text" id="projectNameInput" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label for="taskNameInput">שם המשימה:</label>
-                    <input type="text" id="taskNameInput" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label>חברי צוות:</label>
-                    <div class="members-select">
-                        <!-- Populated dynamically by JavaScript -->
-                    </div>
-                </div>
-                <div class="form-group">
                     <label for="taskTeam">צוות:</label>
                     <select id="taskTeam" class="form-control">
                         <!-- Populated dynamically by JavaScript -->
                     </select>
+                    <div class="form-group">
+                        <label for="projectNameInput">שם הפרויקט:</label>
+                        <input type="text" id="projectNameInput" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskNameInput">שם המשימה:</label>
+                        <input type="text" id="taskNameInput" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>חברי צוות:</label>
+                        <div class="members-select">
+                            <!-- Populated dynamically by JavaScript -->
+                        </div>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group half">
                         <label for="taskStatus">סטטוס:</label>
                         <select id="taskStatus" class="form-control">
+                            <option value="status-notstarted">טרם החל</option>
                             <option value="status-inprogress">בתהליך</option>
                             <option value="status-done">הושלם</option>
-                            <option value="status-notstarted">טרם החל</option>
                             <option value="status-delayed">מעוכב</option>
                         </select>
                     </div>
