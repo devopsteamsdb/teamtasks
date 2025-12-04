@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>לוח משימות</title>
+    <title>לוח משימות DevOps</title>
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
 </head>
 
@@ -13,7 +13,8 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <span>לוח משימות</span>
+            <!--<img src="logo.png" alt="DevOps Logo">-->
+            <span>לוח משימות DevOps</span>
         </div>
         <div class="search-container"
             style="display: inline-block; vertical-align: middle; margin-left: 20px; position: relative;">
@@ -152,8 +153,9 @@
                     '': '#cbd5e1'
                     } %}
                     {% set color = project_colors[(loop.index0) % project_colors|length] %}
-                    <span class="project-badge" style="background-color: {{ color.bg }}; color: {{ color.color }};">{{
-                        project_teams.get(project, 'ללא צוות') }}</span>
+                    <span class="project-badge"
+                        style="background-color: {{ color.bg }}; color: {{ color.color }};">פרויקט {{ loop.index
+                        }}</span>
                 </div>
                 <div class="project-body">
                     <ul class="task-list">
@@ -181,20 +183,18 @@
                             <div class="task-meta">
                                 <div class="avatar-group">
                                     {% set member_list = task.members.split(',') if task.members else [] %}
-                                    {% for member_name in member_list %}
-                                    {% set member_key = member_name|lower|trim %}
+                                    {% set hebrew_names = {'elad': 'אלעד', 'guy': 'גיא', 'itamar': 'איתמר', 'noam':
+                                    'נועם', 'david': 'דוד'} %}
+                                    {% for member in member_list %}
+                                    {% set member_key = member|lower|trim %}
                                     {% if member_key %}
-                                    {% set member_obj = members|selectattr('name_en', 'equalto', member_key)|first %}
-                                    {% if member_obj %}
-                                    <img src="{{ url_for('static', filename='images/' + member_obj.avatar_path) }}"
-                                        onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
-                                        class="avatar" title="{{ member_obj.name_he }}">
-                                    {% endif %}
+                                    <img src="{{ url_for('static', filename='images/' + member_key + '.png') }}"
+                                        class="avatar" title="{{ hebrew_names.get(member_key, member) }}">
                                     {% endif %}
                                     {% endfor %}
                                 </div>
                                 <span class="status-badge {{ task.status }}">{{ task.status|replace('status-inprogress',
-                                    'בתהליך')|replace('status-done', 'הושלם')|replace('status-notstarted', 'טרם
+                                    'בתהליך')|replace('status-done', 'הושלם')|replace('status-notstarted', 'לא
                                     החל')|replace('status-delayed', 'מעוכב') }}</span>
                             </div>
                         </li>
@@ -238,7 +238,7 @@
                         <select id="createTaskStatus" class="form-control">
                             <option value="status-inprogress">בתהליך</option>
                             <option value="status-done">הושלם</option>
-                            <option value="status-notstarted">טרם החל</option>
+                            <option value="status-notstarted">לא החל</option>
                             <option value="status-delayed">מעוכב</option>
                         </select>
                     </div>
@@ -293,7 +293,7 @@
                         <select id="taskStatus" class="form-control">
                             <option value="status-inprogress">בתהליך</option>
                             <option value="status-done">הושלם</option>
-                            <option value="status-notstarted">טרם החל</option>
+                            <option value="status-notstarted">לא החל</option>
                             <option value="status-delayed">מעוכב</option>
                         </select>
                     </div>

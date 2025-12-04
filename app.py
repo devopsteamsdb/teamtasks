@@ -256,7 +256,21 @@ def index():
     teams = Team.query.all()
     members = TeamMember.query.all()
     
-    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams)
+    # Create a mapping of project names to team names
+    project_teams = {}
+    for project in projects:
+        # Get the first task of this project to determine its team
+        first_task = Task.query.filter_by(project=project).first()
+        if first_task and first_task.team_id:
+            team = Team.query.get(first_task.team_id)
+            if team:
+                project_teams[project] = team.name_he
+            else:
+                project_teams[project] = None
+        else:
+            project_teams[project] = None
+    
+    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams)
 
 @app.route('/add', methods=['POST'])
 def add_task():
