@@ -141,7 +141,8 @@
                                     {% if member_obj %}
                                     <img src="{{ url_for('static', filename='images/' + member_obj.avatar_path) }}"
                                         onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
-                                        class="avatar" title="{{ member_obj.name_he }}">
+                                        class="avatar" title="{{ member_obj.name_he }}"
+                                        data-member-name="{{ member_obj.name_en }}">
                                     {% endif %}
                                     {% endif %}
                                     {% endfor %}

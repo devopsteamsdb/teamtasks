@@ -254,8 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const avatars = task.querySelectorAll('.avatar');
                 let hasMember = false;
                 avatars.forEach(avatar => {
-                    const src = avatar.getAttribute('src');
-                    if (src.toLowerCase().includes(activeMemberFilter.toLowerCase())) {
+                    const memberName = avatar.dataset.memberName;
+                    if (memberName && memberName === activeMemberFilter) {
                         hasMember = true;
                     }
                 });

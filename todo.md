@@ -1,0 +1,1 @@
+# make the page reload automatically when a task is added or changed. not need to refresh the page manually

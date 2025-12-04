@@ -19,7 +19,12 @@ db.init_app(app)
 def api_add_task():
     data = request.json
     project = data.get('project')
+    if not project or not project.strip():
+        project = "ללא פרויקט"
+        
     task = data.get('task')
+    if not task or not task.strip():
+        task = "ללא שם"
     members = ','.join(data.get('members', []))
     status = data.get('status')
     priority = data.get('priority', 'none')
