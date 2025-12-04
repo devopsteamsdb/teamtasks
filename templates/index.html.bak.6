@@ -13,29 +13,14 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/"><span>לוח משימות</span></a>
+            <span>לוח משימות</span>
         </div>
-
-
         <div class="search-container"
             style="display: inline-block; vertical-align: middle; margin-left: 20px; position: relative;">
             <input type="text" id="searchBox" placeholder="חיפוש משימות..."
                 style="padding: 0.4rem 2rem 0.4rem 1rem; border: 1px solid #ddd; border-radius: 20px; font-size: 0.9rem; width: 250px;">
             <button id="clearSearch"
                 style="position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; display: none; color: #888; font-size: 1.1rem;">×</button>
-        </div>
-        <!-- Team Filter Buttons -->
-        <div style="display: inline-block; margin-left: 1rem;">
-            {% for team in teams %}
-            <button class="filter-team-btn" data-team-id="{{ team.id }}"
-                style="padding: 0.4rem 0.8rem; margin: 0 0.25rem; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;">
-                {{ team.name_he }}
-            </button>
-            {% endfor %}
-            <button id="clearTeamFilter"
-                style="padding: 0.4rem 0.8rem; margin: 0 0.25rem; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
-                הכל
-            </button>
         </div>
         <div class="navbar-meta">
             <a href="/admin" title="ממשק ניהול"
@@ -111,7 +96,19 @@
                 </button>
             </div>
             <div class="filter-controls">
-
+                <!-- Team Filter Buttons -->
+                <div style="display: inline-block; margin-left: 1rem;">
+                    {% for team in teams %}
+                    <button class="filter-team-btn" data-team-id="{{ team.id }}"
+                        style="padding: 0.4rem 0.8rem; margin: 0 0.25rem; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;">
+                        {{ team.name_he }}
+                    </button>
+                    {% endfor %}
+                    <button id="clearTeamFilter"
+                        style="padding: 0.4rem 0.8rem; margin: 0 0.25rem; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
+                        הכל
+                    </button>
+                </div>
 
                 <!-- Separator -->
                 <span
@@ -119,8 +116,7 @@
 
                 <!-- Member Filter Buttons (existing) -->
                 {% for member in members %}
-                <button class="filter-avatar-btn" data-member="{{ member.name_en }}" data-team-id="{{ member.team_id }}"
-                    title="{{ member.name_he }}">
+                <button class="filter-avatar-btn" data-member="{{ member.name_en }}" title="{{ member.name_he }}">
                     <img src="{{ url_for('static', filename='images/' + member.avatar_path) }}" class="filter-avatar">
                 </button>
                 {% endfor %}
@@ -391,17 +387,16 @@
         const teamButtons = document.querySelectorAll('.filter-team-btn');
         const clearTeamBtn = document.getElementById('clearTeamFilter');
         const projectCards = document.querySelectorAll('.project-card');
-        const memberButtons = document.querySelectorAll('.filter-avatar-btn');
 
         teamButtons.forEach(btn => {
             btn.addEventListener('click', function () {
                 const teamId = this.getAttribute('data-team-id');
 
-                // Update team button styles
+                // Update button styles
                 teamButtons.forEach(b => {
                     b.style.background = 'white';
                     b.style.borderColor = '#ddd';
-                    b.style.color = 'inherit';
+                    b.style.color = 'inherit';  // Add this line to reset text color
                     b.style.fontWeight = 'normal';
                 });
                 this.style.background = '#4F46E5';
@@ -410,32 +405,6 @@
                 this.style.fontWeight = 'bold';
                 clearTeamBtn.style.background = '#f5f5f5';
                 clearTeamBtn.style.color = 'inherit';
-
-                // Clear any active member filter
-                memberButtons.forEach(mb => {
-                    mb.classList.remove('active');
-                });
-
-                // Reset the global activeMemberFilter variable from script.js
-                if (typeof activeMemberFilter !== 'undefined') {
-                    activeMemberFilter = null;
-                }
-
-                // Reset task filtering - show all tasks within the selected team
-                const taskItems = document.querySelectorAll('.task-item');
-                taskItems.forEach(task => {
-                    task.style.display = 'list-item';
-                });
-
-                // Filter member buttons - show only members from selected team
-                memberButtons.forEach(mb => {
-                    const memberTeamId = mb.getAttribute('data-team-id');
-                    if (memberTeamId === teamId) {
-                        mb.style.display = 'inline-block';
-                    } else {
-                        mb.style.display = 'none';
-                    }
-                });
 
                 // Filter project cards
                 projectCards.forEach(card => {
@@ -450,7 +419,7 @@
         });
 
         clearTeamBtn.addEventListener('click', function () {
-            // Reset all team buttons
+            // Reset all buttons
             teamButtons.forEach(b => {
                 b.style.background = 'white';
                 b.style.borderColor = '#ddd';
@@ -460,29 +429,12 @@
             this.style.background = '#4F46E5';
             this.style.color = 'white';
 
-            // Clear any active member filter
-            memberButtons.forEach(mb => {
-                mb.classList.remove('active');
-            });
-
-            // Reset task filtering - show all tasks
-            const taskItems = document.querySelectorAll('.task-item');
-            taskItems.forEach(task => {
-                task.style.display = 'list-item';
-            });
-
-            // Show all member buttons
-            memberButtons.forEach(mb => {
-                mb.style.display = 'inline-block';
-            });
-
             // Show all project cards
             projectCards.forEach(card => {
                 card.style.display = 'block';
             });
         });
     });
-</script>
 </script>
 </body>
 
