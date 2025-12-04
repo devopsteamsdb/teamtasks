@@ -111,7 +111,7 @@
                     } %}
                     {% set color = project_colors[(loop.index0) % project_colors|length] %}
                     <span class="project-badge" style="background-color: {{ color.bg }}; color: {{ color.color }};">{{
-                        project_teams.get(project, 'ללא צוות') }}</span>
+                        project_teams.get(project) or 'כללי' }}</span>
                 </div>
                 <div class="project-body">
                     <ul class="task-list">

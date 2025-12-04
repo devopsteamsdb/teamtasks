@@ -254,7 +254,7 @@ def index():
     
     # Get all teams and members dynamically
     teams = Team.query.all()
-    members = TeamMember.query.all()
+    members = TeamMember.query.join(Team).order_by(Team.id, TeamMember.id).all()
     
     # Create a mapping of project names to team names
     project_teams = {}

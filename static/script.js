@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Reset task filtering - show all tasks
         const taskItems = document.querySelectorAll('.task-item');
         taskItems.forEach(task => {
-            task.style.display = 'list-item';
+            task.style.display = '';
         });
 
         // Show all member buttons
