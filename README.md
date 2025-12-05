@@ -58,9 +58,13 @@ A modern, bilingual (Hebrew/English) task management application built with Flas
 
 ### Main Dashboard
 The main task board with team filtering and search capabilities.
+<img width="1912" height="907" alt="image" src="https://github.com/user-attachments/assets/baf73720-620d-44ad-9695-ab0be1abe49f" />
+
 
 ### Admin Panel
 Manage teams and members, upload avatars, and configure settings.
+<img width="1915" height="729" alt="image" src="https://github.com/user-attachments/assets/0f5d9854-24ad-4635-a6d0-45fd2706e054" />
+
 
 ---
 
@@ -440,3 +444,4 @@ For issues, questions, or contributions:
 ---
 
 **Made with ❤️ by the DevOps Team**
+
