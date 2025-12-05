@@ -1,1 +1,0 @@
-- [x] when page load data, the page loads all tasks and then filtering it. its seems like "2 phases reload" can you fix it for not seeing "all tasks" for 1 second?

@@ -1,0 +1,126 @@
+# Default values for teamtasks
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: devopsteamsdb/devopsteamsdb
+  pullPolicy: IfNotPresent
+  tag: "teamtasks_latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  # OpenShift uses arbitrary UIDs, so we don't set runAsUser
+  fsGroup: 1000
+
+securityContext:
+  # OpenShift requires these to be unset or use arbitrary UIDs
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 5000
+  targetPort: 5000
+
+# OpenShift Route configuration
+route:
+  enabled: true
+  host: ""  # Leave empty for auto-generated hostname
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  annotations: {}
+
+# Ingress configuration (alternative to Route for non-OpenShift)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: teamtasks.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+# Persistent Volume Claims
+persistence:
+  database:
+    enabled: true
+    storageClass: ""  # Use default storage class
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    annotations: {}
+  
+  uploads:
+    enabled: true
+    storageClass: ""  # Use default storage class
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    annotations: {}
+
+# Environment variables
+env:
+  - name: FLASK_ENV
+    value: "production"
+  - name: FLASK_APP
+    value: "app.py"
+
+# Health check configuration
+livenessProbe:
+  httpGet:
+    path: /api/version
+    port: 5000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/version
+    port: 5000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

@@ -65,7 +65,8 @@
                 <button class="filter-avatar-btn" data-member="{{ member.name_en }}" data-team-id="{{ member.team_id }}"
                     title="{{ member.name_he }}"
                     style="{% if active_team_id and member.team_id != active_team_id %}display:none;{% endif %}">
-                    <img src="{{ url_for('static', filename='images/' + member.avatar_path) }}" class="filter-avatar">
+                    <img src="/uploads/avatars/{{ member.avatar_path }}" class="filter-avatar"
+                        onerror="this.src='{{ url_for('static', filename='images/default.png') }}'">
                 </button>
                 {% endfor %}
             </div>
@@ -150,7 +151,7 @@
                                     {% if member_key %}
                                     {% set member_obj = members|selectattr('name_en', 'equalto', member_key)|first %}
                                     {% if member_obj %}
-                                    <img src="{{ url_for('static', filename='images/' + member_obj.avatar_path) }}"
+                                    <img src="/uploads/avatars/{{ member_obj.avatar_path }}"
                                         onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
                                         class="avatar" title="{{ member_obj.name_he }}"
                                         data-member-name="{{ member_obj.name_en }}">

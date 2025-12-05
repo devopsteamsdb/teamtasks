@@ -8,11 +8,20 @@ import time
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'static/images'
+app.config['UPLOAD_FOLDER'] = 'uploads/avatars'
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
 # Import models and initialize db
 from models import db, Team, TeamMember, Task
 db.init_app(app)
+
+# Ensure upload directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Route to serve uploaded files
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Serve uploaded files from the uploads directory"""
+    return send_from_directory('uploads', filename)
 
 @app.route('/api/version')
 def api_version():
@@ -51,7 +60,6 @@ def api_add_task():
     notes = data.get('notes', '')
     team_id = data.get('team_id')
     new_task = Task(project=project, task=task, members=members, status=status, priority=priority, notes=notes, team_id=team_id)
-    new_task = Task(project=project, task=task, members=members, status=status, priority=priority, notes=notes, team_id=team_id)
     db.session.add(new_task)
     db.session.commit()
     
@@ -68,7 +76,6 @@ def api_edit_task(id):
     task.status = data.get('status', task.status)
     task.priority = data.get('priority', task.priority)
     task.notes = data.get('notes', task.notes)
-    task.team_id = data.get('team_id', task.team_id)
     task.team_id = data.get('team_id', task.team_id)
     db.session.commit()
     
@@ -107,7 +114,6 @@ def api_create_team():
     if existing:
         return jsonify({'success': False, 'error': 'Team with this English name already exists'}), 400
     
-    team = Team(name_en=name_en, name_he=name_he)
     team = Team(name_en=name_en, name_he=name_he)
     db.session.add(team)
     db.session.commit()
@@ -280,16 +286,11 @@ def index():
         query = query.filter(Task.project == project_filter)
     if member_filter:
         query = query.filter(Task.members.contains(member_filter))
-    if member_filter:
-        query = query.filter(Task.members.contains(member_filter))
     # Team filtering is now handled client-side to prevent flickering
     # But we pass the active team ID to the template for initial state
     active_team_id = None
     if team_filter and team_filter.isdigit():
         active_team_id = int(team_filter)
-        
-    # if team_filter:
-    #     query = query.filter(Task.team_id == team_filter)
 
     tasks = query.all()
     projects = [project[0] for project in db.session.query(distinct(Task.project)).all()]
@@ -312,45 +313,13 @@ def index():
         else:
             project_teams[project] = None
     
-            project_teams[project] = None
-    
     return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams, active_team_id=active_team_id)
 
-@app.route('/add', methods=['POST'])
-def add_task():
-    project = request.form['project']
-    task = request.form['task']
-    members = ','.join(request.form.getlist('members'))
-    status = request.form['status']
-    priority = request.form['priority']
-    notes = request.form.get('notes', '')
-    new_task = Task(project=project, task=task, members=members, status=status, priority=priority, notes=notes)
-    db.session.add(new_task)
-    db.session.commit()
-    return redirect(url_for('index'))
 
-@app.route('/edit/<int:id>', methods=['GET', 'POST'])
-def edit_task(id):
-    task = Task.query.get_or_404(id)
-    projects = [project[0] for project in db.session.query(distinct(Task.project)).all()]
-    if request.method == 'POST':
-        task.project = request.form['project']
-        task.task = request.form['task']
-        task.members = ','.join(request.form.getlist('members'))
-        task.status = request.form['status']
-        task.priority = request.form['priority']
-        task.notes = request.form.get('notes', '')
-        db.session.commit()
-        return redirect(url_for('index'))
-    return render_template('edit.html', task=task, projects=projects)
 
-@app.route('/delete/<int:id>')
-def delete_task(id):
-    task = Task.query.get_or_404(id)
-    task = Task.query.get_or_404(id)
-    db.session.delete(task)
-    db.session.commit()
-    return redirect(url_for('index'))
+
+
+
 
 @app.route('/print')
 def print_view():

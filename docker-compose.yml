@@ -1,6 +1,29 @@
-version: '3'
+version: '3.8'
+
 services:
-  myservice:
+  teamtasks:
     image: devopsteamsdb/devopsteamsdb:teamtasks_latest
+    container_name: teamtasks-app
     ports:
       - "5000:5000"
+    volumes:
+      # Database persistence
+      - teamtasks-db:/app/instance
+      # User-uploaded avatars persistence
+      - teamtasks-uploads:/app/uploads
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=app.py
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/api/version" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  teamtasks-db:
+    driver: local
+  teamtasks-uploads:
+    driver: local
