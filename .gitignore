@@ -4,3 +4,7 @@
 
 # Ignore static files (Contains images)
 /static/images/*
+
+# Python cache
+__pycache__/
+*.pyc
