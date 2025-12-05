@@ -24,13 +24,11 @@
         <!-- Team Filter Buttons -->
         <div class="team-filter-group">
             {% for team in teams %}
-            <button class="filter-team-btn" data-team-id="{{ team.id }}">
+            <button class="filter-team-btn {% if active_team_id == team.id %}active{% endif %}"
+                data-team-id="{{ team.id }}">
                 {{ team.name_he }}
             </button>
             {% endfor %}
-            <button id="clearTeamFilter" class="filter-team-btn">
-                הכל
-            </button>
         </div>
         <div class="navbar-meta">
             <a href="/admin" title="ממשק ניהול" class="navbar-icon-link">
@@ -65,7 +63,8 @@
                 <!-- Member Filter Buttons (existing) -->
                 {% for member in members %}
                 <button class="filter-avatar-btn" data-member="{{ member.name_en }}" data-team-id="{{ member.team_id }}"
-                    title="{{ member.name_he }}">
+                    title="{{ member.name_he }}"
+                    style="{% if active_team_id and member.team_id != active_team_id %}display:none;{% endif %}">
                     <img src="{{ url_for('static', filename='images/' + member.avatar_path) }}" class="filter-avatar">
                 </button>
                 {% endfor %}
@@ -74,8 +73,19 @@
 
         <div class="projects-grid">
             {% for project in projects %}
-            <div class="project-card"
-                data-team-id="{{ tasks|selectattr('project', 'equalto', project)|map(attribute='team_id')|first }}">
+            {% set project_tasks = tasks|selectattr('project', 'equalto', project)|list %}
+            {% set project_team_id = project_tasks|map(attribute='team_id')|first %}
+            {% set project_visible = True %}
+            {% if active_team_id %}
+            {# Check if any task in project matches active team #}
+            {% set matching_tasks = project_tasks|selectattr('team_id', 'equalto', active_team_id)|list %}
+            {% if matching_tasks|length == 0 %}
+            {% set project_visible = False %}
+            {% endif %}
+            {% endif %}
+
+            <div class="project-card {% if not project_visible %}filtered-hidden{% endif %}"
+                data-team-id="{{ project_team_id }}">
                 <div class="project-header">
                     <span class="project-title">
                         <button class="add-task-project-btn" data-project="{{ project }}" title="הוסף משימה לפרויקט זה">
@@ -116,8 +126,9 @@
                 <div class="project-body">
                     <ul class="task-list">
                         {% for task in tasks if task.project == project %}
-                        <li class="task-item" data-id="{{ task.id }}" data-notes="{{ task.notes|default('') }}"
-                            data-priority="{{ task.priority|default('none') }}">
+                        <li class="task-item {% if active_team_id and task.team_id != active_team_id %}filtered-hidden{% endif %}"
+                            data-id="{{ task.id }}" data-notes="{{ task.notes|default('') }}"
+                            data-priority="{{ task.priority|default('none') }}" data-team-id="{{ task.team_id }}">
                             <div class="task-info">
                                 <span class="task-marker"
                                     style="background-color: {{ priority_colors.get(task.priority, '#cbd5e1') }};"></span>

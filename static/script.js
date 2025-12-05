@@ -6,61 +6,64 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeTeamFilter = null;
     let activeMemberFilter = null;
     let searchTimeout;
+    let lastUpdateTimestamp = 0;
 
-    // Listen for member filter reset event
-    window.addEventListener('resetMemberFilter', function () {
-        activeMemberFilter = null;
-        applyFilters();
-    });
-
-    // DOM Elements - Modals
-    const modal = document.getElementById('taskModal');
-    const createModal = document.getElementById('createTaskModal');
-    const closeModal = document.querySelector('.close-modal');
-    const closeCreateModal = document.querySelector('.close-modal-create');
-
-    // DOM Elements - Forms
-    const saveBtn = document.getElementById('saveBtn');
-    const deleteBtn = document.getElementById('deleteBtn');
-    const createSaveBtn = document.getElementById('createSaveBtn');
-
-    // DOM Elements - Inputs (Edit)
-    const taskNameInput = document.getElementById('taskNameInput');
-    const projectNameInput = document.getElementById('projectNameInput');
-    const taskStatus = document.getElementById('taskStatus');
-    const taskPriority = document.getElementById('taskPriority');
-    const taskNotes = document.getElementById('taskNotes');
-    const taskTeam = document.getElementById('taskTeam');
-
-    // DOM Elements - Inputs (Create)
-    const createTaskNameInput = document.getElementById('createTaskNameInput');
-    const createProjectNameInput = document.getElementById('createProjectNameInput');
-    const createTaskStatus = document.getElementById('createTaskStatus');
-    const createTaskPriority = document.getElementById('createTaskPriority');
-    const createTaskNotes = document.getElementById('createTaskNotes');
-    const createTaskTeam = document.getElementById('createTaskTeam');
-
-    // DOM Elements - Search & Filter
-    const searchBox = document.getElementById('searchBox');
-    const clearSearchBtn = document.getElementById('clearSearch');
-    const teamFilterButtons = document.querySelectorAll('.filter-team-btn');
-    const memberFilterButtons = document.querySelectorAll('.filter-avatar-btn');
+    // DOM Elements Cache
+    let modal, createModal, closeModal, closeCreateModal;
+    let saveBtn, deleteBtn, createSaveBtn;
+    let taskNameInput, projectNameInput, taskStatus, taskPriority, taskNotes, taskTeam;
+    let createTaskNameInput, createProjectNameInput, createTaskStatus, createTaskPriority, createTaskNotes, createTaskTeam;
+    let searchBox, clearSearchBtn, teamFilterButtons, memberFilterButtons;
 
     // Initialize
     init();
 
+    function updateDOMElements() {
+        modal = document.getElementById('taskModal');
+        createModal = document.getElementById('createTaskModal');
+        closeModal = document.querySelector('.close-modal');
+        closeCreateModal = document.querySelector('.close-modal-create');
+
+        saveBtn = document.getElementById('saveBtn');
+        deleteBtn = document.getElementById('deleteBtn');
+        createSaveBtn = document.getElementById('createSaveBtn');
+
+        taskNameInput = document.getElementById('taskNameInput');
+        projectNameInput = document.getElementById('projectNameInput');
+        taskStatus = document.getElementById('taskStatus');
+        taskPriority = document.getElementById('taskPriority');
+        taskNotes = document.getElementById('taskNotes');
+        taskTeam = document.getElementById('taskTeam');
+
+        createTaskNameInput = document.getElementById('createTaskNameInput');
+        createProjectNameInput = document.getElementById('createProjectNameInput');
+        createTaskStatus = document.getElementById('createTaskStatus');
+        createTaskPriority = document.getElementById('createTaskPriority');
+        createTaskNotes = document.getElementById('createTaskNotes');
+        createTaskTeam = document.getElementById('createTaskTeam');
+
+        searchBox = document.getElementById('searchBox');
+        clearSearchBtn = document.getElementById('clearSearch');
+        teamFilterButtons = document.querySelectorAll('.filter-team-btn');
+        memberFilterButtons = document.querySelectorAll('.filter-avatar-btn');
+    }
+
     async function init() {
-        await Promise.all([loadTeams(), loadMembers()]);
+        updateDOMElements();
+        await Promise.all([loadTeams(), loadMembers(), checkVersion(true)]);
         populateDropdowns();
         populateMemberCheckboxes();
         attachEventListeners();
+        attachGlobalListeners();
+
+        // Start polling for updates
+        setInterval(() => checkVersion(false), 5000);
 
         // Check URL for team filter
         const urlParams = new URLSearchParams(window.location.search);
         const teamId = urlParams.get('team');
         if (teamId) {
-            const btn = document.querySelector(`.filter-team-btn[data-team-id="${teamId}"]`);
-            if (btn) btn.click();
+            activeTeamFilter = teamId;
         }
     }
 
@@ -80,6 +83,60 @@ document.addEventListener('DOMContentLoaded', () => {
             members = await response.json();
         } catch (error) {
             console.error('Error loading members:', error);
+        }
+    }
+
+    async function checkVersion(firstLoad = false) {
+        try {
+            const response = await fetch('/api/version?t=' + new Date().getTime());
+            const data = await response.json();
+
+            if (firstLoad) {
+                lastUpdateTimestamp = data.timestamp;
+            } else if (data.timestamp > lastUpdateTimestamp) {
+                lastUpdateTimestamp = data.timestamp;
+                await refreshContent();
+            }
+        } catch (error) {
+            console.error('Error checking version:', error);
+        }
+    }
+
+    async function refreshContent() {
+        try {
+            const response = await fetch(window.location.href);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            const newMainContainer = doc.querySelector('.main-container');
+            const newNavbar = doc.querySelector('.navbar');
+
+            if (newMainContainer) {
+                document.querySelector('.main-container').innerHTML = newMainContainer.innerHTML;
+            }
+
+            // Only update navbar if changed (to prevent flicker)
+            const currentNavbar = document.querySelector('.navbar');
+            if (newNavbar && currentNavbar.innerHTML !== newNavbar.innerHTML) {
+                currentNavbar.innerHTML = newNavbar.innerHTML;
+            }
+
+            // Re-initialize DOM elements and listeners
+            updateDOMElements();
+            populateDropdowns(); // Re-populate dropdowns as modals are recreated
+            attachEventListeners();
+
+            // Re-apply filters if needed
+            if (activeTeamFilter) {
+                // Ensure active class on button
+                const btn = document.querySelector(`.filter-team-btn[data-team-id="${activeTeamFilter}"]`);
+                if (btn) btn.classList.add('active');
+            }
+            applyFilters();
+
+        } catch (error) {
+            console.error('Error refreshing content:', error);
         }
     }
 
@@ -109,16 +166,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event Listeners
+    // Global Listeners (attached once)
+    function attachGlobalListeners() {
+        // Listen for member filter reset event
+        window.addEventListener('resetMemberFilter', function () {
+            activeMemberFilter = null;
+            if (memberFilterButtons) {
+                memberFilterButtons.forEach(b => b.classList.remove('active'));
+            }
+            applyFilters();
+        });
+
+        window.addEventListener('click', (e) => {
+            // We need to check modal visibility because element references might be stale if not updated properly
+            // But we update modal variables on refreshContent, so it should be fine.
+            if (modal && e.target == modal) modal.style.display = 'none';
+            if (createModal && e.target == createModal) createModal.style.display = 'none';
+        });
+    }
+
+    // Content Listeners (attached on init and refresh)
     function attachEventListeners() {
         // Modals
         if (closeModal) closeModal.addEventListener('click', () => modal.style.display = 'none');
         if (closeCreateModal) closeCreateModal.addEventListener('click', () => createModal.style.display = 'none');
-
-        window.addEventListener('click', (e) => {
-            if (e.target == modal) modal.style.display = 'none';
-            if (e.target == createModal) createModal.style.display = 'none';
-        });
 
         // Task Items
         document.querySelectorAll('.task-item').forEach(item => {
@@ -173,16 +244,40 @@ document.addEventListener('DOMContentLoaded', () => {
         teamFilterButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const teamId = btn.dataset.teamId;
+
+                // Check if clicking currently active team (deselect logic)
                 if (activeTeamFilter === teamId) {
                     activeTeamFilter = null;
                     btn.classList.remove('active');
-                    updateUrlParams('team', null);
-                } else {
-                    activeTeamFilter = teamId;
-                    teamFilterButtons.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    updateUrlParams('team', teamId);
+
+                    // Clear URL param
+                    const url = new URL(window.location);
+                    url.searchParams.delete('team');
+                    window.history.pushState({}, '', url);
+
+                    // Reset task visibility (show all)
+                    document.querySelectorAll('.project-card').forEach(card => {
+                        card.classList.remove('filtered-hidden');
+                        card.style.display = '';
+                    });
+
+                    // Reset member filters too
+                    if (typeof window.resetMemberFilter === 'function') {
+                        window.resetMemberFilter();
+                    }
+                    // Make sure member buttons are shown
+                    if (memberFilterButtons) {
+                        memberFilterButtons.forEach(mb => mb.style.display = 'inline-block');
+                    }
+                    return;
                 }
+
+                // Select Logic
+                activeTeamFilter = teamId;
+                teamFilterButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateUrlParams('team', teamId);
+
                 applyFilters();
             });
         });
@@ -194,12 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (activeMemberFilter === member) {
                     activeMemberFilter = null;
                     btn.classList.remove('active');
-                    // updateUrlParams('member', null);
                 } else {
                     activeMemberFilter = member;
                     memberFilterButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    // updateUrlParams('member', member);
                 }
                 applyFilters();
             });
@@ -224,28 +317,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Team Filter
             if (activeTeamFilter) {
-                // Check if we have data-team-id on the task item.
-                // If not, we need to rely on the project badge or fetch it.
-                // Assuming we will add data-team-id to the task item in index.html.
-                // For now, let's try to match by project name if we have team info loaded.
-                // But wait, the task item doesn't have team info directly.
-                // We need to add data-team-id to the task item in index.html.
                 const taskTeamId = task.dataset.teamId;
                 if (taskTeamId && taskTeamId !== activeTeamFilter) {
                     visible = false;
                 } else if (!taskTeamId) {
-                    // If no team ID on task, maybe it's a legacy task or we forgot to add the attribute.
-                    // Let's assume it doesn't match if we are filtering by team.
+                    // Check project team? No, assume task data is correct.
                     // visible = false; 
-                    // Actually, let's try to be smart.
-                    // We can check the project badge in the same card? No, tasks can be in different projects.
-                    // The project card has the badge.
-                    // Let's check the project card's team.
-                    const projectCard = task.closest('.project-card');
-                    const badge = projectCard.querySelector('.project-badge');
-                    // This is hard because badge text is Hebrew name.
-                    // We need the ID.
-                    // Best solution: Add data-team-id to task-item in index.html.
                 }
             }
 
@@ -271,6 +348,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Hide project cards with no visible tasks
         document.querySelectorAll('.project-card').forEach(card => {
+            // Handle team filter visibility for project cards via class first
+            const cardTeamId = card.getAttribute('data-team-id');
+            if (activeTeamFilter && cardTeamId && cardTeamId !== activeTeamFilter) {
+                card.classList.add('filtered-hidden');
+                return; // Skip further checks
+            } else if (activeTeamFilter && cardTeamId && cardTeamId === activeTeamFilter) {
+                card.classList.remove('filtered-hidden');
+            }
+
             const visibleTasks = card.querySelectorAll('.task-item:not(.filtered-hidden):not(.search-hidden)');
             if (visibleTasks.length === 0) {
                 card.classList.add('filtered-hidden');
@@ -278,6 +364,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.classList.remove('filtered-hidden');
             }
         });
+
+        // Filter member buttons based on team
+        if (activeTeamFilter) {
+            memberFilterButtons.forEach(mb => {
+                const memberTeamId = mb.getAttribute('data-team-id');
+                if (memberTeamId === activeTeamFilter) {
+                    mb.style.display = 'inline-block';
+                } else {
+                    mb.style.display = 'none';
+                }
+            });
+        } else {
+            memberFilterButtons.forEach(mb => mb.style.display = 'inline-block');
+        }
     }
 
     // Modal Logic
@@ -312,8 +412,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Set Team
-        // We need to set the team dropdown.
-        // If we have data-team-id on task item, use it.
         if (taskItem.dataset.teamId) {
             taskTeam.value = taskItem.dataset.teamId;
         } else {
@@ -362,7 +460,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
             if (data.success) {
-                location.reload();
+                // Manually trigger refresh after save
+                checkVersion(false);
+                // Close modal
+                modal.style.display = 'none';
             } else {
                 alert('שגיאה בשמירת המשימה');
             }
@@ -392,7 +493,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
             if (data.success) {
-                location.reload();
+                checkVersion(false);
+                createModal.style.display = 'none';
             } else {
                 alert('שגיאה ביצירת המשימה');
             }
@@ -413,7 +515,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
             if (data.success) {
-                location.reload();
+                checkVersion(false);
+                modal.style.display = 'none';
             } else {
                 alert('שגיאה במחיקת המשימה');
             }
@@ -477,36 +580,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================
-// INLINE SCRIPTS MOVED FROM INDEX.HTML
+// INLINE SCRIPTS MOVED FROM INDEX.HTML (Refactored into main logic if possible, or kept global)
 // ============================================
 
-// Add-task-per-project button logic
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.add-task-project-btn').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            var projectName = btn.getAttribute('data-project');
-            var modal = document.getElementById('createTaskModal');
-            var projectInput = document.getElementById('createProjectNameInput');
-            if (projectInput) projectInput.value = projectName;
-            // Clear other fields
-            var nameInput = document.getElementById('createTaskNameInput');
-            if (nameInput) nameInput.value = '';
-            var statusInput = document.getElementById('createTaskStatus');
-            if (statusInput) statusInput.value = 'status-inprogress';
-            var priorityInput = document.getElementById('createTaskPriority');
-            if (priorityInput) priorityInput.value = 'none';
-            var notesInput = document.getElementById('createTaskNotes');
-            if (notesInput) notesInput.value = '';
-            document.querySelectorAll('#createTaskModal .members-select input[type=\"checkbox\"]').forEach(function (cb) { cb.checked = false; });
-            modal.style.display = 'block';
-            modal.style.zIndex = 2000;
-            modal.style.visibility = 'visible';
-        });
-    });
-});
-
-// Live clock for navbar
+// Live clock for navbar (Global)
 function updateClock() {
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -515,7 +592,6 @@ function updateClock() {
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
-    // Format: dd/mm/yyyy hh:mm:ss
     const formatted = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
     const el = document.getElementById('liveClock');
     if (el) el.textContent = ` ${formatted} `;
@@ -525,89 +601,6 @@ updateClock();
 
 // Make member filter reset accessible globally
 window.resetMemberFilter = function () {
-    const memberButtons = document.querySelectorAll('.filter-avatar-btn');
-    memberButtons.forEach(mb => {
-        mb.classList.remove('active');
-    });
-    const allTasks = document.querySelectorAll('.task-item');
-    allTasks.forEach(task => {
-        task.style.display = '';
-    });
-    // Trigger custom event to notify script.js
+    // This is dispatched custom event, listener handles logic
     window.dispatchEvent(new CustomEvent('resetMemberFilter'));
 };
-
-// Team filtering logic
-document.addEventListener('DOMContentLoaded', function () {
-    const teamButtons = document.querySelectorAll('.filter-team-btn');
-    const clearTeamBtn = document.getElementById('clearTeamFilter');
-    const projectCards = document.querySelectorAll('.project-card');
-    const memberButtons = document.querySelectorAll('.filter-avatar-btn');
-
-    teamButtons.forEach(btn => {
-        btn.addEventListener('click', function () {
-            const teamId = this.getAttribute('data-team-id');
-
-            // Update team button styles
-            teamButtons.forEach(b => {
-                b.classList.remove('active');
-            });
-            this.classList.add('active');
-            clearTeamBtn.classList.remove('active');
-
-            // Clear any active member filter and reset task visibility
-            if (typeof window.resetMemberFilter === 'function') {
-                window.resetMemberFilter();
-            }
-
-            // Filter member buttons - show only members from selected team
-            memberButtons.forEach(mb => {
-                const memberTeamId = mb.getAttribute('data-team-id');
-                if (memberTeamId === teamId) {
-                    mb.style.display = 'inline-block';
-                } else {
-                    mb.style.display = 'none';
-                }
-            });
-
-            // Filter project cards
-            projectCards.forEach(card => {
-                const cardTeamId = card.getAttribute('data-team-id');
-                if (cardTeamId === teamId) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        });
-    });
-
-    clearTeamBtn.addEventListener('click', function () {
-        // Reset all team buttons
-        teamButtons.forEach(b => {
-            b.classList.remove('active');
-        });
-        this.classList.add('active');
-
-        // Clear any active member filter
-        memberButtons.forEach(mb => {
-            mb.classList.remove('active');
-        });
-
-        // Reset task filtering - show all tasks
-        const taskItems = document.querySelectorAll('.task-item');
-        taskItems.forEach(task => {
-            task.style.display = '';
-        });
-
-        // Show all member buttons
-        memberButtons.forEach(mb => {
-            mb.style.display = 'inline-block';
-        });
-
-        // Show all project cards
-        projectCards.forEach(card => {
-            card.style.display = 'block';
-        });
-    });
-});

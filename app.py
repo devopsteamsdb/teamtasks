@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, jsonify, s
 from sqlalchemy import case, distinct, or_
 from werkzeug.utils import secure_filename
 import os
+import time
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -9,10 +10,29 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/images'
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
-
 # Import models and initialize db
 from models import db, Team, TeamMember, Task
 db.init_app(app)
+
+@app.route('/api/version')
+def api_version():
+    try:
+        # Check database file modification time
+        db_path = os.path.join(app.instance_path, 'tasks.db')
+        # If app.instance_path is not where we expect, try relative
+        if not os.path.exists(db_path):
+             db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'tasks.db')
+             
+        if os.path.exists(db_path):
+            timestamp = os.path.getmtime(db_path)
+        else:
+            timestamp = time.time()
+            
+        response = jsonify({'timestamp': timestamp})
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return response
+    except Exception:
+        return jsonify({'timestamp': time.time()})
 
 # API endpoint to add a task (AJAX)
 @app.route('/api/tasks', methods=['POST'])
@@ -31,8 +51,10 @@ def api_add_task():
     notes = data.get('notes', '')
     team_id = data.get('team_id')
     new_task = Task(project=project, task=task, members=members, status=status, priority=priority, notes=notes, team_id=team_id)
+    new_task = Task(project=project, task=task, members=members, status=status, priority=priority, notes=notes, team_id=team_id)
     db.session.add(new_task)
     db.session.commit()
+    
     return jsonify({'success': True, 'id': new_task.id})
 
 # API endpoint to edit a task (AJAX)
@@ -47,7 +69,9 @@ def api_edit_task(id):
     task.priority = data.get('priority', task.priority)
     task.notes = data.get('notes', task.notes)
     task.team_id = data.get('team_id', task.team_id)
+    task.team_id = data.get('team_id', task.team_id)
     db.session.commit()
+    
     return jsonify({'success': True})
 
 # API endpoint to delete a task (AJAX)
@@ -56,6 +80,7 @@ def api_delete_task(id):
     task = Task.query.get_or_404(id)
     db.session.delete(task)
     db.session.commit()
+    
     return jsonify({'success': True})
 
 
@@ -83,8 +108,10 @@ def api_create_team():
         return jsonify({'success': False, 'error': 'Team with this English name already exists'}), 400
     
     team = Team(name_en=name_en, name_he=name_he)
+    team = Team(name_en=name_en, name_he=name_he)
     db.session.add(team)
     db.session.commit()
+    
     return jsonify({'success': True, 'team': team.to_dict()})
 
 # Update a team
@@ -99,6 +126,7 @@ def api_update_team(id):
         team.name_he = data['name_he'].strip()
     
     db.session.commit()
+    
     return jsonify({'success': True, 'team': team.to_dict()})
 
 # Delete a team
@@ -107,6 +135,7 @@ def api_delete_team(id):
     team = Team.query.get_or_404(id)
     db.session.delete(team)
     db.session.commit()
+    
     return jsonify({'success': True})
 
 
@@ -145,6 +174,7 @@ def api_add_team_member(team_id):
     )
     db.session.add(member)
     db.session.commit()
+    
     return jsonify({'success': True, 'member': member.to_dict()})
 
 # Update a team member
@@ -161,6 +191,7 @@ def api_update_team_member(team_id, member_id):
         member.avatar_path = data['avatar_path']
     
     db.session.commit()
+    
     return jsonify({'success': True, 'member': member.to_dict()})
 
 # Delete a team member
@@ -169,6 +200,7 @@ def api_delete_team_member(team_id, member_id):
     member = TeamMember.query.filter_by(id=member_id, team_id=team_id).first_or_404()
     db.session.delete(member)
     db.session.commit()
+    
     return jsonify({'success': True})
 
 # Upload avatar for a team member
@@ -251,6 +283,11 @@ def index():
     if member_filter:
         query = query.filter(Task.members.contains(member_filter))
     # Team filtering is now handled client-side to prevent flickering
+    # But we pass the active team ID to the template for initial state
+    active_team_id = None
+    if team_filter and team_filter.isdigit():
+        active_team_id = int(team_filter)
+        
     # if team_filter:
     #     query = query.filter(Task.team_id == team_filter)
 
@@ -275,7 +312,9 @@ def index():
         else:
             project_teams[project] = None
     
-    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams)
+            project_teams[project] = None
+    
+    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams, active_team_id=active_team_id)
 
 @app.route('/add', methods=['POST'])
 def add_task():
@@ -307,6 +346,7 @@ def edit_task(id):
 
 @app.route('/delete/<int:id>')
 def delete_task(id):
+    task = Task.query.get_or_404(id)
     task = Task.query.get_or_404(id)
     db.session.delete(task)
     db.session.commit()
