@@ -1,0 +1,43 @@
+{{- if .Values.persistence.database.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "teamtasks.fullname" . }}-database
+  labels:
+    {{- include "teamtasks.labels" . | nindent 4 }}
+  {{- with .Values.persistence.database.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.database.accessMode }}
+  {{- if .Values.persistence.database.storageClass }}
+  storageClassName: {{ .Values.persistence.database.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.database.size }}
+{{- end }}
+---
+{{- if .Values.persistence.uploads.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "teamtasks.fullname" . }}-uploads
+  labels:
+    {{- include "teamtasks.labels" . | nindent 4 }}
+  {{- with .Values.persistence.uploads.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.uploads.accessMode }}
+  {{- if .Values.persistence.uploads.storageClass }}
+  storageClassName: {{ .Values.persistence.uploads.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.uploads.size }}
+{{- end }}

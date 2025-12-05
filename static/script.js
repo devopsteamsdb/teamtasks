@@ -159,8 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = members.map(member => `
                 <label class="member-checkbox">
                     <input type="checkbox" value="${member.name_en}" 
-                           data-img="/static/images/${member.avatar_path}">
-                    <img src="/static/images/${member.avatar_path}" class="avatar-sm"> ${member.name_he}
+                           data-img="/uploads/avatars/${member.avatar_path}">
+                    <img src="/uploads/avatars/${member.avatar_path}" class="avatar-sm"
+                         onerror="this.src='/static/images/default.png'"> ${member.name_he}
                 </label>
             `).join('');
         });
@@ -277,6 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 teamFilterButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 updateUrlParams('team', teamId);
+
+                // Clear member filter when switching teams
+                activeMemberFilter = null;
+                memberFilterButtons.forEach(mb => mb.classList.remove('active'));
 
                 applyFilters();
             });

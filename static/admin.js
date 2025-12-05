@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveMemberBtn.addEventListener('click', saveMember);
     cancelTeamBtn.addEventListener('click', () => closeModal(teamModal));
     cancelMemberBtn.addEventListener('click', () => closeModal(memberModal));
-    
+
     closeModalBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             closeModal(teamModal);
@@ -118,7 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${team.members.map(member => `
                         <div class="member-item">
                             <div class="member-info">
-                                <img src="/static/images/${member.avatar_path}" class="member-avatar" alt="${member.name_he}">
+                            <img src="/uploads/avatars/${member.avatar_path}" class="member-avatar" alt="${member.name_he}"
+                                 onerror="this.src='/static/images/default.png'">
                                 <div class="member-names">
                                     <span class="member-name-he">${member.name_he}</span>
                                     <span class="member-name-en">${member.name_en}</span>
@@ -196,11 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openTeamModal(teamId = null) {
         currentTeam = teamId ? teams.find(t => t.id === teamId) : null;
-        
+
         document.getElementById('teamModalTitle').textContent = currentTeam ? 'ערוך צוות' : 'הוסף צוות חדש';
         document.getElementById('teamNameEn').value = currentTeam ? currentTeam.name_en : '';
         document.getElementById('teamNameHe').value = currentTeam ? currentTeam.name_he : '';
-        
+
         teamModal.style.display = 'block';
     }
 
@@ -209,15 +210,15 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTeam = team;
         currentMember = memberId ? team.members.find(m => m.id === memberId) : null;
         selectedFile = null;
-        
+
         document.getElementById('memberModalTitle').textContent = currentMember ? 'ערוך חבר צוות' : 'הוסף חבר צוות';
         document.getElementById('memberNameEn').value = currentMember ? currentMember.name_en : '';
         document.getElementById('memberNameHe').value = currentMember ? currentMember.name_he : '';
-        
-        const avatarPath = currentMember ? `/static/images/${currentMember.avatar_path}` : '/static/images/default.png';
+
+        const avatarPath = currentMember ? `/uploads/avatars/${currentMember.avatar_path}` : '/static/images/default.png';
         document.getElementById('avatarPreview').src = avatarPath;
         document.getElementById('memberAvatar').value = '';
-        
+
         memberModal.style.display = 'block';
     }
 
@@ -240,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const url = currentTeam ? `/api/teams/${currentTeam.id}` : '/api/teams';
             const method = currentTeam ? 'PUT' : 'POST';
-            
+
             const response = await fetch(url, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
@@ -248,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 showToast(currentTeam ? 'הצוות עודכן בהצלחה' : 'הצוות נוצר בהצלחה', 'success');
                 closeModal(teamModal);
@@ -273,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 showToast('הצוות נמחק בהצלחה', 'success');
                 loadTeams();
@@ -297,11 +298,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // First, save member data
-            const url = currentMember 
+            const url = currentMember
                 ? `/api/teams/${currentTeam.id}/members/${currentMember.id}`
                 : `/api/teams/${currentTeam.id}/members`;
             const method = currentMember ? 'PUT' : 'POST';
-            
+
             const response = await fetch(url, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
@@ -309,15 +310,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 const memberId = currentMember ? currentMember.id : data.member.id;
-                
+
                 // If there's a file selected, upload it
                 if (selectedFile) {
                     await uploadAvatar(currentTeam.id, memberId, selectedFile);
                 }
-                
+
                 showToast(currentMember ? 'חבר הצוות עודכן בהצלחה' : 'חבר הצוות נוסף בהצלחה', 'success');
                 closeModal(memberModal);
                 loadTeams();
@@ -341,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
-            
+
             if (!data.success) {
                 showToast('שגיאה בהעלאת התמונה', 'error');
             }
@@ -362,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 showToast('חבר הצוות נמחק בהצלחה', 'success');
                 loadTeams();
@@ -378,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showToast(message, type = 'success') {
         toast.textContent = message;
         toast.className = `toast show ${type}`;
-        
+
         setTimeout(() => {
             toast.classList.remove('show');
         }, 3000);

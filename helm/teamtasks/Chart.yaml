@@ -1,0 +1,16 @@
+apiVersion: v2
+name: teamtasks
+description: A Helm chart for TeamTasks application on OpenShift
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - teamtasks
+  - task-management
+  - flask
+  - openshift
+maintainers:
+  - name: DevOps Team
+home: https://github.com/devopsteamsdb/teamtasks
+sources:
+  - https://github.com/devopsteamsdb/teamtasks
