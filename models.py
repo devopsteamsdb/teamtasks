@@ -56,6 +56,12 @@ class Task(db.Model):
     notes = db.Column(db.Text, nullable=True)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True)  # Nullable for migration
     
+    # Calendar-related fields (v3)
+    start_date = db.Column(db.Date, nullable=True)  # When task is scheduled to start
+    end_date = db.Column(db.Date, nullable=True)  # When task is scheduled to end
+    estimated_hours = db.Column(db.Float, nullable=True)  # Estimated work hours for workload calculations
+    is_archived = db.Column(db.Boolean, default=False, nullable=False)  # Archive status
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -65,8 +71,33 @@ class Task(db.Model):
             'status': self.status,
             'priority': self.priority,
             'notes': self.notes,
-            'team_id': self.team_id
+            'team_id': self.team_id,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'estimated_hours': self.estimated_hours,
+            'is_archived': self.is_archived
         }
     
     def __repr__(self):
         return f'<Task {self.id}>'
+
+
+class SpecialDay(db.Model):
+    """SpecialDay model - represents holidays and non-working days"""
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    type = db.Column(db.String(50), default='holiday')  # 'holiday', 'company_event', 'other'
+    color = db.Column(db.String(20), nullable=True)  # Hex color code
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'date': self.date.isoformat(),
+            'name': self.name,
+            'type': self.type,
+            'color': self.color
+        }
+
+    def __repr__(self):
+        return f'<SpecialDay {self.name} {self.date}>'

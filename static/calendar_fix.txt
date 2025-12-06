@@ -1,0 +1,70 @@
+﻿    
+    function openScheduleModal(task) {
+        currentTaskId = task.id;
+        document.getElementById('scheduleTaskName').value = task.task;
+        
+        // Convert ISO dates to dd/mm/yyyy format
+        if (task.start_date) {
+            const startParts = task.start_date.split('-');
+            document.getElementById('scheduleStartDate').value = ${startParts[2]}//;
+        } else {
+            document.getElementById('scheduleStartDate').value = '';
+        }
+        
+        if (task.end_date) {
+            const endParts = task.end_date.split('-');
+            document.getElementById('scheduleEndDate').value = ${endParts[2]}//;
+        } else {
+            document.getElementById('scheduleEndDate').value = '';
+        }
+        
+        scheduleModal.style.display = 'block';
+    }
+
+    async function saveTaskSchedule() {
+        if (!currentTaskId) return;
+
+        const startDateInput = document.getElementById('scheduleStartDate').value;
+        const endDateInput = document.getElementById('scheduleEndDate').value;
+
+        // Convert dd/mm/yyyy to yyyy-mm-dd (ISO format)
+        let startDate = null;
+        let endDate = null;
+        
+        if (startDateInput) {
+            const startParts = startDateInput.split('/');
+            if (startParts.length === 3) {
+                startDate = ${startParts[2]}--;
+            }
+        }
+        
+        if (endDateInput) {
+            const endParts = endDateInput.split('/');
+            if (endParts.length === 3) {
+                endDate = ${endParts[2]}--;
+            }
+        }
+
+        try {
+            const response = await fetch(/api/tasks//schedule, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    start_date: startDate,
+                    end_date: endDate,
+                    estimated_hours: null
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                scheduleModal.style.display = 'none';
+                renderCurrentView();
+            } else {
+                alert('שגיאה בשמירת תזמון המשימה');
+            }
+        } catch (error) {
+            console.error('Error saving task schedule:', error);
+            alert('שגיאה בשמירת תזמון המשימה');
+        }
+    }
