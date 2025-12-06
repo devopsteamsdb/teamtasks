@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, request, jsonify, send_from_directory
-from sqlalchemy import case, distinct, or_
+from sqlalchemy import case, distinct, or_, and_
 from werkzeug.utils import secure_filename
 import os
 import time
@@ -11,7 +11,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads/avatars'
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
 # Import models and initialize db
-from models import db, Team, TeamMember, Task
+from models import db, Team, TeamMember, Task, SpecialDay
 db.init_app(app)
 
 # Ensure upload directory exists
@@ -59,7 +59,37 @@ def api_add_task():
     priority = data.get('priority', 'none')
     notes = data.get('notes', '')
     team_id = data.get('team_id')
-    new_task = Task(project=project, task=task, members=members, status=status, priority=priority, notes=notes, team_id=team_id)
+    
+    # Calendar fields (v3)
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    estimated_hours = data.get('estimated_hours')
+    
+    # Parse date strings to date objects if provided
+    from datetime import datetime
+    if start_date:
+        try:
+            start_date = datetime.fromisoformat(start_date).date()
+        except (ValueError, AttributeError):
+            start_date = None
+    if end_date:
+        try:
+            end_date = datetime.fromisoformat(end_date).date()
+        except (ValueError, AttributeError):
+            end_date = None
+            
+    new_task = Task(
+        project=project, 
+        task=task, 
+        members=members, 
+        status=status, 
+        priority=priority, 
+        notes=notes, 
+        team_id=team_id,
+        start_date=start_date,
+        end_date=end_date,
+        estimated_hours=estimated_hours
+    )
     db.session.add(new_task)
     db.session.commit()
     
@@ -77,9 +107,46 @@ def api_edit_task(id):
     task.priority = data.get('priority', task.priority)
     task.notes = data.get('notes', task.notes)
     task.team_id = data.get('team_id', task.team_id)
+    
+    # Handle calendar fields (v3)
+    from datetime import datetime
+    if 'start_date' in data:
+        start_date = data.get('start_date')
+        if start_date:
+            try:
+                task.start_date = datetime.fromisoformat(start_date).date()
+            except (ValueError, AttributeError):
+                pass
+        else:
+            task.start_date = None
+    
+    if 'end_date' in data:
+        end_date = data.get('end_date')
+        if end_date:
+            try:
+                task.end_date = datetime.fromisoformat(end_date).date()
+            except (ValueError, AttributeError):
+                pass
+        else:
+            task.end_date = None
+    
+    if 'estimated_hours' in data:
+        task.estimated_hours = data.get('estimated_hours')
+
+    # Handle archiving
+    if 'is_archived' in data:
+        task.is_archived = data['is_archived']
+    
     db.session.commit()
     
     return jsonify({'success': True})
+
+# API endpoint to get archived tasks
+@app.route('/api/archive')
+def api_get_archive():
+    tasks = Task.query.filter_by(is_archived=True).order_by(Task.task).all()
+    tasks_list = [task.to_dict() for task in tasks]
+    return jsonify(tasks_list)
 
 # API endpoint to delete a task (AJAX)
 @app.route('/api/tasks/<int:id>', methods=['DELETE'])
@@ -87,7 +154,6 @@ def api_delete_task(id):
     task = Task.query.get_or_404(id)
     db.session.delete(task)
     db.session.commit()
-    
     return jsonify({'success': True})
 
 
@@ -110,7 +176,6 @@ def api_create_team():
         return jsonify({'success': False, 'error': 'Both English and Hebrew names are required'}), 400
     
     # Check if team already exists
-    existing = Team.query.filter_by(name_en=name_en).first()
     if existing:
         return jsonify({'success': False, 'error': 'Team with this English name already exists'}), 400
     
@@ -262,6 +327,249 @@ def api_search():
 
 
 
+# ============ CALENDAR API (v3) ============
+
+@app.route('/api/calendar/week', methods=['GET'])
+def api_calendar_week():
+    """Get tasks for a specific week"""
+    from datetime import datetime, timedelta
+    
+    # Get date parameter (defaults to today)
+    date_str = request.args.get('date')
+    team_id = request.args.get('team_id')
+    
+    if date_str:
+        try:
+            reference_date = datetime.fromisoformat(date_str).date()
+        except ValueError:
+            reference_date = datetime.now().date()
+    else:
+        reference_date = datetime.now().date()
+    
+    # Calculate week start (Sunday) and end (Saturday)
+    days_since_sunday = (reference_date.weekday() + 1) % 7
+    week_start = reference_date - timedelta(days=days_since_sunday)
+    week_end = week_start + timedelta(days=6)
+    
+    # Query tasks that fall within this week
+    query = Task.query.filter(
+        or_(
+            Task.start_date.between(week_start, week_end),
+            Task.end_date.between(week_start, week_end),
+            and_(Task.start_date <= week_start, Task.end_date >= week_end)
+        )
+    )
+    
+    if team_id:
+        query = query.filter(Task.team_id == team_id)
+    
+    tasks = query.all()
+    
+    return jsonify({
+        'week_start': week_start.isoformat(),
+        'week_end': week_end.isoformat(),
+        'tasks': [task.to_dict() for task in tasks]
+    })
+
+
+@app.route('/api/calendar/month', methods=['GET'])
+def api_calendar_month():
+    """Get tasks for a specific month"""
+    from datetime import datetime
+    from calendar import monthrange
+    
+    # Get month/year parameters (defaults to current month)
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    team_id = request.args.get('team_id')
+    
+    now = datetime.now()
+    if not year:
+        year = now.year
+    if not month:
+        month = now.month
+    
+    # Calculate month boundaries
+    month_start = datetime(year, month, 1).date()
+    last_day = monthrange(year, month)[1]
+    month_end = datetime(year, month, last_day).date()
+    
+    # Query tasks that fall within this month
+    query = Task.query.filter(
+        or_(
+            Task.start_date.between(month_start, month_end),
+            Task.end_date.between(month_start, month_end),
+            and_(Task.start_date <= month_start, Task.end_date >= month_end)
+        )
+    )
+    
+    if team_id:
+        query = query.filter(Task.team_id == team_id)
+    
+    tasks = query.all()
+    
+    return jsonify({
+        'month': month,
+        'year': year,
+        'month_start': month_start.isoformat(),
+        'month_end': month_end.isoformat(),
+        'tasks': [task.to_dict() for task in tasks]
+    })
+
+
+@app.route('/api/calendar/workload', methods=['GET'])
+def api_calendar_workload():
+    """Get member workload data for a date range"""
+    from datetime import datetime, timedelta
+    
+    # Get date range parameters
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    team_id = request.args.get('team_id')
+    
+    # Default to current week if not specified
+    if not start_date_str or not end_date_str:
+        today = datetime.now().date()
+        days_since_sunday = (today.weekday() + 1) % 7
+        start_date = today - timedelta(days=days_since_sunday)
+        end_date = start_date + timedelta(days=6)
+    else:
+        try:
+            start_date = datetime.fromisoformat(start_date_str).date()
+            end_date = datetime.fromisoformat(end_date_str).date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date format'}), 400
+    
+    # Get team members
+    if team_id:
+        members = TeamMember.query.filter_by(team_id=team_id).all()
+    else:
+        members = TeamMember.query.all()
+    
+    # Get tasks for the date range
+    tasks = Task.query.filter(
+        or_(
+            Task.start_date.between(start_date, end_date),
+            Task.end_date.between(start_date, end_date),
+            and_(Task.start_date <= start_date, Task.end_date >= end_date)
+        )
+    ).all()
+    
+    # Build workload data structure
+    workload_data = []
+    for member in members:
+        member_tasks = [
+            task.to_dict() for task in tasks 
+            if member.name_en in task.members.split(',')
+        ]
+        workload_data.append({
+            'member': member.to_dict(),
+            'tasks': member_tasks
+        })
+    
+    return jsonify({
+        'start_date': start_date.isoformat(),
+        'end_date': end_date.isoformat(),
+        'workload': workload_data
+    })
+
+
+@app.route('/api/tasks/<int:id>/schedule', methods=['PUT'])
+def api_update_task_schedule(id):
+    """Update task scheduling information (dates and estimated hours)"""
+    from datetime import datetime
+    
+    task = Task.query.get_or_404(id)
+    data = request.json
+    
+    # Update start_date
+    if 'start_date' in data:
+        start_date = data.get('start_date')
+        if start_date:
+            try:
+                task.start_date = datetime.fromisoformat(start_date).date()
+            except (ValueError, AttributeError):
+                return jsonify({'success': False, 'error': 'Invalid start_date format'}), 400
+        else:
+            task.start_date = None
+    
+    # Update end_date
+    if 'end_date' in data:
+        end_date = data.get('end_date')
+        if end_date:
+            try:
+                task.end_date = datetime.fromisoformat(end_date).date()
+            except (ValueError, AttributeError):
+                return jsonify({'success': False, 'error': 'Invalid end_date format'}), 400
+        else:
+            task.end_date = None
+    
+    # Update estimated_hours
+    if 'estimated_hours' in data:
+        task.estimated_hours = data.get('estimated_hours')
+    
+    db.session.commit()
+    
+    return jsonify({'success': True, 'task': task.to_dict()})
+
+
+
+# ============ SPECIAL DAYS API ============
+
+@app.route('/api/special-days', methods=['GET'])
+def api_get_special_days():
+    from datetime import datetime
+    
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    
+    query = SpecialDay.query
+    
+    if start_date_str and end_date_str:
+        try:
+            start_date = datetime.fromisoformat(start_date_str).date()
+            end_date = datetime.fromisoformat(end_date_str).date()
+            query = query.filter(SpecialDay.date.between(start_date, end_date))
+        except ValueError:
+            pass
+            
+    special_days = query.order_by(SpecialDay.date).all()
+    return jsonify([day.to_dict() for day in special_days])
+
+@app.route('/api/special-days', methods=['POST'])
+def api_create_special_day():
+    data = request.json
+    from datetime import datetime
+    
+    try:
+        date_obj = datetime.fromisoformat(data['date']).date()
+    except (ValueError, KeyError):
+        return jsonify({'success': False, 'error': 'Invalid date'}), 400
+        
+    name = data.get('name')
+    if not name:
+        return jsonify({'success': False, 'error': 'Name is required'}), 400
+        
+    special_day = SpecialDay(
+        date=date_obj,
+        name=name,
+        type=data.get('type', 'holiday'),
+        color=data.get('color')
+    )
+    
+    db.session.add(special_day)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'special_day': special_day.to_dict()})
+
+@app.route('/api/special-days/<int:id>', methods=['DELETE'])
+def api_delete_special_day(id):
+    day = SpecialDay.query.get_or_404(id)
+    db.session.delete(day)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 # Initialize database tables
 with app.app_context():
     db.create_all()
@@ -280,7 +588,7 @@ def index():
         (Task.priority == 'low', 3),
         (Task.priority == 'none', 4),
     )
-    query = Task.query.order_by(priority_order, Task.project)
+    query = Task.query.filter(Task.is_archived == False).order_by(priority_order, Task.project)
 
     if project_filter:
         query = query.filter(Task.project == project_filter)
@@ -333,7 +641,7 @@ def print_view():
         (Task.priority == 'low', 3),
         (Task.priority == 'none', 4),
     )
-    query = Task.query.order_by(priority_order, Task.project)
+    query = Task.query.filter(Task.is_archived == False).order_by(priority_order, Task.project)
 
     if project_filter:
         query = query.filter(Task.project == project_filter)
@@ -352,11 +660,27 @@ def print_view():
     return render_template('printable.html', tasks=tasks, projects=projects, members=members, teams=teams)
 
 
+@app.route('/calendar')
+def calendar():
+    """Calendar page for week/month planning"""
+    teams = Team.query.all()
+    members = TeamMember.query.all()
+    return render_template('calendar.html', teams=teams, members=members)
+
+
 @app.route('/admin')
 def admin():
     """Admin page for managing teams and members"""
     teams = Team.query.all()
     return render_template('admin.html', teams=teams)
+
+
+@app.route('/archive')
+def archive():
+    """Page to view and restore archived tasks"""
+    teams = [team.to_dict() for team in Team.query.all()]
+    members = [member.to_dict() for member in TeamMember.query.all()]
+    return render_template('archive.html', teams=teams, members=members)
 
 
 if __name__ == '__main__':

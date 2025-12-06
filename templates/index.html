@@ -13,7 +13,8 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/" class="navbar-brand-link"><span>לוח משימות</span></a>
+            <a href="/" class="navbar-brand-link active"><span>לוח משימות</span></a>
+            <a href="/calendar" class="navbar-brand-link"><span>לוח שנה</span></a>
         </div>
 
 
@@ -51,14 +52,17 @@
 
         <header class="dashboard-header">
             <div class="dashboard-title">
-                <!--╫£╫ץ╫ק ╫₧╫⌐╫ש╫₧╫ץ╫¬-->
                 <button id="addTaskBtn" class="btn-add-task">
-                    <img src="{{ url_for('static', filename='icons/plus.svg') }}" width="18" height="18" alt="Add"
-                        style="vertical-align:middle;"> הוסף משימה
+                    <img src="{{ url_for('static', filename='icons/plus.svg') }}" width="18" height="18" alt="Add"> הוסף
+                    משימה
                 </button>
+                <a href="/archive" class="btn-archive">
+                    <img src="{{ url_for('static', filename='icons/archive.svg') }}" width="16" height="16"
+                        alt="Archive" class="icon-img">
+                    משימות בארכיון
+                </a>
             </div>
             <div class="filter-controls">
-
 
                 <!-- Member Filter Buttons (existing) -->
                 {% for member in members %}
@@ -129,7 +133,9 @@
                         {% for task in tasks if task.project == project %}
                         <li class="task-item {% if active_team_id and task.team_id != active_team_id %}filtered-hidden{% endif %}"
                             data-id="{{ task.id }}" data-notes="{{ task.notes|default('') }}"
-                            data-priority="{{ task.priority|default('none') }}" data-team-id="{{ task.team_id }}">
+                            data-priority="{{ task.priority|default('none') }}" data-team-id="{{ task.team_id }}"
+                            data-start-date="{{ task.start_date.isoformat() if task.start_date else '' }}"
+                            data-end-date="{{ task.end_date.isoformat() if task.end_date else '' }}">
                             <div class="task-info">
                                 <span class="task-marker"
                                     style="background-color: {{ priority_colors.get(task.priority, '#cbd5e1') }};"></span>
@@ -140,9 +146,7 @@
                                         alt="Note" style="vertical-align:middle;">
                                 </span>
                             </div>
-                            <div class="task-actions">
-                                <button class="btn-icon edit-btn" title="ערוך"></button>
-                            </div>
+
                             <div class="task-meta">
                                 <div class="avatar-group">
                                     {% set member_list = task.members.split(',') if task.members else [] %}
@@ -173,24 +177,92 @@
 
 
 
-        <!-- Create Task Modal -->
-        <div id="createTaskModal" class="modal">
-            <div class="modal-content">
-                <span class="close-modal-create">&times;</span>
-                <h2 id="createModalTitle">יצירת משימה חדשה</h2>
-                <div class="form-group">
-                    <label for="createTaskTeam">צוות:</label>
-                    <select id="createTaskTeam" class="form-control">
-                        <!-- Populated dynamically by JavaScript -->
+    </div>
+    </div>
+
+
+    <!-- Create Task Modal -->
+    <div id="createTaskModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal-create">&times;</span>
+            <h2 id="createModalTitle">יצירת משימה חדשה</h2>
+            <div class="form-group">
+                <label for="createTaskTeam">צוות:</label>
+                <select id="createTaskTeam" class="form-control">
+                    <!-- Populated dynamically by JavaScript -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="createProjectNameInput">שם הפרויקט:</label>
+                <input type="text" id="createProjectNameInput" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="createTaskNameInput">שם המשימה:</label>
+                <input type="text" id="createTaskNameInput" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>חברי צוות:</label>
+                <div class="members-select">
+                    <!-- Populated dynamically by JavaScript -->
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="createTaskStatus">סטטוס:</label>
+                    <select id="createTaskStatus" class="form-control">
+                        <option value="status-notstarted">טרם החל</option>
+                        <option value="status-inprogress">בתהליך</option>
+                        <option value="status-done">הושלם</option>
+                        <option value="status-delayed">מעוכב</option>
                     </select>
                 </div>
+                <div class="form-group half">
+                    <label for="createTaskPriority">עדיפות:</label>
+                    <select id="createTaskPriority" class="form-control">
+                        <option value="none">ללא</option>
+                        <option value="low">נמוכה</option>
+                        <option value="medium">בינונית</option>
+                        <option value="high">גבוהה</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="createTaskStartDate">תאריך התחלה (אופציונלי):</label>
+                    <input type="text" id="createTaskStartDate" class="form-control" placeholder="dd/mm/yyyy">
+                </div>
+                <div class="form-group half">
+                    <label for="createTaskEndDate">תאריך סיום (אופציונלי):</label>
+                    <input type="text" id="createTaskEndDate" class="form-control" placeholder="dd/mm/yyyy">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="createTaskNotes">הערות:</label>
+                <textarea id="createTaskNotes" rows="4" placeholder="הוסף הערות כאן..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button id="createSaveBtn" class="btn btn-primary">צור משימה</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modalTitle">עריכת משימה</h2>
+            <div class="form-group">
+                <label for="taskTeam">צוות:</label>
+                <select id="taskTeam" class="form-control">
+                    <!-- Populated dynamically by JavaScript -->
+                </select>
                 <div class="form-group">
-                    <label for="createProjectNameInput">שם הפרויקט:</label>
-                    <input type="text" id="createProjectNameInput" class="form-control">
+                    <label for="projectNameInput">שם הפרויקט:</label>
+                    <input type="text" id="projectNameInput" class="form-control">
                 </div>
                 <div class="form-group">
-                    <label for="createTaskNameInput">שם המשימה:</label>
-                    <input type="text" id="createTaskNameInput" class="form-control">
+                    <label for="taskNameInput">שם המשימה:</label>
+                    <input type="text" id="taskNameInput" class="form-control">
                 </div>
                 <div class="form-group">
                     <label>חברי צוות:</label>
@@ -198,93 +270,50 @@
                         <!-- Populated dynamically by JavaScript -->
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group half">
-                        <label for="createTaskStatus">סטטוס:</label>
-                        <select id="createTaskStatus" class="form-control">
-                            <option value="status-notstarted">טרם החל</option>
-                            <option value="status-inprogress">בתהליך</option>
-                            <option value="status-done">הושלם</option>
-                            <option value="status-delayed">מעוכב</option>
-                        </select>
-                    </div>
-                    <div class="form-group half">
-                        <label for="createTaskPriority">עדיפות:</label>
-                        <select id="createTaskPriority" class="form-control">
-                            <option value="none">ללא</option>
-                            <option value="low">נמוכה</option>
-                            <option value="medium">בינונית</option>
-                            <option value="high">גבוהה</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="createTaskNotes">הערות:</label>
-                    <textarea id="createTaskNotes" rows="4" placeholder="הוסף הערות כאן..."></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button id="createSaveBtn" class="btn btn-primary">צור משימה</button>
-                </div>
             </div>
-        </div>
-
-        <!-- Edit Task Modal -->
-        <div id="taskModal" class="modal">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h2 id="modalTitle">עריכת משימה</h2>
-                <div class="form-group">
-                    <label for="taskTeam">צוות:</label>
-                    <select id="taskTeam" class="form-control">
-                        <!-- Populated dynamically by JavaScript -->
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="taskStatus">סטטוס:</label>
+                    <select id="taskStatus" class="form-control">
+                        <option value="status-notstarted">טרם החל</option>
+                        <option value="status-inprogress">בתהליך</option>
+                        <option value="status-done">הושלם</option>
+                        <option value="status-delayed">מעוכב</option>
                     </select>
-                    <div class="form-group">
-                        <label for="projectNameInput">שם הפרויקט:</label>
-                        <input type="text" id="projectNameInput" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label for="taskNameInput">שם המשימה:</label>
-                        <input type="text" id="taskNameInput" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>חברי צוות:</label>
-                        <div class="members-select">
-                            <!-- Populated dynamically by JavaScript -->
-                        </div>
-                    </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group half">
-                        <label for="taskStatus">סטטוס:</label>
-                        <select id="taskStatus" class="form-control">
-                            <option value="status-notstarted">טרם החל</option>
-                            <option value="status-inprogress">בתהליך</option>
-                            <option value="status-done">הושלם</option>
-                            <option value="status-delayed">מעוכב</option>
-                        </select>
-                    </div>
-                    <div class="form-group half">
-                        <label for="taskPriority">עדיפות:</label>
-                        <select id="taskPriority" class="form-control">
-                            <option value="none">ללא</option>
-                            <option value="low">נמוכה</option>
-                            <option value="medium">בינונית</option>
-                            <option value="high">גבוהה</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="taskNotes">הערות:</label>
-                    <textarea id="taskNotes" rows="4" placeholder="הוסף הערות כאן..."></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button id="saveBtn" class="btn btn-primary">שמור שינויים</button>
-                    <button id="deleteBtn" class="btn btn-danger">מחק משימה</button>
+                <div class="form-group half">
+                    <label for="taskPriority">עדיפות:</label>
+                    <select id="taskPriority" class="form-control">
+                        <option value="none">ללא</option>
+                        <option value="low">נמוכה</option>
+                        <option value="medium">בינונית</option>
+                        <option value="high">גבוהה</option>
+                    </select>
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="taskStartDate">תאריך התחלה (אופציונלי):</label>
+                    <input type="text" id="taskStartDate" class="form-control" placeholder="dd/mm/yyyy">
+                </div>
+                <div class="form-group half">
+                    <label for="taskEndDate">תאריך סיום (אופציונלי):</label>
+                    <input type="text" id="taskEndDate" class="form-control" placeholder="dd/mm/yyyy">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="taskNotes">הערות:</label>
+                <textarea id="taskNotes" rows="4" placeholder="הוסף הערות כאן..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button id="saveBtn" class="btn btn-primary">שמור שינויים</button>
+                <button id="archiveBtn" class="btn btn-secondary" style="margin-right: 10px;">ארכיון</button>
+                <button id="deleteBtn" class="btn btn-danger">מחק משימה</button>
+            </div>
         </div>
+    </div>
 
-        <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=3"></script>
 </body>
 
 </html>

@@ -11,8 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements Cache
     let modal, createModal, closeModal, closeCreateModal;
     let saveBtn, deleteBtn, createSaveBtn;
-    let taskNameInput, projectNameInput, taskStatus, taskPriority, taskNotes, taskTeam;
-    let createTaskNameInput, createProjectNameInput, createTaskStatus, createTaskPriority, createTaskNotes, createTaskTeam;
+    let taskNameInput, projectNameInput, taskStatus, taskPriority, taskNotes, taskTeam, taskStartDate, taskEndDate;
+    let createTaskNameInput, createProjectNameInput, createTaskStatus, createTaskPriority, createTaskNotes, createTaskTeam, createTaskStartDate, createTaskEndDate;
     let searchBox, clearSearchBtn, teamFilterButtons, memberFilterButtons;
 
     // Initialize
@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
         taskPriority = document.getElementById('taskPriority');
         taskNotes = document.getElementById('taskNotes');
         taskTeam = document.getElementById('taskTeam');
+        taskStartDate = document.getElementById('taskStartDate');
+        taskEndDate = document.getElementById('taskEndDate');
 
         createTaskNameInput = document.getElementById('createTaskNameInput');
         createProjectNameInput = document.getElementById('createProjectNameInput');
@@ -41,6 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
         createTaskPriority = document.getElementById('createTaskPriority');
         createTaskNotes = document.getElementById('createTaskNotes');
         createTaskTeam = document.getElementById('createTaskTeam');
+        createTaskStartDate = document.getElementById('createTaskStartDate');
+        createTaskEndDate = document.getElementById('createTaskEndDate');
 
         searchBox = document.getElementById('searchBox');
         clearSearchBtn = document.getElementById('clearSearch');
@@ -59,12 +63,33 @@ document.addEventListener('DOMContentLoaded', () => {
         // Start polling for updates
         setInterval(() => checkVersion(false), 5000);
 
-        // Check URL for team filter
+        // Check localStorage or URL for team filter
         const urlParams = new URLSearchParams(window.location.search);
         const teamId = urlParams.get('team');
+        const storedTeamId = localStorage.getItem('activeTeamFilter');
+
         if (teamId) {
             activeTeamFilter = teamId;
+        } else if (storedTeamId) {
+            activeTeamFilter = storedTeamId;
+            // Update URL to match state without reload
+            const url = new URL(window.location);
+            url.searchParams.set('team', activeTeamFilter);
+            window.history.replaceState({}, '', url);
         }
+
+        // Update UI buttons if filter is active
+        if (activeTeamFilter) {
+            teamFilterButtons.forEach(btn => {
+                if (btn.dataset.teamId === activeTeamFilter) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        applyFilters();
     }
 
     // Data Loading
@@ -186,27 +211,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Content Listeners (attached on init and refresh)
+
+    // Event Listeners and Logic
     function attachEventListeners() {
-        // Modals
-        if (closeModal) closeModal.addEventListener('click', () => modal.style.display = 'none');
-        if (closeCreateModal) closeCreateModal.addEventListener('click', () => createModal.style.display = 'none');
-
-        // Task Items
-        document.querySelectorAll('.task-item').forEach(item => {
-            item.addEventListener('click', () => openEditModal(item));
-            const editBtn = item.querySelector('.edit-btn');
-            if (editBtn) {
-                editBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openEditModal(item);
-                });
-            }
-        });
-
         // Add Task Button
-        const addTaskBtn = document.getElementById('addTaskBtn');
         if (addTaskBtn) {
+            // Remove old listener to avoid duplicates if re-running
+            addTaskBtn.removeEventListener('click', openCreateModal);
             addTaskBtn.addEventListener('click', openCreateModal);
         }
 
@@ -218,10 +229,27 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        // Task Item Click (Edit)
+        document.querySelectorAll('.task-item').forEach(item => {
+            item.removeEventListener('click', handleTaskClick); // Prevent duplicates
+            item.addEventListener('click', handleTaskClick);
+        });
+
+        function handleTaskClick(e) {
+            // Prevent if clicking on interactive elements
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) {
+                return;
+            }
+            // Open modal
+            const taskItem = e.currentTarget;
+            openEditModal(taskItem);
+        }
+
         // Save Buttons
         if (saveBtn) saveBtn.addEventListener('click', saveTask);
         if (createSaveBtn) createSaveBtn.addEventListener('click', createTask);
         if (deleteBtn) deleteBtn.addEventListener('click', deleteTask);
+        if (archiveBtn) archiveBtn.addEventListener('click', archiveTask);
 
         // Search
         if (searchBox) {
@@ -247,14 +275,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const teamId = btn.dataset.teamId;
 
                 // Check if clicking currently active team (deselect logic)
+                // Check if clicking currently active team (deselect logic)
                 if (activeTeamFilter === teamId) {
                     activeTeamFilter = null;
                     btn.classList.remove('active');
 
-                    // Clear URL param
-                    const url = new URL(window.location);
-                    url.searchParams.delete('team');
-                    window.history.pushState({}, '', url);
+                    // Clear URL param and localStorage
+                    updateUrlParams('team', null);
 
                     // Reset task visibility (show all)
                     document.querySelectorAll('.project-card').forEach(card => {
@@ -267,9 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.resetMemberFilter();
                     }
                     // Make sure member buttons are shown
-                    if (memberFilterButtons) {
-                        memberFilterButtons.forEach(mb => mb.style.display = 'inline-block');
-                    }
+                    selectedTeamMemberButtonsUpdate();
                     return;
                 }
 
@@ -304,12 +329,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function selectedTeamMemberButtonsUpdate() {
+        if (activeTeamFilter) {
+            memberFilterButtons.forEach(mb => {
+                const memberTeamId = mb.getAttribute('data-team-id');
+                if (memberTeamId === activeTeamFilter) {
+                    mb.style.display = 'inline-block';
+                } else {
+                    mb.style.display = 'none';
+                }
+            });
+        } else {
+            memberFilterButtons.forEach(mb => mb.style.display = 'inline-block');
+        }
+    }
+
     function updateUrlParams(key, value) {
         const url = new URL(window.location);
         if (value) {
             url.searchParams.set(key, value);
+            if (key === 'team') {
+                localStorage.setItem('activeTeamFilter', value);
+            }
         } else {
             url.searchParams.delete(key);
+            if (key === 'team') {
+                localStorage.removeItem('activeTeamFilter');
+            }
         }
         window.history.pushState({}, '', url);
     }
@@ -325,9 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskTeamId = task.dataset.teamId;
                 if (taskTeamId && taskTeamId !== activeTeamFilter) {
                     visible = false;
-                } else if (!taskTeamId) {
-                    // Check project team? No, assume task data is correct.
-                    // visible = false; 
                 }
             }
 
@@ -353,36 +396,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Hide project cards with no visible tasks
         document.querySelectorAll('.project-card').forEach(card => {
-            // Handle team filter visibility for project cards via class first
             const cardTeamId = card.getAttribute('data-team-id');
-            if (activeTeamFilter && cardTeamId && cardTeamId !== activeTeamFilter) {
-                card.classList.add('filtered-hidden');
-                return; // Skip further checks
-            } else if (activeTeamFilter && cardTeamId && cardTeamId === activeTeamFilter) {
-                card.classList.remove('filtered-hidden');
-            }
+
+            // If team filter is active, only show relevant project cards if they belong to team (mixed usage, but safe)
+            // or if they contain relevant tasks.
+            // Simplified: Hide card if no visible tasks inside.
 
             const visibleTasks = card.querySelectorAll('.task-item:not(.filtered-hidden):not(.search-hidden)');
+
+            // Check if card itself matches filter (if cards have team ID)
+            let cardMatchesTeam = true;
+            if (activeTeamFilter && cardTeamId && cardTeamId !== activeTeamFilter) {
+                // However, card might have tasks from other teams? 
+                // Based on template, project card has team_id.
+                cardMatchesTeam = false;
+            }
+
             if (visibleTasks.length === 0) {
+                // Even if card matches team, if no tasks, maybe hide?
+                // Let's stick to task visibility driving it
                 card.classList.add('filtered-hidden');
             } else {
                 card.classList.remove('filtered-hidden');
             }
         });
 
-        // Filter member buttons based on team
-        if (activeTeamFilter) {
-            memberFilterButtons.forEach(mb => {
-                const memberTeamId = mb.getAttribute('data-team-id');
-                if (memberTeamId === activeTeamFilter) {
-                    mb.style.display = 'inline-block';
-                } else {
-                    mb.style.display = 'none';
-                }
-            });
-        } else {
-            memberFilterButtons.forEach(mb => mb.style.display = 'inline-block');
-        }
+        selectedTeamMemberButtonsUpdate();
     }
 
     // Modal Logic
@@ -391,10 +430,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const taskId = taskItem.dataset.id;
 
         taskNameInput.value = taskItem.querySelector('.task-name').textContent;
+        // Using dataset for notes if available, or try to find hidden element? 
+        // Template shows: data-notes="{{ task.notes|default('') }}"
         taskNotes.value = taskItem.dataset.notes || '';
 
         const statusBadge = taskItem.querySelector('.status-badge');
-        taskStatus.value = getStatusFromClass(statusBadge.classList[1]);
+        // Fallback if classList[1] isn't the status
+        let statusClass = 'status-inprogress';
+        statusBadge.classList.forEach(cls => {
+            if (cls.startsWith('status-')) statusClass = cls;
+        });
+        taskStatus.value = getStatusFromClass(statusClass);
 
         taskPriority.value = taskItem.dataset.priority || 'none';
 
@@ -407,13 +453,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check members based on avatars
         const avatars = taskItem.querySelectorAll('.avatar');
         avatars.forEach(img => {
-            const src = img.getAttribute('src');
-            const checkbox = document.querySelector(`#taskModal .members-select input[data-img="${src}"]`);
-            if (checkbox) checkbox.checked = true;
-
-            const filename = src.split('/').pop();
-            const checkboxByFile = document.querySelector(`#taskModal .members-select input[data-img$="${filename}"]`);
-            if (checkboxByFile) checkboxByFile.checked = true;
+            // Using name data attribute is safer than image src matching
+            const memberName = img.dataset.memberName;
+            if (memberName) {
+                const checkbox = document.querySelector(`#taskModal .members-select input[value="${memberName}"]`);
+                if (checkbox) checkbox.checked = true;
+            } else {
+                // Fallback to src matching
+                const src = img.getAttribute('src');
+                const checkbox = document.querySelector(`#taskModal .members-select input[data-img="${src}"]`);
+                if (checkbox) checkbox.checked = true;
+            }
         });
 
         // Set Team
@@ -423,16 +473,28 @@ document.addEventListener('DOMContentLoaded', () => {
             taskTeam.value = '';
         }
 
+        taskStartDate.value = '';
+        taskEndDate.value = '';
+        if (taskItem.dataset.startDate) taskStartDate.value = formatDateFromISO(taskItem.dataset.startDate);
+        if (taskItem.dataset.endDate) taskEndDate.value = formatDateFromISO(taskItem.dataset.endDate);
+
         modal.style.display = 'block';
     }
 
     function openCreateModal(e, projectName = null) {
         createTaskNameInput.value = '';
+        // If triggered by + button on project
         createProjectNameInput.value = projectName || '';
+        if (projectName) {
+            // Maybe lock it?
+        }
+
         createTaskStatus.value = 'status-notstarted';
         createTaskPriority.value = 'none';
         createTaskNotes.value = '';
         createTaskTeam.value = '';
+        createTaskStartDate.value = '';
+        createTaskEndDate.value = '';
 
         document.querySelectorAll('#createTaskModal .members-select input[type="checkbox"]').forEach(cb => cb.checked = false);
 
@@ -453,7 +515,9 @@ document.addEventListener('DOMContentLoaded', () => {
             status: taskStatus.value,
             priority: taskPriority.value,
             notes: taskNotes.value.trim(),
-            team_id: taskTeam.value || null
+            team_id: taskTeam.value || null,
+            start_date: parseDateToISO(taskStartDate.value),
+            end_date: parseDateToISO(taskEndDate.value)
         };
 
         try {
@@ -486,7 +550,9 @@ document.addEventListener('DOMContentLoaded', () => {
             status: createTaskStatus.value,
             priority: createTaskPriority.value,
             notes: createTaskNotes.value.trim(),
-            team_id: createTaskTeam.value || null
+            team_id: createTaskTeam.value || null,
+            start_date: parseDateToISO(createTaskStartDate.value),
+            end_date: parseDateToISO(createTaskEndDate.value)
         };
 
         try {
@@ -531,6 +597,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function archiveTask() {
+        if (!currentTaskItem || !confirm('האם להעביר משימה זו לארכיון?')) return;
+
+        const taskId = currentTaskItem.dataset.id;
+        try {
+            const response = await fetch(`/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_archived: true })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                checkVersion(false);
+                modal.style.display = 'none';
+            } else {
+                alert('שגיאה בארכוב המשימה');
+            }
+        } catch (error) {
+            console.error('Error archiving task:', error);
+            alert('שגיאה בארכוב המשימה');
+        }
+    }
+
     // Search & Filter Logic
     async function performSearch(query) {
         if (!query) {
@@ -569,6 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Helpers
     function getStatusFromClass(className) {
+        if (!className) return 'status-inprogress';
         if (className.includes('status-inprogress')) return 'status-inprogress';
         if (className.includes('status-done')) return 'status-done';
         if (className.includes('status-notstarted')) return 'status-notstarted';
@@ -582,6 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .filter(cb => cb.checked)
             .map(cb => cb.value);
     }
+
 });
 
 // ============================================
@@ -609,3 +701,19 @@ window.resetMemberFilter = function () {
     // This is dispatched custom event, listener handles logic
     window.dispatchEvent(new CustomEvent('resetMemberFilter'));
 };
+
+// Helper: Convert dd/mm/yyyy to yyyy-mm-dd (ISO format)
+function parseDateToISO(dateStr) {
+    if (!dateStr || !dateStr.trim()) return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
+// Helper: Convert yyyy-mm-dd (ISO) to dd/mm/yyyy
+function formatDateFromISO(isoStr) {
+    if (!isoStr) return '';
+    const parts = isoStr.split('-');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ארכיון משימות</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+        .archive-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .archive-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .archive-table th,
+        .archive-table td {
+            padding: 1rem;
+            text-align: right;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .archive-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .restore-btn {
+            background-color: #10B981;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .restore-btn:hover {
+            background-color: #059669;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="/" class="navbar-brand-link"><span>לוח משימות</span></a>
+        </div>
+
+    </nav>
+
+    <div class="archive-container">
+        <h1 style="margin-bottom: 2rem;">משימות בארכיון</h1>
+
+        <table class="archive-table">
+            <thead>
+                <tr>
+                    <th>משימה</th>
+                    <th>הערות</th>
+                    <th>פרויקט</th>
+                    <th>צוות</th>
+                    <th>חברים</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody id="archiveList">
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+        <div id="loading" class="empty-state">טוען משימות...</div>
+        <div id="emptyState" class="empty-state" style="display: none;">אין משימות בארכיון</div>
+    </div>
+
+    <script>
+        let teams = {{ teams| tojson | safe }};
+        let members = {{ members| tojson | safe }};
+        const teamsMap = {};
+        teams.forEach(t => teamsMap[t.id] = t.name_he);
+
+        const membersMap = {};
+        members.forEach(m => membersMap[m.name_en] = m.name_he);
+
+        async function loadArchivedTasks() {
+            try {
+                const response = await fetch('/api/archive');
+                const tasks = await response.json();
+                renderTasks(tasks);
+            } catch (error) {
+                console.error('Error loading archive:', error);
+                document.getElementById('loading').textContent = 'שגיאה בטעינת הנתונים';
+            }
+        }
+
+        function renderTasks(tasks) {
+            const tbody = document.getElementById('archiveList');
+            const loading = document.getElementById('loading');
+            const emptyState = document.getElementById('emptyState');
+
+            tbody.innerHTML = '';
+            loading.style.display = 'none';
+
+            if (tasks.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            tasks.forEach(task => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div style="font-weight: 500;">${task.task}</div>
+                    </td>
+                    <td>
+                        ${task.notes ? `<div style="font-size: 0.875rem; color: #6b7280;">${task.notes}</div>` : '-'}
+                    </td>
+                    <td>${task.project}</td>
+                    <td>${teamsMap[task.team_id] || '-'}</td>
+                    <td>
+                        <div class="avatar-group">
+                            ${task.members.map(m => `<span class="member-tag">${membersMap[m] || m}</span>`).join(', ')}
+                        </div>
+                    </td>
+                    <td>
+                        <button class="restore-btn" onclick="restoreTask(${task.id})">
+                            שחזר
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function restoreTask(id) {
+            if (!confirm('האם לשחזר את המשימה ללוח?')) return;
+
+            try {
+                const response = await fetch(`/api/tasks/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_archived: false })
+                });
+
+                if (response.ok) {
+                    loadArchivedTasks(); // Reload list
+                } else {
+                    alert('שגיאה בשחזור המשימה');
+                }
+            } catch (error) {
+                console.error('Error restoring task:', error);
+                alert('שגיאה בשחזור המשימה');
+            }
+        }
+
+        // Init
+        loadArchivedTasks();
+    </script>
+</body>
+
+</html>
