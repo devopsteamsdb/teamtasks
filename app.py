@@ -764,6 +764,8 @@ def index():
     project_filter = request.args.get('project')
     member_filter = request.args.get('member')
     team_filter = request.args.get('team')
+    query_str = request.args.get('q', '').strip()
+    mode = request.args.get('mode', 'active') # 'active' or 'archive'
 
     # Order by priority (high, medium, low, none)
     priority_order = case(
@@ -772,17 +774,44 @@ def index():
         (Task.priority == 'low', 3),
         (Task.priority == 'none', 4),
     )
-    query = Task.query.filter(Task.is_archived == False).order_by(priority_order, Task.project)
+    
+    # Base query
+    query = Task.query.order_by(priority_order, Task.project)
+    
+    # Filter by Archive Status based on mode
+    if mode == 'archive':
+        query = query.filter(Task.is_archived == True)
+    else:
+        query = query.filter(Task.is_archived == False)
+
+    # Search Logic
+    if query_str:
+        search_pattern = f'%{query_str}%'
+        query = query.filter(
+            or_(
+                Task.task.like(search_pattern),
+                Task.project.like(search_pattern),
+                Task.notes.like(search_pattern),
+                Task.members.like(search_pattern)
+            )
+        )
 
     if project_filter:
         query = query.filter(Task.project == project_filter)
     if member_filter:
         query = query.filter(Task.members.contains(member_filter))
-    # Team filtering is now handled client-side to prevent flickering
-    # But we pass the active team ID to the template for initial state
+    
+    # Team filtering
     active_team_id = None
     if team_filter and team_filter.isdigit():
         active_team_id = int(team_filter)
+        # We can also filter server-side if desired, but kept consistent with existing pattern
+        # Actually, for 'Archive' logic to work as 'Team', we might want server-side filtering 
+        # But previous code relied on client side hiding for teams? 
+        # Let's double check lines 781-785 of original: "Team filtering is now handled client-side"
+        # However, for Archive page, we might want to just dump everything.
+        # But user wants Archive to act like a Team filter.
+        # If I pass all archived tasks to template, client-side filtering can works there too.
 
     tasks = query.all()
     projects = [project[0] for project in db.session.query(distinct(Task.project)).all()]
@@ -794,7 +823,6 @@ def index():
     # Create a mapping of project names to team names
     project_teams = {}
     for project in projects:
-        # Get the first task of this project to determine its team
         first_task = Task.query.filter_by(project=project).first()
         if first_task and first_task.team_id:
             team = Team.query.get(first_task.team_id)
@@ -805,7 +833,7 @@ def index():
         else:
             project_teams[project] = None
     
-    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams, active_team_id=active_team_id)
+    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams, active_team_id=active_team_id, q=query_str, mode=mode)
 
 
 

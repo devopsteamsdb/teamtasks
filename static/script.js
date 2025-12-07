@@ -160,6 +160,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function refreshContent() {
         try {
+            // Preserve focus state
+            const activeElement = document.activeElement;
+            const activeId = activeElement ? activeElement.id : null;
+            const selectionStart = (activeId === 'searchBox') ? activeElement.selectionStart : 0;
+            const selectionEnd = (activeId === 'searchBox') ? activeElement.selectionEnd : 0;
+
             const response = await fetch(window.location.href);
             const html = await response.text();
             const parser = new DOMParser();
@@ -176,6 +182,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentNavbar = document.querySelector('.navbar');
             if (newNavbar && currentNavbar.innerHTML !== newNavbar.innerHTML) {
                 currentNavbar.innerHTML = newNavbar.innerHTML;
+            }
+
+            // Restore focus if needed
+            if (activeId === 'searchBox') {
+                const el = document.getElementById('searchBox');
+                if (el) {
+                    el.focus();
+                    el.setSelectionRange(selectionStart, selectionEnd);
+                }
             }
 
             // Re-initialize DOM elements and listeners
@@ -198,14 +213,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // UI Population
     function populateDropdowns() {
+        // ... (existing code, not changing)
         const options = teams.map(team =>
             `<option value="${team.id}">${team.name_he}</option>`
         ).join('');
 
         const defaultOption = '<option value="">בחר צוות...</option>';
+        const archiveOption = '<option value="archive">ארכיון</option>';
 
-        if (createTaskTeam) createTaskTeam.innerHTML = defaultOption + options;
-        if (taskTeam) taskTeam.innerHTML = defaultOption + options;
+        if (createTaskTeam) createTaskTeam.innerHTML = defaultOption + options; // No archive for new tasks? Or maybe yes? Let's keep it simple for now and only allow moving to archive for existing.
+        if (taskTeam) taskTeam.innerHTML = defaultOption + options + archiveOption;
+    }
+    // ... skipping unchanged lines until performSearch ...
+
+    // Search & Filter Logic
+    async function performSearch(query) {
+        // Update URL with search query
+        const url = new URL(window.location);
+        if (query) {
+            url.searchParams.set('q', query);
+        } else {
+            url.searchParams.delete('q');
+        }
+        window.history.pushState({}, '', url);
+
+        // Trigger content refresh (which will now use the new query param)
+        // This allows archived tasks to be rendered by the server
+        await refreshContent();
     }
 
     function populateMemberCheckboxes() {
@@ -293,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saveBtn) saveBtn.addEventListener('click', saveTask);
         if (createSaveBtn) createSaveBtn.addEventListener('click', createTask);
         if (deleteBtn) deleteBtn.addEventListener('click', deleteTask);
-        if (archiveBtn) archiveBtn.addEventListener('click', archiveTask);
+        if (deleteBtn) deleteBtn.addEventListener('click', deleteTask);
 
         // Search
         if (searchBox) {
@@ -315,36 +349,81 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Team Filters
         teamFilterButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const teamId = btn.dataset.teamId;
+                const mode = btn.dataset.mode || 'active'; // 'active' or 'archive'
 
-                // Check if clicking currently active team (deselect logic)
-                // Check if clicking currently active team (deselect logic)
+                // 1. Archive Toggle Button Logic
+                if (mode === 'archive') {
+                    const currentUrl = new URL(window.location);
+                    const isArchiveActive = currentUrl.searchParams.get('mode') === 'archive';
+
+                    if (isArchiveActive) {
+                        // Toggle Off -> Go to active
+                        updateUrlParams('mode', 'active');
+                        btn.classList.remove('active');
+                    } else {
+                        // Toggle On -> Go to archive
+                        updateUrlParams('mode', 'archive');
+                        btn.classList.add('active');
+
+                        // Clear active team filter visually & URL
+                        activeTeamFilter = null;
+                        updateUrlParams('team', null);
+
+                        // Deselect all team buttons
+                        Array.from(document.querySelectorAll('.filter-team-btn:not(.archive-filter-btn)')).forEach(b => b.classList.remove('active'));
+                    }
+                    await refreshContent();
+                    return;
+                }
+
+                // 2. Normal Team Button Logic 
+                // Checks if we need to switch from Archive mode first
+                const currentUrlParams = new URLSearchParams(window.location.search);
+                const wasInArchiveMode = currentUrlParams.get('mode') === 'archive';
+
+                if (wasInArchiveMode) {
+                    // Switch to Active Mode AND Select the team
+                    updateUrlParams('mode', 'active');
+
+                    // Set team filter
+                    activeTeamFilter = teamId;
+                    updateUrlParams('team', teamId);
+
+                    // We must refresh because we are changing mode
+                    await refreshContent();
+                    return;
+                }
+
+                // 3. Active Mode - Toggle Logic
                 if (activeTeamFilter === teamId) {
+                    // Deselect Current Team
                     activeTeamFilter = null;
                     btn.classList.remove('active');
-
-                    // Clear URL param and localStorage
                     updateUrlParams('team', null);
 
-                    // Reset task visibility (show all)
+                    // Reset UI to show all active tasks
                     document.querySelectorAll('.project-card').forEach(card => {
                         card.classList.remove('filtered-hidden');
                         card.style.display = '';
                     });
 
-                    // Reset member filters too
                     if (typeof window.resetMemberFilter === 'function') {
                         window.resetMemberFilter();
                     }
-                    // Make sure member buttons are shown
                     selectedTeamMemberButtonsUpdate();
+                    applyFilters();
                     return;
                 }
 
-                // Select Logic
+                // 4. Active Mode - Select New Team
                 activeTeamFilter = teamId;
-                teamFilterButtons.forEach(b => b.classList.remove('active'));
+
+                // Remove active class from ALL buttons
+                Array.from(document.querySelectorAll('.filter-team-btn')).forEach(b => b.classList.remove('active'));
+
+                // Add active class to clicked button
                 btn.classList.add('active');
                 updateUrlParams('team', teamId);
 
@@ -394,6 +473,8 @@ document.addEventListener('DOMContentLoaded', () => {
             url.searchParams.set(key, value);
             if (key === 'team') {
                 localStorage.setItem('activeTeamFilter', value);
+                // Also ensure mode is active if selecting team logic happened elsewhere? 
+                // Rely on caller to set mode.
             }
         } else {
             url.searchParams.delete(key);
@@ -510,8 +591,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Set Team
-        if (taskItem.dataset.teamId) {
+        // Set Team or Archive
+        // Check if archived using data attribute
+        const isArchived = taskItem.dataset.isArchived === 'true';
+        if (isArchived) {
+            taskTeam.value = 'archive';
+        } else if (taskItem.dataset.teamId) {
             taskTeam.value = taskItem.dataset.teamId;
         } else {
             taskTeam.value = '';
@@ -552,6 +637,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentTaskItem) return;
 
         const taskId = currentTaskItem.dataset.id;
+
+        // Determine is_archived state from team selection
+        const selectedTeam = taskTeam.value;
+        const isArchiveSelected = selectedTeam === 'archive';
+
         const payload = {
             project: projectNameInput.value.trim(),
             task: taskNameInput.value.trim(),
@@ -559,9 +649,21 @@ document.addEventListener('DOMContentLoaded', () => {
             status: taskStatus.value,
             priority: taskPriority.value,
             notes: taskNotes.value.trim(),
-            team_id: taskTeam.value || null,
+            // If archive is selected, we might want to keep the old team_id or clear it? 
+            // The requirement says "move task from archived back to a certain team".
+            // If I set team_id to null when archiving, I lose the history.
+            // But if I unarchive I set it to the new team.
+            // Let's keep team_id as is if archiving (or maybe the user does not care).
+            // Actually, if I select "archive", the value is "archive". I can't send "archive" as team_id (int).
+            // So if archive, send existing team_id? Or null?
+            // Let's check what backend expects. It expects team_id as int or null.
+            // For now, let's set team_id to null if archived, unless we want to "remember" it.
+            // But the dropdown UI forces a choice: Team OR Archive. 
+            // So if I choose Archive, I am NOT choosing a Team.
+            team_id: isArchiveSelected ? null : (selectedTeam || null),
             start_date: parseDateToISO(taskStartDate.value),
-            end_date: parseDateToISO(taskEndDate.value)
+            end_date: parseDateToISO(taskEndDate.value),
+            is_archived: isArchiveSelected
         };
 
         if (taskStartDate.value && taskEndDate.value) {
