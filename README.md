@@ -363,7 +363,31 @@ GET /api/version
 
 ## 💾 Backup & Restore
 
-### Docker
+### Via Admin Interface (Recommended)
+You can easily backup and restore data via the Admin Panel (`/admin > Backup & Restore`):
+- **Backup**: Select a table (or "All System") and download a JSON file.
+- **Restore**: Select a target table (or "All System") and upload a JSON backup file.
+  - **All System Restore**: WARNING! This will wipe existing data and replace it with the backup content to ensure consistency.
+
+### Via API
+
+**Backup Table**
+```bash
+GET /api/backup/{table_name}
+# table_name can be: teams, members, tasks, special_days, or all
+```
+
+**Restore Table**
+```bash
+POST /api/restore/{table_name}
+Content-Type: multipart/form-data
+file: <backup_file.json>
+```
+
+### Manual (Docker/K8s)
+Legacy method for full volume backup:
+
+#### Docker
 
 **Backup**
 ```bash
@@ -383,7 +407,7 @@ cat db-backup.tar.gz | docker exec -i teamtasks tar xzf - -C /
 cat uploads-backup.tar.gz | docker exec -i teamtasks tar xzf - -C /
 ```
 
-### Kubernetes/OpenShift
+#### Kubernetes/OpenShift
 
 **Backup**
 ```bash

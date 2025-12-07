@@ -24,17 +24,125 @@
     <!-- Main Content -->
     <div class="admin-container">
 
-        <header class="admin-header">
-            <h1>ניהול צוותים וחברי צוות</h1>
-            <button id="addTeamBtn" class="btn btn-primary">
-                <img src="{{ url_for('static', filename='icons/plus-medium.svg') }}" width="18" height="18" alt="Add"
-                    style="vertical-align:middle;">
-                הוסף צוות חדש
-            </button>
+        <header class="admin-top-header">
+            <h1>הגדרות מערכת</h1>
         </header>
 
-        <div id="teamsContainer" class="teams-grid">
-            <!-- Teams will be loaded here dynamically -->
+        <div class="settings-layout">
+            <!-- Sidebar Navigation -->
+            <aside class="settings-sidebar">
+                <nav class="settings-nav">
+                    <button class="nav-item active" data-section="teams">
+                        <img src="{{ url_for('static', filename='icons/users.svg') }}" width="20" height="20"
+                            alt="Teams">
+                        ניהול צוותים
+                    </button>
+                    <button class="nav-item" data-section="system">
+                        <img src="{{ url_for('static', filename='icons/settings.svg') }}" width="20" height="20"
+                            alt="System">
+                        הגדרות כלליות
+                    </button>
+                    <button class="nav-item" data-section="backup">
+                        <img src="{{ url_for('static', filename='icons/save.svg') }}" width="20" height="20"
+                            alt="Backup">
+                        גיבוי ושחזור
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="settings-content">
+
+                <!-- Teams Section (Existing Content) -->
+                <section id="section-teams" class="settings-section active">
+                    <div class="section-header">
+                        <h2>צוותים וחברי צוות</h2>
+                        <button id="addTeamBtn" class="btn btn-primary">
+                            <img src="{{ url_for('static', filename='icons/plus-medium.svg') }}" width="18" height="18"
+                                alt="Add" style="vertical-align:middle;">
+                            הוסף צוות חדש
+                        </button>
+                    </div>
+
+                    <div id="teamsContainer" class="teams-grid">
+                        <!-- Teams will be loaded here dynamically -->
+                    </div>
+                </section>
+
+                <!-- System Section (New Placeholder) -->
+                <section id="section-system" class="settings-section">
+                    <div class="section-header">
+                        <h2>הגדרות כלליות</h2>
+                    </div>
+                    <div class="settings-card">
+                        <p>הגדרות מערכת נוספות יופיעו כאן בקרוב.</p>
+                    </div>
+                </section>
+
+                <!-- Backup & Restore Section -->
+                <section id="section-backup" class="settings-section">
+                    <div class="section-header">
+                        <h2>גיבוי ושחזור</h2>
+                    </div>
+
+                    <div class="backup-grid">
+                        <!-- Export Card -->
+                        <div class="settings-card">
+                            <h3>ייצוא נתונים (Backup)</h3>
+                            <p style="margin-bottom: 1rem; color: #6b7280;">הורד קובץ JSON המכיל את נתוני הטבלה הנבחרת.
+                            </p>
+
+                            <div class="form-group">
+                                <label for="backupTableSelect">בחר טבלה לגיבוי:</label>
+                                <select id="backupTableSelect" class="form-control">
+                                    <option value="all" style="font-weight: bold;">כל המערכת (All System)</option>
+                                    <option value="teams">צוותים (Teams)</option>
+                                    <option value="members">חברי צוות (Team Members)</option>
+                                    <option value="tasks">משימות (Tasks)</option>
+                                    <option value="special_days">ימים מיוחדים (Special Days)</option>
+                                </select>
+                            </div>
+
+                            <button id="downloadBackupBtn" class="btn btn-primary" style="width: 100%;">
+                                <img src="{{ url_for('static', filename='icons/save.svg') }}" width="18" height="18"
+                                    style="vertical-align:middle;">
+                                הורד גיבוי
+                            </button>
+                        </div>
+
+                        <!-- Import Card -->
+                        <div class="settings-card">
+                            <h3>ייבוא נתונים (Restore)</h3>
+                            <p style="margin-bottom: 1rem; color: #6b7280;">בחר טבלה וטען קובץ גיבוי. המערכת תאמת את
+                                התוכן.</p>
+
+                            <div class="form-group">
+                                <label for="restoreTableSelect">בחר טבלה לשחזור:</label>
+                                <select id="restoreTableSelect" class="form-control">
+                                    <option value="all" style="font-weight: bold;">כל המערכת (All System)</option>
+                                    <option value="teams">צוותים (Teams)</option>
+                                    <option value="members">חברי צוות (Team Members)</option>
+                                    <option value="tasks">משימות (Tasks)</option>
+                                    <option value="special_days">ימים מיוחדים (Special Days)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="restoreFileInput">קובץ גיבוי (JSON):</label>
+                                <input type="file" id="restoreFileInput" class="form-control" accept=".json" multiple>
+                                <small>ניתן לבחור מספר קבצים. הם ייבדקו מול הטבלה שנבחרה.</small>
+                            </div>
+
+                            <button id="restoreBtn" class="btn btn-danger" style="width: 100%;">
+                                <img src="{{ url_for('static', filename='icons/archive.svg') }}" width="18" height="18"
+                                    style="vertical-align:middle;">
+                                שחזר נתונים
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
         </div>
 
     </div>

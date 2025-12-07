@@ -576,6 +576,189 @@ with app.app_context():
     db.create_all()
 
 
+# ============ BACKUP & RESTORE API ============
+
+@app.route('/api/backup/<string:table_name>', methods=['GET'])
+def api_backup_table(table_name):
+    """Export table data as JSON"""
+    models = {
+        'tasks': Task,
+        'teams': Team,
+        'members': TeamMember,
+        'special_days': SpecialDay
+    }
+    
+    if table_name == 'all':
+        full_data = {}
+        total_count = 0
+        for name, model in models.items():
+            records = [r.to_dict() for r in model.query.all()]
+            full_data[name] = records
+            total_count += len(records)
+            
+        response_data = {
+            'table': 'all',
+            'count': total_count,
+            'timestamp': time.time(),
+            'data': full_data
+        }
+    elif table_name in models:
+        model = models[table_name]
+        records = model.query.all()
+        data = [record.to_dict() for record in records]
+        
+        response_data = {
+            'table': table_name,
+            'count': len(data),
+            'timestamp': time.time(),
+            'data': data
+        }
+    else:
+        return jsonify({'error': 'Invalid table name'}), 400
+    
+    response = jsonify(response_data)
+    response.headers['Content-Disposition'] = f'attachment; filename=backup_{table_name}_{int(time.time())}.json'
+    return response
+
+@app.route('/api/restore/<string:table_name>', methods=['POST'])
+def api_restore_table(table_name):
+    """Import table data from JSON with validation"""
+    
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file part'}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'No selected file'}), 400
+        
+    try:
+        import json
+        content = json.load(file)
+        
+        # Determine strictness and mode
+        is_full_backup = (table_name == 'all')
+        
+        # Check metadata
+        if isinstance(content, dict) and 'table' in content:
+            source_table = content['table']
+            # If user wants to restore 'all' but file is single table -> Error or Allow? 
+            # Error is safer.
+            if is_full_backup and source_table != 'all':
+                 return jsonify({'success': False, 'error': 'Cannot restore single table backup to "All System"'}), 400
+            
+            # If user wants single table, but file is 'all' -> Error?
+            if not is_full_backup and source_table == 'all':
+                 return jsonify({'success': False, 'error': 'Cannot restore "All System" backup to single table. Select "All System" to restore.'}), 400
+                 
+            # Mismatch single to single
+            if not is_full_backup and source_table != table_name:
+                 return jsonify({'success': False, 'error': f'Table mismatch: File is "{source_table}", expected "{table_name}"'}), 400
+            
+            data = content.get('data')
+        else:
+            # Raw list?
+            if is_full_backup:
+                return jsonify({'success': False, 'error': 'Invalid backup format for full restore'}), 400
+            data = content if isinstance(content, list) else []
+
+        if not data:
+             return jsonify({'success': True, 'message': 'No data to restore', 'count': 0})
+
+        # Helper to restore a single list of items to a table
+        def restore_single_table_data(t_name, t_data):
+            models = {
+                'tasks': Task,
+                'teams': Team,
+                'members': TeamMember,
+                'special_days': SpecialDay
+            }
+            if t_name not in models: return 0
+            if not t_data: return 0
+            
+            model = models[t_name]
+            
+            # Validation (check first record)
+            required_fields = {
+                'teams': ['name_en', 'name_he'],
+                'members': ['name_en', 'name_he', 'team_id'],
+                'tasks': ['project', 'task', 'status'],
+                'special_days': ['date', 'name']
+            }
+            if t_name in required_fields:
+                sample = t_data[0]
+                for f in required_fields[t_name]:
+                    if f not in sample:
+                        raise ValueError(f'Missing field "{f}" in {t_name} data')
+
+            valid_keys = [c.key for c in model.__table__.columns]
+            from datetime import datetime
+            
+            count = 0
+            for item in t_data:
+                clean_item = {k: v for k, v in item.items() if k in valid_keys}
+                
+                # Date processing & Fixes
+                if t_name == 'tasks':
+                    # Convert members list to string if needed
+                    if 'members' in clean_item and isinstance(clean_item['members'], list):
+                        clean_item['members'] = ','.join(clean_item['members'])
+                        
+                    for date_field in ['start_date', 'end_date']:
+                        if clean_item.get(date_field) and isinstance(clean_item[date_field], str):
+                             try:
+                                clean_item[date_field] = datetime.fromisoformat(clean_item[date_field]).date()
+                             except ValueError:
+                                clean_item[date_field] = None
+                                
+                if t_name == 'special_days':
+                     if clean_item.get('date') and isinstance(clean_item['date'], str):
+                         try:
+                            clean_item['date'] = datetime.fromisoformat(clean_item['date']).date()
+                         except ValueError:
+                            pass
+
+                # Use merge to handle both insert (with specific ID) and update
+                record = model(**clean_item)
+                db.session.merge(record)
+                count += 1
+            return count
+
+        restored_counts = {}
+        
+        if is_full_backup:
+            # WIPE DATA for full restore to ensure exact state match
+            # Order matters: Dependencies first (Tasks depend on nothing? wait.)
+            # Tasks -> TeamID (nullable). Members -> TeamID. 
+            # Delete order: Tasks, SpecialDays, TeamMembers, Teams
+            try:
+                Task.query.delete()
+                SpecialDay.query.delete()
+                TeamMember.query.delete()
+                Team.query.delete()
+                db.session.flush() # Ensure deletes happen before inserts
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({'success': False, 'error': f'Failed to clear existing data: {str(e)}'}), 500
+
+            # Restore Order: Teams -> Members -> Tasks -> SpecialDays
+            restore_order = ['teams', 'members', 'tasks', 'special_days']
+            for t_name in restore_order:
+                if t_name in data:
+                    cnt = restore_single_table_data(t_name, data[t_name])
+                    restored_counts[t_name] = cnt
+        else:
+            # For single table, we generally APPEND/UPDATE. 
+            # Wiping single table is risky without cascading, so we stick to additive.
+            cnt = restore_single_table_data(table_name, data)
+            restored_counts[table_name] = cnt
+            
+        db.session.commit()
+        return jsonify({'success': True, 'counts': restored_counts})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/')
 def index():
     project_filter = request.args.get('project')

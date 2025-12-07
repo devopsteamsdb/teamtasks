@@ -20,6 +20,95 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load teams on page load
     loadTeams();
 
+    // Sidebar Navigation
+    const navItems = document.querySelectorAll('.nav-item');
+    const sections = document.querySelectorAll('.settings-section');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            // Update Nav
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+
+            // Update Section
+            const sectionId = 'section-' + item.dataset.section;
+            sections.forEach(section => {
+                if (section.id === sectionId) {
+                    section.classList.add('active');
+                } else {
+                    section.classList.remove('active');
+                }
+            });
+        });
+    });
+
+    // Backup & Restore
+    const downloadBackupBtn = document.getElementById('downloadBackupBtn');
+    if (downloadBackupBtn) {
+        downloadBackupBtn.addEventListener('click', () => {
+            const table = document.getElementById('backupTableSelect').value;
+            window.location.href = `/api/backup/${table}`;
+        });
+    }
+
+    const restoreBtn = document.getElementById('restoreBtn');
+    if (restoreBtn) {
+        restoreBtn.addEventListener('click', async () => {
+            const table = document.getElementById('restoreTableSelect').value;
+            const fileInput = document.getElementById('restoreFileInput');
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                showToast('נא לבחור קובץ אחד לפחות', 'error');
+                return;
+            }
+
+            if (!confirm(`האם אתה בטוח שברצונך לשחזר נתונים לטבלה "${table}"? פעולה זו תוסיף נתונים מהגיבוי.`)) {
+                return;
+            }
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            // Process files sequentially
+            for (let i = 0; i < files.length; i++) {
+                const formData = new FormData();
+                formData.append('file', files[i]);
+
+                try {
+                    const response = await fetch(`/api/restore/${table}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        console.error(`Error restoring file ${files[i].name}:`, result.error);
+                        errorCount++;
+                        showToast(`שגיאה בקובץ ${files[i].name}: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    console.error(error);
+                    errorCount++;
+                    showToast(`שגיאה בקובץ ${files[i].name}`, 'error');
+                }
+            }
+
+            if (successCount > 0) {
+                showToast(`השחזור הושלם: ${successCount} קבצים עובדו בהצלחה`, 'success');
+                // Refresh teams if that was the target
+                if (table === 'teams' || table === 'members') {
+                    loadTeams();
+                }
+            }
+
+            // Clear input
+            fileInput.value = '';
+        });
+    }
+
     // Event Listeners
     addTeamBtn.addEventListener('click', () => openTeamModal());
     saveTeamBtn.addEventListener('click', saveTeam);

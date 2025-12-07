@@ -1,37 +1,168 @@
 /* Admin Page Styles */
 
+/* Navbar Adjustments */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 0.75rem 2rem;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 0;
+}
+
+.navbar-brand span {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: #4f46e5;
+    /* Primary */
+    color: white;
+    text-decoration: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.btn-back:hover {
+    background: #4338ca;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+}
+
 .admin-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 2rem;
 }
 
-.admin-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.admin-top-header {
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid var(--border, #e5e7eb);
+    border-bottom: 1px solid #e5e7eb;
 }
 
-.admin-header h1 {
-    font-size: 2rem;
-    color: var(--text-primary, #1f2937);
+.admin-top-header h1 {
+    font-size: 1.8rem;
+    color: #1f2937;
     margin: 0;
 }
 
-.btn-back {
-    padding: 0.5rem 1rem;
-    background: var(--primary, #4f46e5);
-    color: white;
-    text-decoration: none;
-    border-radius: 0.5rem;
-    transition: all 0.2s;
+/* Settings Layout */
+.settings-layout {
+    display: flex;
+    gap: 2rem;
+    min-height: 600px;
 }
 
-.btn-back:hover {
-    background: var(--primary-dark, #4338ca);
+.settings-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+}
+
+.settings-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    border-radius: 0.5rem;
+    color: #4b5563;
+    font-size: 1rem;
+    text-align: right;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.nav-item img {
+    opacity: 0.7;
+    filter: none;
+    /* Reset any default */
+}
+
+/* Fix for potential white icons being invisible on light background */
+.nav-item img[src*="save.svg"],
+.nav-item img[src*="archive.svg"] {
+    filter: invert(1) brightness(0);
+    /* Force black if originally white */
+}
+
+.nav-item:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+.nav-item.active {
+    background: #e0e7ff;
+    color: #4f46e5;
+    font-weight: 500;
+}
+
+.settings-content {
+    flex-grow: 1;
+}
+
+.settings-section {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.settings-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+    font-size: 1.5rem;
+    color: #1f2937;
+    margin: 0;
+}
+
+.settings-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+}
+
+/* Backup Grid */
+.backup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
 }
 
 /* Teams Grid */
@@ -341,7 +472,7 @@
     .teams-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .admin-header {
         flex-direction: column;
         align-items: flex-start;
