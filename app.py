@@ -176,6 +176,7 @@ def api_create_team():
         return jsonify({'success': False, 'error': 'Both English and Hebrew names are required'}), 400
     
     # Check if team already exists
+    existing = Team.query.filter_by(name_en=name_en).first()
     if existing:
         return jsonify({'success': False, 'error': 'Team with this English name already exists'}), 400
     

@@ -11,3 +11,9 @@
 # Python cache
 __pycache__/
 *.pyc
+
+# Ignore venv
+/venv/
+
+# Ignore node_modules
+/node_modules/

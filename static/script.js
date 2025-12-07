@@ -18,6 +18,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize
     init();
 
+    function initializeFlatpickr() {
+        const config = {
+            locale: "he",
+            dateFormat: "d/m/Y",
+            allowInput: true,
+            firstDayOfWeek: 0, // Sunday
+            disableMobile: "true",
+            parseDate: (datestr, format) => {
+                // Return null or undefined if empty
+                if (!datestr) return null;
+
+                // Allow free form entry (e.g. 07122025 -> 2025-12-07)
+                // Normalize separators
+                let cleanStr = datestr.replace(/[\.\-]/g, '/');
+
+                // Handle 8 digit number (07122025)
+                if (/^\d{8}$/.test(cleanStr)) {
+                    cleanStr = cleanStr.substring(0, 2) + '/' + cleanStr.substring(2, 4) + '/' + cleanStr.substring(4);
+                }
+
+                return flatpickr.parseDate(cleanStr, format);
+            }
+        };
+
+        flatpickr("#taskStartDate", config);
+        flatpickr("#taskEndDate", config);
+        flatpickr("#createTaskStartDate", config);
+        flatpickr("#createTaskEndDate", config);
+    }
+
     function updateDOMElements() {
         modal = document.getElementById('taskModal');
         createModal = document.getElementById('createTaskModal');
@@ -54,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function init() {
         updateDOMElements();
+        initializeFlatpickr();
         await Promise.all([loadTeams(), loadMembers(), checkVersion(true)]);
         populateDropdowns();
         populateMemberCheckboxes();
@@ -219,6 +250,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove old listener to avoid duplicates if re-running
             addTaskBtn.removeEventListener('click', openCreateModal);
             addTaskBtn.addEventListener('click', openCreateModal);
+        }
+
+        // Close Modal Buttons
+        if (closeModal) {
+            closeModal.addEventListener('click', () => {
+                if (modal) modal.style.display = 'none';
+            });
+        }
+
+        if (closeCreateModal) {
+            closeCreateModal.addEventListener('click', () => {
+                if (createModal) createModal.style.display = 'none';
+            });
         }
 
         // Add Task to Project Buttons
@@ -520,6 +564,15 @@ document.addEventListener('DOMContentLoaded', () => {
             end_date: parseDateToISO(taskEndDate.value)
         };
 
+        if (taskStartDate.value && taskEndDate.value) {
+            const start = flatpickr.parseDate(taskStartDate.value, "d/m/Y");
+            const end = flatpickr.parseDate(taskEndDate.value, "d/m/Y");
+            if (start > end) {
+                alert('תאריך ההתחלה לא יכול להיות מאוחר מתאריך הסיום');
+                return;
+            }
+        }
+
         try {
             const response = await fetch(`/api/tasks/${taskId}`, {
                 method: 'PUT',
@@ -554,6 +607,15 @@ document.addEventListener('DOMContentLoaded', () => {
             start_date: parseDateToISO(createTaskStartDate.value),
             end_date: parseDateToISO(createTaskEndDate.value)
         };
+
+        if (createTaskStartDate.value && createTaskEndDate.value) {
+            const start = flatpickr.parseDate(createTaskStartDate.value, "d/m/Y");
+            const end = flatpickr.parseDate(createTaskEndDate.value, "d/m/Y");
+            if (start > end) {
+                alert('תאריך ההתחלה לא יכול להיות מאוחר מתאריך הסיום');
+                return;
+            }
+        }
 
         try {
             const response = await fetch('/api/tasks', {
