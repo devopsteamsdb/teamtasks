@@ -64,6 +64,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         await loadData();
         renderCurrentView();
+
+        // Add Archive Filter Persistence Logic (Calendar -> Tasks)
+        const navTasks = document.getElementById('navTasksLink');
+        if (navTasks) {
+            navTasks.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (activeTeamFilter === 'archive') {
+                    window.location.href = '/?mode=archive';
+                } else if (activeTeamFilter) {
+                    window.location.href = `/?team=${activeTeamFilter}`;
+                } else {
+                    window.location.href = '/';
+                }
+            });
+        }
     }
 
     function attachEventListeners() {
@@ -123,10 +138,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadWeekData() {
         try {
-            let url = `/api/calendar/week?date=${toISODateString(currentDate)}`;
+            const weekStart = getWeekStart(currentDate);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+
+            let url = `/api/calendar/week?start_date=${formatDate(weekStart)}&end_date=${formatDate(weekEnd)}`;
+
             if (activeTeamFilter) {
                 url += `&team_id=${activeTeamFilter}`;
             }
+
             const response = await fetch(url);
             const data = await response.json();
             tasks = data.tasks;
@@ -135,18 +156,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
-
     async function loadWorkloadData() {
         try {
             const weekStart = getWeekStart(currentDate);
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekEnd.getDate() + 4); // Only 5 days
 
-            let url = `/api/calendar/workload?start_date=${toISODateString(weekStart)}&end_date=${toISODateString(weekEnd)}`;
+            let url = `/api/calendar/workload?start_date=${formatDate(weekStart)}&end_date=${formatDate(weekEnd)}`;
+
             if (activeTeamFilter) {
                 url += `&team_id=${activeTeamFilter}`;
             }
+
             const response = await fetch(url);
             const data = await response.json();
             tasks = data.workload;
@@ -187,23 +208,52 @@ document.addEventListener('DOMContentLoaded', () => {
             renderWorkloadView();
         }
     }
+}
+    }
+}
 
     function navigatePeriod(direction) {
         if (currentView === 'week') {
             currentDate.setDate(currentDate.getDate() + (direction * 7));
-        } else if (currentView === 'workload') {
-            currentDate.setDate(currentDate.getDate() + (direction * 7));
+else {
+            }
         }
-        renderCurrentView();
     }
+} else if (currentView === 'workload') {
+    currentDate.setDate(currentDate.getDate() + (direction * 7));
+else {
+    }
+}
+    }
+}
+renderCurrentView();
+else {
+}
+            }
+    }
+}
 
+function renderWeekView() {
+    const weekStart = getWeekStart(currentDate);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 4); // Only 5 days (Sun-Thu)
+
+    // Update title - reversed order for RTL
+    periodTitle.textContent = `${
+}
+                    }
+            }
+        } - ${
+}
+                    }
+            }
     function renderWeekView() {
         const weekStart = getWeekStart(currentDate);
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 4); // Only 5 days (Sun-Thu)
+        weekEnd.setDate(weekEnd.getDate() + 6);
 
-        // Update title - reversed order for RTL
-        periodTitle.textContent = `${formatDate(weekEnd)} - ${formatDate(weekStart)}`;
+        // Update title
+        periodTitle.textContent = `${ formatDate(weekStart) } - ${ formatDate(weekEnd) } `;
 
         // Build week grid
         const grid = weekView.querySelector('.calendar-week-grid');
@@ -223,10 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const dayNum = String(day.getDate()).padStart(2, '0');
             const monthNum = String(day.getMonth() + 1).padStart(2, '0');
             const yearNum = day.getFullYear();
+            
             dayHeader.innerHTML = `
-                <div class="day-name">${hebrewDays[day.getDay()]}</div>
-                <div class="day-number">${dayNum}/${monthNum}/${yearNum}</div>
-            `;
+        < div class="day-name" > ${ hebrewDays[day.getDay()] }</div >
+            <div class="day-number">${dayNum}/${monthNum}/${yearNum}</div>
+    `;
 
             // Special day check
             const dayStr = toISODateString(day);
@@ -264,15 +315,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
-
     function renderWorkloadView() {
         const weekStart = getWeekStart(currentDate);
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 4); // Only 5 days
 
         // Update title - reversed order for RTL
-        periodTitle.textContent = `חברי צוות: ${formatDate(weekEnd)} - ${formatDate(weekStart)}`;
+        periodTitle.textContent = `חברי צוות: ${ formatDate(weekStart) } - ${ formatDate(weekEnd) } `;
 
         const container = workloadView.querySelector('.workload-container');
         container.innerHTML = '';
@@ -304,9 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const yearNum = day.getFullYear();
 
             dayHeader.innerHTML = `
-                <div style="font-weight: 600; font-size: 0.9rem;">${hebrewDays[day.getDay()]}</div>
-                <div style="font-size: 0.8rem; color: #6B7280;">${dayNum}/${monthNum}/${yearNum}</div>
-            `;
+        < div style = "font-weight: 600; font-size: 0.9rem;" > ${ hebrewDays[day.getDay()] }</div >
+            <div style="font-size: 0.8rem; color: #6B7280;">${dayNum}/${monthNum}/${yearNum}</div>
+    `;
 
             // Special day check
             const dayStr = toISODateString(day);
@@ -335,10 +384,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const memberInfo = document.createElement('div');
             memberInfo.className = 'workload-member-info';
             memberInfo.innerHTML = `
-                <img src="/uploads/avatars/${memberData.member.avatar_path}" class="workload-avatar" 
-                     onerror="this.src='/static/images/default.png'">
-                <span class="workload-member-name">${memberData.member.name_he}</span>
-            `;
+        < img src = "/uploads/avatars/${memberData.member.avatar_path}" class="workload-avatar"
+    onerror = "this.src='/static/images/default.png'" >
+        <span class="workload-member-name">${memberData.member.name_he}</span>
+    `;
             memberRow.appendChild(memberInfo);
 
             // Timeline
@@ -401,12 +450,12 @@ document.addEventListener('DOMContentLoaded', () => {
         card.className = 'calendar-task-card';
         card.draggable = true;
         card.dataset.taskId = task.id;
-        card.style.borderRight = `4px solid ${priorityColors[task.priority || 'none']}`;
+        card.style.borderRight = `4px solid ${ priorityColors[task.priority || 'none'] } `;
 
         card.innerHTML = `
-            <div class="task-card-name">${task.task}</div>
+        < div class="task-card-name" > ${ task.task }</div >
             <div class="task-card-project">${task.project}</div>
-        `;
+    `;
 
         card.addEventListener('click', () => openScheduleModal(task));
         card.addEventListener('dragstart', handleDragStart);
@@ -439,46 +488,90 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function updateTaskDate(taskId, newDate) {
         try {
-            const response = await fetch(`/api/tasks/${taskId}/schedule`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ start_date: newDate })
-            });
+            const response = await fetch(`/ api / tasks / ${ taskId }/schedule`, {
+    method: 'PUT',
+        headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        start_date: newDate
+    })
+});
 
-            const data = await response.json();
-            if (data.success) {
-                renderCurrentView();
-                renderCurrentView();
-            } else {
-                alert('שגיאה בשמירת תזמון המשימה');
-            }
+const data = await response.json();
+if (data.success) {
+    renderCurrentView();
+} else {
+    alert('שגיאה בשמירת תזמון המשימה');
+}
         } catch (error) {
-            console.error('Error saving task schedule:', error);
-            alert('שגיאה בשמירת תזמון המשימה');
-        }
+    console.error('Error saving task schedule:', error);
+    alert('שגיאה בשמירת תזמון המשימה');
+}
     }
 
-    function openScheduleModal(task) {
-        currentTaskId = task.id;
-        document.getElementById('scheduleTaskName').value = task.task;
+function openScheduleModal(task) {
+    currentTaskId = task.id;
+    document.getElementById('scheduleTaskName').value = task.task;
 
-        // Convert ISO dates to dd/mm/yyyy format
-        if (task.start_date) {
-            const startParts = task.start_date.split('-');
-            document.getElementById('scheduleStartDate').value = `${startParts[2]}/${startParts[1]}/${startParts[0]}`;
-        } else {
-            document.getElementById('scheduleStartDate').value = '';
+    // Convert ISO dates to dd/mm/yyyy format
+    if (task.start_date) {
+        const startParts = task.start_date.split('-');
+        document.getElementById('scheduleStartDate').value = `${startParts[2]
+else {
         }
+    }
+}
+                }
+            }
+    }
+            }
+        }
+}
+}`;
+else {
+                }
+            }
+    }
+            document.getElementById('scheduleStartDate').value = '';
+else {
+                }
+            }
+    }
+}
 
         if (task.end_date) {
             const endParts = task.end_date.split('-');
-            document.getElementById('scheduleEndDate').value = `${endParts[2]}/${endParts[1]}/${endParts[0]}`;
-        } else {
-            document.getElementById('scheduleEndDate').value = '';
+            document.getElementById('scheduleEndDate').value = `${
+    endParts[2]
+else {
+    }
+}
+    }
+            }
         }
+}
+            }
+        }
+}
+}`;
+else {
+                }
+            }
+    }
+            document.getElementById('scheduleEndDate').value = '';
+else {
+                }
+            }
+    }
+}
 
         scheduleModal.style.display = 'block';
+else {
+                }
+            }
     }
+}
 
     async function saveTaskSchedule() {
         if (!currentTaskId) return;
@@ -493,65 +586,196 @@ document.addEventListener('DOMContentLoaded', () => {
         if (startDateInput) {
             const startParts = startDateInput.split('/');
             if (startParts.length === 3) {
-                startDate = `${startParts[2]}-${startParts[1]}-${startParts[0]}`;
+                startDate = `${
+    startParts[2]
+else {
+    }
+}
+    }
+} -${
+    startParts[1]
+else {
+    }
+}
+    }
+} -${
+    startParts[0]
+else {
+    }
+}
+    }
+} `;
+else {
+                }
             }
-        }
+    }
+}
+else {
+                }
+            }
+    }
+}
 
         if (endDateInput) {
             const endParts = endDateInput.split('/');
             if (endParts.length === 3) {
-                endDate = `${endParts[2]}-${endParts[1]}-${endParts[0]}`;
+                endDate = `${
+    endParts[2]
+else {
+    }
+}
+    }
+} -${
+    endParts[1]
+else {
+    }
+}
+    }
+} -${
+    endParts[0]
+else {
+    }
+}
+    }
+} `;
+else {
+                }
             }
-        }
+    }
+}
+else {
+                }
+            }
+    }
+}
 
         try {
-            const response = await fetch(`/api/tasks/${currentTaskId}/schedule`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    start_date: startDate,
-                    end_date: endDate,
-                    estimated_hours: null
-                })
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                scheduleModal.style.display = 'none';
-                renderCurrentView();
-            } else {
-                alert('שגיאה בשמירת תזמון המשימה');
-            }
-        } catch (error) {
-            console.error('Error saving task schedule:', error);
-            alert('שגיאה בשמירת תזמון המשימה');
+            const response = await fetch(`/ api / tasks / ${
+    currentTaskId
+else {
+    }
+}
+    }
+}/schedule`, {
+method: 'PUT',
+    headers: {
+    'Content-Type': 'application/json'
+else {
+    }
+}
+    }
+},
+body: JSON.stringify({
+    start_date: startDate,
+    end_date: endDate,
+    estimated_hours: null
+else {
+    }
+}
+    }
+})
+else {
+}
         }
-    }
+}
 
-    // Helper functions
-    function getWeekStart(date) {
-        const d = new Date(date);
-        const day = d.getDay();
-        const diff = day; // Sunday is 0
-        d.setDate(d.getDate() - diff);
-        d.setHours(0, 0, 0, 0);
-        return d;
+const data = await response.json();
+if (data.success) {
+    scheduleModal.style.display = 'none';
+    renderCurrentView();
+else {
     }
+}
+    }
+alert('שגיאה בשמירת תזמון המשימה');
+else {
+}
+            }
+    }
+}
+else {
+}
+        }
+}
+} catch (error) {
+    console.error('Error saving task schedule:', error);
+    alert('שגיאה בשמירת תזמון המשימה');
+else {
+    }
+}
+    }
+}
+else {
+}
+        }
+}
+}
 
-    function formatDate(date) {
-        const d = String(date.getDate()).padStart(2, '0');
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const y = date.getFullYear();
-        return `${d}/${m}/${y}`;
+// Helper functions
+function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day; // Sunday is 0
+    d.setDate(d.getDate() - diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+else {
     }
+}
+    }
+}
+
+function formatDate(date) {
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d
+else {
+    }
+}
+    }
+            }
+        }
+}
+            }
+        }
+}
+}`;
+else {
+                }
+            }
+    }
+}
 
     function toISODateString(date) {
         const d = new Date(date);
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return `${
+    year
+else {
     }
+}
+    }
+} -${
+    month
+else {
+    }
+}
+    }
+} -${
+    day
+else {
+    }
+}
+    }
+} `;
+else {
+                }
+            }
+    }
+}
 
     // Special Days Management
     const specialDaysModal = document.getElementById('specialDaysModal');
@@ -562,12 +786,23 @@ document.addEventListener('DOMContentLoaded', () => {
         manageHolidaysBtn.addEventListener('click', () => {
             loadSpecialDaysList();
             specialDaysModal.style.display = 'block';
-        });
+else {
+                }
+            }
     }
+else {
+                }
+            }
+    }
+}
 
     if (closeSpecialModalBtn) {
         closeSpecialModalBtn.addEventListener('click', () => specialDaysModal.style.display = 'none');
+else {
+                }
+            }
     }
+}
 
     document.getElementById('addSpecialDayBtn').addEventListener('click', async () => {
         const dateInput = document.getElementById('specialDayDate');
@@ -580,18 +815,48 @@ document.addEventListener('DOMContentLoaded', () => {
         // Convert dd/mm/yyyy to iso
         const parts = dateVal.split('/');
         if (parts.length !== 3) return alert('פורמט תאריך לא תקין');
-        const isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        const isoDate = `${
+    parts[2]
+else {
+    }
+}
+    }
+} -${
+    parts[1]
+else {
+    }
+}
+    }
+} -${
+    parts[0]
+else {
+    }
+}
+    }
+} `;
 
         try {
             const response = await fetch('/api/special-days', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json'
+else {
+                }
+            }
+    }
+},
                 body: JSON.stringify({
                     date: isoDate,
                     name: nameInput.value,
                     type: typeInput.value
-                })
-            });
+else {
+                }
+            }
+    }
+})
+else {
+                }
+            }
+    }
 
             const data = await response.json();
             if (data.success) {
@@ -603,14 +868,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 await fetchSpecialDays();
                 loadSpecialDaysList();
                 renderCurrentView();
-            } else {
-                alert('שגיאה בהוספת יום מיוחד: ' + (data.error || 'שגיאה לא ידועה'));
+else {
+                }
             }
-        } catch (e) {
+    }
+                alert('שגיאה בהוספת יום מיוחד: ' + (data.error || 'שגיאה לא ידועה'));
+else {
+                }
+            }
+    }
+}
+else {
+                }
+            }
+    }
+} catch (e) {
             console.error(e);
             alert('שגיאה בתקשורת');
-        }
-    });
+else {
+                }
+            }
+    }
+}
+else {
+                }
+            }
+    }
 
     async function loadSpecialDaysList() {
         await fetchSpecialDays(); // Ensure fresh data
@@ -625,41 +908,114 @@ document.addEventListener('DOMContentLoaded', () => {
             item.className = 'special-day-item';
 
             const dateParts = day.date.split('-');
-            const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+            const displayDate = `${
+    dateParts[2]
+else {
+    }
+}
+    }
+            }
+        }
+}
+            }
+        }
+}
+}`;
 
             item.innerHTML = `
-                <div class="special-day-info">
-                    <span class="special-day-date">${displayDate}</span>
-                    <span class="special-day-name">${day.name}</span>
-                    <span class="special-day-type ${day.type}">${day.type === 'holiday' ? 'חג' : (day.type === 'company_event' ? 'אירוע' : 'אחר')}</span>
-                </div>
-                <button class="btn-delete-special" data-id="${day.id}">&times;</button>
-            `;
+    < div class="special-day-info" >
+                    <span class="special-day-date">${displayDate
+else {
+                }
+            }
+    }
+}</span>
+                    <span class="special-day-name">${day.name
+else {
+                }
+            }
+    }
+}</span>
+                    <span class="special-day-type ${day.type
+else {
+}
+            }
+    }
+}">${day.type === 'holiday' ? 'חג' : (day.type === 'company_event' ? 'אירוע' : 'אחר')
+else {
+            }
+        }
+}
+}</span >
+                </div >
+    <button class="btn-delete-special" data-id="${day.id
+else {
+}
+            }
+    }
+}">&times;</button>
+`;
 
             const delBtn = item.querySelector('.btn-delete-special');
             delBtn.addEventListener('click', () => deleteSpecialDay(day.id));
 
             list.appendChild(item);
-        });
+else {
+                }
+            }
     }
+else {
+                }
+            }
+    }
+}
 
     async function deleteSpecialDay(id) {
         if (!confirm('האם למחוק יום מיוחד זה?')) return;
 
         try {
-            const response = await fetch(`/api/special-days/${id}`, { method: 'DELETE' });
+            const response = await fetch(`/ api / special - days / ${
+    id
+else {
+    }
+}
+    }
+} `, { method: 'DELETE'
+else {
+                }
+            }
+    }
             if (response.ok) {
                 await fetchSpecialDays();
                 loadSpecialDaysList();
                 renderCurrentView();
-            } else {
-                alert('שגיאה במחיקה');
+else {
+                }
             }
-        } catch (e) {
+    }
+                alert('שגיאה במחיקה');
+else {
+                }
+            }
+    }
+}
+else {
+                }
+            }
+    }
+} catch (e) {
             console.error(e);
             alert('שגיאה בתקשורת');
-        }
+else {
+                }
+            }
     }
+}
+else {
+                }
+            }
+    }
+}
 
     // Real-time Updates
     let lastUpdateTimestamp = 0;
@@ -677,18 +1033,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (firstLoad) {
                 lastUpdateTimestamp = data.timestamp;
-            } else if (data.timestamp > lastUpdateTimestamp) {
+else {
+                }
+            }
+    }
+} else if (data.timestamp > lastUpdateTimestamp) {
                 lastUpdateTimestamp = data.timestamp;
                 // Refresh data
                 if (currentView !== 'workload') {
                     await fetchSpecialDays();
+else {
                 }
+            }
+    }
+}
                 loadSpecialDaysList();
                 renderCurrentView();
+else {
+                }
             }
-        } catch (error) {
-            console.error('Error checking version:', error);
-        }
     }
-
-});
+}
+else {
+                }
+            }
+    }
+} catch (error) {
+            console.error('Error checking version:', error);
+else {
+                }
+            }
+    }
+}
+else {
+                }
+            }
+    }
+}
+else {
+                }
+            }
+    }

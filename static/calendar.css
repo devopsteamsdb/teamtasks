@@ -317,9 +317,7 @@
     min-height: 60px;
 }
 
-.workload-day-cell:first-child {
-    border-left: none;
-}
+/* removed first-child rule to keep border */
 
 .workload-task-block {
     background: #cbd5e1;

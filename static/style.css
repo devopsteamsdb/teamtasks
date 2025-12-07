@@ -176,6 +176,8 @@ textarea {
     color: var(--dark);
     display: flex;
     align-items: center;
+    width: 100%;
+    /* Ensure it spans full width for flex spacing */
 }
 
 /* Grid Layout */
@@ -606,7 +608,9 @@ textarea {
 .filter-controls {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    /* Removed gap for manual overlap control */
+    padding-right: 5px;
+    /* small buffer */
 }
 
 .filter-avatar-btn {
@@ -616,16 +620,25 @@ textarea {
     padding: 0;
     cursor: pointer;
     transition: all 0.2s;
+    margin-right: -12px;
+    /* Overlap */
+    position: relative;
+    z-index: 1;
+    border: 2px solid var(--white);
+    /* White border to separate overlapping avatars */
 }
 
 .filter-avatar-btn:hover {
     border-color: var(--primary);
     transform: scale(1.1);
+    z-index: 100;
 }
 
 .filter-avatar-btn.active {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    z-index: 50;
+    /* Keep active above normal but below hover */
+    transform: scale(1.05);
 }
 
 .filter-avatar {
@@ -854,27 +867,240 @@ textarea {
 .add-task-project-btn {
     background: none;
     border: none;
+}
+
+.task-actions {
+    margin-right: auto;
+    margin-left: 10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.task-item:hover .task-actions {
+    opacity: 1;
+}
+
+/* Hidden task for filtering */
+.task-item.filtered-hidden,
+.project-card.filtered-hidden {
+    display: none !important;
+}
+
+/* Delete Button */
+.btn-danger {
+    background-color: var(--danger);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Search Box */
+.navbar-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 0 2rem;
+}
+
+.search-container {
+    position: relative;
+    max-width: 300px;
+}
+
+.search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.5rem 2.5rem 0.5rem 2.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.clear-search-btn {
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: none;
+    color: #888;
+    font-size: 1.1rem;
+}
+
+.clear-search-btn:hover {
+    color: #4b5563;
+}
+
+.clear-search {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    font-size: 1.125rem;
+}
+
+.clear-search:hover {
+    color: #4b5563;
+}
+
+.search-highlight {
+    background-color: #fef3c7;
+    font-weight: 600;
+}
+
+.task-item.search-hidden,
+.project-card.search-hidden {
+    display: none !important;
+}
+
+/* Team Filters */
+.team-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-team-btn {
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.filter-team-btn:hover {
+    border-color: #4f46e5;
+    background: #f0f0ff;
+}
+
+.filter-team-btn.active {
+    background: #4f46e5;
+    color: white;
+    border-color: #4f46e5;
+}
+
+/* Navbar Link Styles */
+.navbar-brand-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+
+
+
+
+/* Navbar Icon Links */
+.navbar-icon-link {
+    margin-left: 16px;
+    vertical-align: middle;
+    display: inline-block;
+    color: #555;
+}
+
+.navbar-icon-link.print-link {
+    float: right;
+}
+
+/* Icon Images */
+.icon-img {
+    vertical-align: middle;
+}
+
+/* Add Task to Project Button */
+.add-task-project-btn {
+    background: none;
+    border: none;
     cursor: pointer;
     padding: 0 0 0 6px;
     vertical-align: middle;
 }
 
-. b t n - a r c h i v e    {
-                 t e x t - d e c o r a t i o n :    n o n e ;
-                 m a r g i n - r i g h t :    1 0 p x ;
-                 p a d d i n g :    0 . 4 r e m   0 . 8 r e m ;
-                 d i s p l a y :    i n l i n e - f l e x ;
-                 a l i g n - i t e m s :    c e n t e r ;
-                 g a p :    5 p x ;
-                 f o n t - s i z e :    0 . 8 5 r e m ;
-                 / *   M a t c h   a d d   t a s k   f o n t   s i z e   * /             b a c k g r o u n d - c o l o r :    v a r ( - - s e c o n d a r y ) ;
-                 / *   E n s u r e   b g   c o l o r   f r o m   g l o b a l   s e c o n d a r y   * /             c o l o r :    w h i t e ;
-                 / *   E n s u r e   t e x t   c o l o r   * /     
+.btn-archive {
+    text-decoration: none;
+    margin-right: 10px;
+    padding: 0.4rem 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+    background-color: var(--secondary);
+    color: white;
+    border-radius: var(--radius-md);
 }
 
-         . b t n - a r c h i v e : h o v e r    {
-                 b a c k g r o u n d - c o l o r :    # 4 7 5 5 6 9 ;
-                 / *   M a t c h   b t n - s e c o n d a r y   h o v e r   * /     
+.btn-archive:hover {
+    background-color: #475569;
 }
 
-     
+/* Archive Button Active State Override */
+.archive-filter-btn.active {
+    background-color: #ef4444 !important;
+    color: white !important;
+    border-color: #ef4444 !important;
+}
+
+.archive-filter-btn.active img {
+    filter: brightness(0) invert(1) !important;
+    /* Make icon white */
+}
+
+/* Avatar Filters Container */
+.avatar-filter-container {
+    margin-right: auto;
+    /* Push to left in RTL */
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}

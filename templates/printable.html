@@ -23,7 +23,22 @@
 <body>
     <div class="print-header">
         <h1>לוח משימות - גרסה להדפסה</h1>
-        <div class="print-meta">הופק בתאריך: <span id="printDate"></span></div>
+        <div class="print-meta">
+            <button onclick="window.location.href='/'" class="no-print"
+                style="margin-left: 10px; padding: 5px 10px; background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">
+                חזרה ללוח המשימות
+            </button>
+            <select id="teamFilter" class="no-print"
+                onchange="const val=this.value; window.location.href = val ? '?team='+val : window.location.pathname"
+                style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 10px;">
+                <option value="">כל הצוותים</option>
+                {% for team in teams %}
+                <option value="{{ team.id }}" {% if request.args.get('team')==team.id|string %}selected{% endif %}>{{
+                    team.name_he }}</option>
+                {% endfor %}
+            </select>
+            הופק בתאריך: <span id="printDate"></span>
+        </div>
     </div>
     <div class="print-projects">
         {% for project in projects %}
@@ -31,6 +46,7 @@
         {% set first_task = project_tasks|first %}
         {% set team_name = first_task.team.name_he if first_task and first_task.team else '' %}
 
+        {% if project_tasks|length > 0 %}
         <div class="print-project">
             <h2 class="print-project-title">
                 {{ project }}
@@ -75,6 +91,7 @@
                 </tbody>
             </table>
         </div>
+        {% endif %}
         {% endfor %}
     </div>
     <script>

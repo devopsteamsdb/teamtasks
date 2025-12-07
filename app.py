@@ -23,6 +23,12 @@ def uploaded_file(filename):
     """Serve uploaded files from the uploads directory"""
     return send_from_directory('uploads', filename)
 
+@app.context_processor
+def inject_now():
+    from datetime import datetime
+    return {'now': datetime.now()}
+
+
 @app.route('/api/version')
 def api_version():
     try:
@@ -368,7 +374,19 @@ def api_calendar_week():
     else:
         query = query.filter(Task.is_archived == False)
         if team_id:
-            query = query.filter(Task.team_id == team_id)
+            # Filter by team_id OR if task members contains any member of the team
+            team = Team.query.get(team_id)
+            if team:
+                # Get English names of all team members
+                member_names = [m.name_en for m in team.members]
+                if member_names:
+                    # Create OR filter: task.team_id == team_id OR task.members contains member_name
+                    member_filters = [Task.members.contains(name) for name in member_names]
+                    query = query.filter(or_(Task.team_id == team_id, *member_filters))
+                else:
+                    query = query.filter(Task.team_id == team_id)
+            else:
+                query = query.filter(Task.team_id == team_id)
             
     tasks = query.all()
     
@@ -417,7 +435,19 @@ def api_calendar_month():
     else:
         query = query.filter(Task.is_archived == False)
         if team_id:
-            query = query.filter(Task.team_id == team_id)
+            # Filter by team_id OR if task members contains any member of the team
+            team = Team.query.get(team_id)
+            if team:
+                # Get English names of all team members
+                member_names = [m.name_en for m in team.members]
+                if member_names:
+                    # Create OR filter: task.team_id == team_id OR task.members contains member_name
+                    member_filters = [Task.members.contains(name) for name in member_names]
+                    query = query.filter(or_(Task.team_id == team_id, *member_filters))
+                else:
+                    query = query.filter(Task.team_id == team_id)
+            else:
+                query = query.filter(Task.team_id == team_id)
     
     tasks = query.all()
     
@@ -474,7 +504,32 @@ def api_calendar_workload():
     else:
         query = query.filter(Task.is_archived == False)
         if team_id:
-            query = query.filter(Task.team_id == team_id)
+             # Logic for workload: 
+             # We already filtered 'members' to be only of this team.
+             # Now, for the tasks query, we should NOT strictly filter by team_id only,
+             # because we want to see ALL tasks assigned to these members, even if task.team_id is different.
+             # However, we still fetch "all tasks" in the window and then filter in python loop?
+             # The existing code does: query = query.filter(Task.team_id == team_id)
+             # This restricts the pool of tasks to only those belonging to the team.
+             # But if Member A (Team A) has a task T1 (Team B), T1 is excluded.
+             # WE SHOULD REMOVE THIS FILTER if we want to show all tasks for selected members.
+             # OR, we filter tasks that are assigned to team_id OR any of the selected members.
+             
+             # Let's effectively REMOVE the strict team_id filter for the TASKS QUERY 
+             # if we are focused on members. 
+             # BUT, if we just remove it, we get ALL tasks in the system. 
+             # Then we filter in the loop: "if member.name_en in task.members".
+             # This is slightly inefficient if there are many tasks, but correct for requirements.
+             # Wait, if I have 1000 tasks and 5 members. filtering by team_id=A reduces tasks to 50.
+             # If I remove it, I get 1000 tasks.
+             # Then for Member A, I check 1000 tasks.
+             # This is fine for this scale.
+             
+             # Better optimization: filter tasks that contain ANY of the members.
+             # But for now, just removing the strict team_id filter is the fix, 
+             # because we iterate over the *filtered members* (lines 481-482) and pick their tasks.
+             pass
+             # query = query.filter(Task.team_id == team_id) <-- REMOVED
             
     tasks = query.all()
     
@@ -836,7 +891,8 @@ def index():
         # If I pass all archived tasks to template, client-side filtering can works there too.
 
     tasks = query.all()
-    projects = [project[0] for project in db.session.query(distinct(Task.project)).all()]
+    # Derive projects from the filtered tasks to avoid showing empty projects
+    projects = sorted(list(set(task.project for task in tasks)))
     
     # Get all teams and members dynamically
     teams = Team.query.all()

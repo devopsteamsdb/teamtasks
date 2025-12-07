@@ -14,8 +14,8 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/" class="navbar-brand-link"><span>לוח משימות</span></a>
-            <a href="/calendar" class="navbar-brand-link active"><span>לוח שנה</span></a>
+            <a href="/" class="navbar-brand-link" id="navTasksLink"><span>לוח משימות</span></a>
+            <a href="/calendar" class="navbar-brand-link active" id="navCalendarLink"><span>לוח שנה</span></a>
         </div>
 
         <!-- Team Filter Buttons -->
@@ -41,9 +41,8 @@
                 <img src="{{ url_for('static', filename='icons/print.svg') }}" width="20" height="20" alt="Print"
                     class="icon-img">
             </a>
-            <img src="{{ url_for('static', filename='icons/clock.svg') }}" width="18" height="18" alt="Clock"
-                class="icon-img">
-            <span id="liveClock" style="padding-right: 1px;"></span>
+
+            <span style="padding-right: 1px;">{{ now.strftime('%d/%m/%Y') }}</span>
         </div>
     </nav>
 
@@ -157,23 +156,7 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='calendar.js') }}"></script>
-    <script>
-        // Live clock for navbar
-        function updateClock() {
-            const now = new Date();
-            const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            const formatted = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-            const el = document.getElementById('liveClock');
-            if (el) el.textContent = ` ${formatted} `;
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
+    <script type="module" src="{{ url_for('static', filename='js/calendar/main.js') }}"></script>
     </script>
 </body>
 
