@@ -215,7 +215,32 @@ export function applyFilters() {
         }
     });
 
+    updateMemberFiltersVisibility();
     updateFilterValidationUI();
+}
+
+export function updateMemberFiltersVisibility() {
+    if (!elements.memberFilterButtons) return;
+
+    const activeTeam = state.activeTeamFilter;
+    const isArchive = activeTeam === 'archive';
+
+    elements.memberFilterButtons.forEach(btn => {
+        const memberTeamId = btn.dataset.teamId;
+
+        // Show all if no team selected or archive mode (assuming archive shows all members for now)
+        if (!activeTeam || isArchive) {
+            btn.style.display = ''; // Reset to default (inline-block or flex)
+            return;
+        }
+
+        // Filter by team
+        if (memberTeamId === activeTeam) {
+            btn.style.display = '';
+        } else {
+            btn.style.display = 'none';
+        }
+    });
 }
 
 function updateFilterValidationUI() {
