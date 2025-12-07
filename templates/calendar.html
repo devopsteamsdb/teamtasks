@@ -25,6 +25,11 @@
                 {{ team.name_he }}
             </button>
             {% endfor %}
+            <button class="filter-team-btn archive-filter-btn" data-team-id="archive"
+                style="border: 2px solid #ef4444; color: #ef4444;">
+                <img src="{{ url_for('static', filename='icons/archive.svg') }}" width="14" height="14"
+                    style="vertical-align: middle; filter: brightness(0) invert(0.4);"> ארכיון
+            </button>
         </div>
 
         <div class="navbar-meta">

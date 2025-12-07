@@ -34,7 +34,7 @@
             <button class="filter-team-btn archive-filter-btn {% if mode == 'archive' %}active{% endif %}"
                 data-mode="archive" style="border: 2px solid #ef4444; color: #ef4444;">
                 <img src="{{ url_for('static', filename='icons/archive.svg') }}" width="14" height="14"
-                    style="vertical-align: middle;"> ארכיון
+                    style="vertical-align: middle; filter: brightness(0) invert(0.4);"> ארכיון
             </button>
         </div>
         <div class="navbar-meta">
@@ -60,27 +60,15 @@
             <div class="dashboard-title">
                 <button id="addTaskBtn" class="btn-add-task">
                     <img src="{{ url_for('static', filename='icons/plus.svg') }}" width="18" height="18" alt="Add"> הוסף
-                    משימה
-                </button>
-                {% if mode == 'archive' %}
-                <span class="archive-header-badge"
-                    style="background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-right: 10px;">
-                    <img src="{{ url_for('static', filename='icons/archive.svg') }}" width="14" height="14"
-                        style="vertical-align: baseline;"> משימות ארכיון
-                </span>
-                {% endif %}
-            </div>
-            <div class="filter-controls">
-
-                <!-- Member Filter Buttons (existing) -->
-                {% for member in members %}
-                <button class="filter-avatar-btn" data-member="{{ member.name_en }}" data-team-id="{{ member.team_id }}"
-                    title="{{ member.name_he }}"
-                    style="{% if active_team_id and member.team_id != active_team_id %}display:none;{% endif %}">
-                    <img src="/uploads/avatars/{{ member.avatar_path }}" class="filter-avatar"
-                        onerror="this.src='{{ url_for('static', filename='images/default.png') }}'">
-                </button>
-                {% endfor %}
+                    <!-- Member Filter Buttons (existing) -->
+                    {% for member in members %}
+                    <button class="filter-avatar-btn" data-member="{{ member.name_en }}"
+                        data-team-id="{{ member.team_id }}" title="{{ member.name_he }}"
+                        style="{% if active_team_id and member.team_id != active_team_id %}display:none;{% endif %}">
+                        <img src="/uploads/avatars/{{ member.avatar_path }}" class="filter-avatar"
+                            onerror="this.src='{{ url_for('static', filename='images/default.png') }}'">
+                    </button>
+                    {% endfor %}
             </div>
         </header>
 

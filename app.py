@@ -361,9 +361,15 @@ def api_calendar_week():
         )
     )
     
-    if team_id:
-        query = query.filter(Task.team_id == team_id)
     
+    # Filter Logic
+    if team_id == 'archive':
+        query = query.filter(Task.is_archived == True)
+    else:
+        query = query.filter(Task.is_archived == False)
+        if team_id:
+            query = query.filter(Task.team_id == team_id)
+            
     tasks = query.all()
     
     return jsonify({
@@ -404,8 +410,14 @@ def api_calendar_month():
         )
     )
     
-    if team_id:
-        query = query.filter(Task.team_id == team_id)
+    
+    # Filter Logic
+    if team_id == 'archive':
+        query = query.filter(Task.is_archived == True)
+    else:
+        query = query.filter(Task.is_archived == False)
+        if team_id:
+            query = query.filter(Task.team_id == team_id)
     
     tasks = query.all()
     
@@ -441,20 +453,30 @@ def api_calendar_workload():
         except ValueError:
             return jsonify({'error': 'Invalid date format'}), 400
     
-    # Get team members
-    if team_id:
+    # Handler Members Selection
+    if team_id and team_id != 'archive':
         members = TeamMember.query.filter_by(team_id=team_id).all()
     else:
         members = TeamMember.query.all()
     
-    # Get tasks for the date range
-    tasks = Task.query.filter(
+    # Build Task Query
+    query = Task.query.filter(
         or_(
             Task.start_date.between(start_date, end_date),
             Task.end_date.between(start_date, end_date),
             and_(Task.start_date <= start_date, Task.end_date >= end_date)
         )
-    ).all()
+    )
+    
+    # Apply Filters
+    if team_id == 'archive':
+        query = query.filter(Task.is_archived == True)
+    else:
+        query = query.filter(Task.is_archived == False)
+        if team_id:
+            query = query.filter(Task.team_id == team_id)
+            
+    tasks = query.all()
     
     # Build workload data structure
     workload_data = []

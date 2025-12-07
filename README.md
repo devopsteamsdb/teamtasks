@@ -35,6 +35,7 @@ A modern, bilingual (Hebrew/English) task management application built with Flas
 - ✅ **Priority Levels** - High, Medium, Low, None
 - ✅ **Status Tracking** - Not Started, In Progress, Done, Delayed
 - ✅ **Notes Support** - Add detailed notes to tasks
+- ✅ **Task Archiving** - Archive completed tasks and view them in a dedicated mode
 
 ### User Experience
 - 🌐 **Bilingual Interface** - Full Hebrew and English support

@@ -33,19 +33,19 @@
             <aside class="settings-sidebar">
                 <nav class="settings-nav">
                     <button class="nav-item active" data-section="teams">
-                        <img src="{{ url_for('static', filename='icons/users.svg') }}" width="20" height="20"
-                            alt="Teams">
+                        <img src="{{ url_for('static', filename='icons/group.svg') }}" width="20" height="20"
+                            alt="Teams" style="filter: brightness(0) invert(0.4);">
                         ניהול צוותים
+                    </button>
+                    <button class="nav-item" data-section="backup">
+                        <img src="{{ url_for('static', filename='icons/save.svg') }}" width="20" height="20"
+                            alt="Backup" style="filter: brightness(0) invert(0.4);">
+                        גיבוי ושחזור
                     </button>
                     <button class="nav-item" data-section="system">
                         <img src="{{ url_for('static', filename='icons/settings.svg') }}" width="20" height="20"
                             alt="System">
                         הגדרות כלליות
-                    </button>
-                    <button class="nav-item" data-section="backup">
-                        <img src="{{ url_for('static', filename='icons/save.svg') }}" width="20" height="20"
-                            alt="Backup">
-                        גיבוי ושחזור
                     </button>
                 </nav>
             </aside>
