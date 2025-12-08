@@ -6,6 +6,7 @@ import { state, setCurrentView, setActiveTeamFilter, setSpecialDays, setTasks, s
 
 async function init() {
     UI.updateDOMElements();
+    UI.initializeFlatpickr();
     Events.attachEventListeners();
 
     // Init Logic
