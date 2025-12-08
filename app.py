@@ -483,13 +483,9 @@ def api_calendar_workload():
         except ValueError:
             return jsonify({'error': 'Invalid date format'}), 400
     
-    # Handler Members Selection
-    if team_id and team_id != 'archive':
-        members = TeamMember.query.filter_by(team_id=team_id).all()
-    else:
-        members = TeamMember.query.all()
+    # Handler Members Selection & Task Query
     
-    # Build Task Query
+    # 1. Base Task Query (Date Range)
     query = Task.query.filter(
         or_(
             Task.start_date.between(start_date, end_date),
@@ -498,40 +494,45 @@ def api_calendar_workload():
         )
     )
     
-    # Apply Filters
+    members = []
+    
     if team_id == 'archive':
         query = query.filter(Task.is_archived == True)
-    else:
+        tasks = query.all()
+        members = TeamMember.query.all()
+        
+    elif team_id:
         query = query.filter(Task.is_archived == False)
-        if team_id:
-             # Logic for workload: 
-             # We already filtered 'members' to be only of this team.
-             # Now, for the tasks query, we should NOT strictly filter by team_id only,
-             # because we want to see ALL tasks assigned to these members, even if task.team_id is different.
-             # However, we still fetch "all tasks" in the window and then filter in python loop?
-             # The existing code does: query = query.filter(Task.team_id == team_id)
-             # This restricts the pool of tasks to only those belonging to the team.
-             # But if Member A (Team A) has a task T1 (Team B), T1 is excluded.
-             # WE SHOULD REMOVE THIS FILTER if we want to show all tasks for selected members.
-             # OR, we filter tasks that are assigned to team_id OR any of the selected members.
+        
+        # Get Core Members of the team
+        core_members = TeamMember.query.filter_by(team_id=team_id).all()
+        core_names = [m.name_en for m in core_members]
+        
+        if core_names:
+            # Filter tasks: Assigned to Team OR Assigned to any Core Member
+            member_filters = [Task.members.contains(name) for name in core_names]
+            query = query.filter(or_(Task.team_id == team_id, *member_filters))
+        else:
+             query = query.filter(Task.team_id == team_id)
              
-             # Let's effectively REMOVE the strict team_id filter for the TASKS QUERY 
-             # if we are focused on members. 
-             # BUT, if we just remove it, we get ALL tasks in the system. 
-             # Then we filter in the loop: "if member.name_en in task.members".
-             # This is slightly inefficient if there are many tasks, but correct for requirements.
-             # Wait, if I have 1000 tasks and 5 members. filtering by team_id=A reduces tasks to 50.
-             # If I remove it, I get 1000 tasks.
-             # Then for Member A, I check 1000 tasks.
-             # This is fine for this scale.
-             
-             # Better optimization: filter tasks that contain ANY of the members.
-             # But for now, just removing the strict team_id filter is the fix, 
-             # because we iterate over the *filtered members* (lines 481-482) and pick their tasks.
-             pass
-             # query = query.filter(Task.team_id == team_id) <-- REMOVED
+        tasks = query.all()
+        
+        # Get all members involved in these tasks + core members
+        relevant_names = set(core_names)
+        for task in tasks:
+            if task.members:
+                relevant_names.update([n.strip() for n in task.members.split(',') if n.strip()])
+        
+        if relevant_names:
+            members = TeamMember.query.filter(TeamMember.name_en.in_(relevant_names)).all()
+        else:
+            members = core_members
             
-    tasks = query.all()
+    else:
+        # No Filter
+        query = query.filter(Task.is_archived == False)
+        tasks = query.all()
+        members = TeamMember.query.all()
     
     # Build workload data structure
     workload_data = []

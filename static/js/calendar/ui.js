@@ -314,7 +314,6 @@ export function openTaskModal(task) {
 }
 
 function populateTaskModalDropdowns(task) {
-    // We rely on state.teams and state.members which we need to fetch in main.js
     if (!state.teams || !state.members) return;
 
     // Team Select
@@ -327,26 +326,20 @@ function populateTaskModalDropdowns(task) {
             if (task.team_id == team.id) option.selected = true;
             elements.taskTeam.appendChild(option);
         });
-
-        // Add change listener to update members when team changes (if needed?)
-        // Ideally we should re-render members when team changes.
-        // But for now let's just populate based on current team or all?
-        // Logic: Main app filters members by team.
-        elements.taskTeam.onchange = () => {
-            renderMembersCheckboxes(parseInt(elements.taskTeam.value), task.members || []);
-        };
+        // We do NOT update members on team change anymore, as all members are shown.
     }
 
-    // Initial render of members
-    renderMembersCheckboxes(task.team_id || (state.teams[0] ? state.teams[0].id : null), task.members || []);
+    // Initial render of members (All members)
+    renderMembersCheckboxes(task.members || []);
 }
 
-function renderMembersCheckboxes(teamId, selectedNames) {
+function renderMembersCheckboxes(selectedNames) {
     if (!elements.taskMembersContainer) return;
 
-    const teamMembers = state.members.filter(m => m.team_id == teamId);
+    // Show all members
+    const allMembers = state.members;
 
-    elements.taskMembersContainer.innerHTML = teamMembers.map(member => `
+    elements.taskMembersContainer.innerHTML = allMembers.map(member => `
         <label class="member-checkbox">
             <input type="checkbox" value="${member.name_en}" 
                 ${selectedNames && selectedNames.includes(member.name_en) ? 'checked' : ''}
