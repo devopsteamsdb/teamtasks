@@ -35,6 +35,22 @@ export function updateDOMElements() {
     elements.closeSpecialModalBtn = elements.specialDaysModal ? elements.specialDaysModal.querySelector('.close-modal') : null;
 }
 
+export function initializeFlatpickr() {
+    const config = {
+        dateFormat: "d/m/Y",
+        allowInput: true,
+        locale: "he"
+    };
+
+    if (elements.scheduleStartDate) flatpickr(elements.scheduleStartDate, config);
+    if (elements.scheduleEndDate) flatpickr(elements.scheduleEndDate, config);
+
+    // Also init for Special Days
+    const specialDayParams = { ...config };
+    const specialDayInput = document.getElementById('specialDayDate');
+    if (specialDayInput) flatpickr(specialDayInput, specialDayParams);
+}
+
 export function switchView(newView) {
     if (!elements.weekView || !elements.workloadView) return;
 
@@ -277,4 +293,67 @@ export function openScheduleModal(task) {
 
 export function closeScheduleModal() {
     if (elements.scheduleModal) elements.scheduleModal.style.display = 'none';
+}
+
+// Special Days UI
+export function openSpecialDaysModal() {
+    if (elements.specialDaysModal) {
+        elements.specialDaysModal.style.display = 'block';
+        renderSpecialDaysList();
+    }
+}
+
+export function closeSpecialDaysModal() {
+    if (elements.specialDaysModal) elements.specialDaysModal.style.display = 'none';
+}
+
+export function renderSpecialDaysList() {
+    const listContainer = document.getElementById('specialDaysList');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+
+    if (!state.specialDays || state.specialDays.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center; color:#6b7280; padding:1rem;">אין ימים מיוחדים מוגדרים</div>';
+        return;
+    }
+
+    // Sort by date
+    const sortedDays = [...state.specialDays].sort((a, b) => a.date.localeCompare(b.date));
+
+    sortedDays.forEach(day => {
+        const item = document.createElement('div');
+        item.className = 'special-day-item';
+        item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:0.5rem; border-bottom:1px solid #e5e7eb;';
+
+        const info = document.createElement('div');
+        info.innerHTML = `<strong>${formatDateDisplay(parseDateFromISO(day.date))}</strong> - ${day.name} <span style="font-size:0.8rem; color:#6b7280;">(${getDayTypeLabel(day.type)})</span>`;
+
+        const actions = document.createElement('div');
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.style.cssText = 'background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;';
+        deleteBtn.title = 'מחק';
+        deleteBtn.dataset.id = day.id;
+
+        deleteBtn.addEventListener('click', () => {
+            // Dispatch event to handle delete
+            const event = new CustomEvent('calendar:deleteSpecialDay', { detail: { id: day.id } });
+            window.dispatchEvent(event);
+        });
+
+        actions.appendChild(deleteBtn);
+        item.appendChild(info);
+        item.appendChild(actions);
+        listContainer.appendChild(item);
+    });
+}
+
+function getDayTypeLabel(type) {
+    const types = {
+        'holiday': 'חג',
+        'company_event': 'אירוע חברה',
+        'other': 'אחר'
+    };
+    return types[type] || type;
 }

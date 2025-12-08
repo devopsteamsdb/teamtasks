@@ -1,5 +1,5 @@
 // Calendar Events
-import { state, setCurrentDate, setActiveTeamFilter, setCurrentTaskId } from './state.js';
+import { state, setCurrentDate, setActiveTeamFilter, setCurrentTaskId, setSpecialDays } from './state.js';
 import * as UI from './ui.js';
 import * as API from './api.js';
 import { formatDateToISO, parseDateFromISO } from './utils.js';
@@ -63,11 +63,95 @@ export function attachEventListeners() {
     if (UI.elements.scheduleCancelBtn) UI.elements.scheduleCancelBtn.addEventListener('click', UI.closeScheduleModal);
     if (UI.elements.scheduleSaveBtn) UI.elements.scheduleSaveBtn.addEventListener('click', saveTaskSchedule);
 
+    // Special Days Modal links
+    if (UI.elements.manageHolidaysBtn) {
+        UI.elements.manageHolidaysBtn.addEventListener('click', UI.openSpecialDaysModal);
+    }
+    if (UI.elements.closeSpecialModalBtn) {
+        UI.elements.closeSpecialModalBtn.addEventListener('click', UI.closeSpecialDaysModal);
+    }
+    const addSpecialDayBtn = document.getElementById('addSpecialDayBtn');
+    if (addSpecialDayBtn) {
+        addSpecialDayBtn.addEventListener('click', handleAddSpecialDay);
+    }
+
+    // Modal Background Click
     window.addEventListener('click', (e) => {
         if (UI.elements.scheduleModal && e.target === UI.elements.scheduleModal) UI.closeScheduleModal();
+        if (UI.elements.specialDaysModal && e.target === UI.elements.specialDaysModal) UI.closeSpecialDaysModal();
     });
 
-    // Special Days Modal links...
+    // Handle Delete Special Day custom event
+    window.addEventListener('calendar:deleteSpecialDay', async (e) => {
+        const id = e.detail.id;
+        if (confirm('האם אתה בטוח שברצונך למחוק יום מיוחד זה?')) {
+            try {
+                const res = await API.deleteSpecialDay(id);
+                if (res.success) {
+                    // Refresh data
+                    const specialDays = await API.fetchSpecialDays();
+                    state.specialDays = specialDays; // Directly update state reference (or use setter if available)
+                    // Or setSpecialDays(specialDays) if imported? Not imported.
+                    // Let's import setSpecialDays if possible, or modify state directly.
+                    // state is imported.
+                    // We need to re-render the list inside modal AND re-render calendar views.
+                    UI.renderSpecialDaysList();
+                    window.dispatchEvent(new CustomEvent('calendar:refresh'));
+                }
+            } catch (err) {
+                alert('שגיאה במחיקת יום מיוחד');
+            }
+        }
+    });
+}
+
+
+
+async function handleAddSpecialDay() {
+    const dateInput = document.getElementById('specialDayDate');
+    const nameInput = document.getElementById('specialDayName');
+    const typeInput = document.getElementById('specialDayType');
+
+    if (!dateInput || !nameInput) return;
+
+    // Convert dd/mm/yyyy to ISO
+    const dateVal = dateInput.value;
+    let isoDate = null;
+    if (dateVal) {
+        const parts = dateVal.split('/');
+        if (parts.length === 3) isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+
+    if (!isoDate) {
+        alert('נא להזין תאריך');
+        return;
+    }
+    if (!nameInput.value.trim()) {
+        alert('נא להזין שם');
+        return;
+    }
+
+    try {
+        const type = typeInput ? typeInput.value : 'holiday';
+        const res = await API.addSpecialDay(isoDate, nameInput.value.trim(), type);
+
+        if (res.success) {
+            // Clear inputs
+            dateInput.value = '';
+            nameInput.value = '';
+
+            // Refresh
+            const specialDays = await API.fetchSpecialDays();
+            setSpecialDays(specialDays); // We need to make sure this is available
+            UI.renderSpecialDaysList();
+            window.dispatchEvent(new CustomEvent('calendar:refresh'));
+        } else {
+            alert('שגיאה בהוספת יום מיוחד');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('שגיאה בהוספת יום מיוחד');
+    }
 }
 
 function navigatePeriod(direction) {
