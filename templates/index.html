@@ -129,8 +129,25 @@
                 <div class="project-body">
                     <ul class="task-list">
                         {% for task in tasks if task.project == project %}
-                        <li class="task-item {% if active_team_id and task.team_id != active_team_id %}filtered-hidden{% endif %}"
-                            data-id="{{ task.id }}" data-notes="{{ task.notes|default('') }}"
+                        {% set show_task = True %}
+                        {% if active_team_id %}
+                        {% set task_team_match = (task.team_id == active_team_id) %}
+                        {% set task_member_match = False %}
+                        {% if active_team_members %}
+                        {% set tm_list = task.members.split(',') if task.members else [] %}
+                        {% for m in tm_list %}
+                        {% if m in active_team_members %}
+                        {% set task_member_match = True %}
+                        {% endif %}
+                        {% endfor %}
+                        {% endif %}
+
+                        {% if not task_team_match and not task_member_match %}
+                        {% set show_task = False %}
+                        {% endif %}
+                        {% endif %}
+                        <li class="task-item {% if not show_task %}filtered-hidden{% endif %}" data-id="{{ task.id }}"
+                            data-notes="{{ task.notes|default('') }}"
                             data-priority="{{ task.priority|default('none') }}" data-team-id="{{ task.team_id }}"
                             data-start-date="{{ task.start_date.isoformat() if task.start_date else '' }}"
                             data-end-date="{{ task.end_date.isoformat() if task.end_date else '' }}"

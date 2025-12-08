@@ -878,17 +878,16 @@ def index():
     if member_filter:
         query = query.filter(Task.members.contains(member_filter))
     
-    # Team filtering
+    # Team filtering context
     active_team_id = None
+    active_team_members = []
+    
     if team_filter and team_filter.isdigit():
         active_team_id = int(team_filter)
-        # We can also filter server-side if desired, but kept consistent with existing pattern
-        # Actually, for 'Archive' logic to work as 'Team', we might want server-side filtering 
-        # But previous code relied on client side hiding for teams? 
-        # Let's double check lines 781-785 of original: "Team filtering is now handled client-side"
-        # However, for Archive page, we might want to just dump everything.
-        # But user wants Archive to act like a Team filter.
-        # If I pass all archived tasks to template, client-side filtering can works there too.
+        # Fetch team members for relaxed filtering (Team OR Member)
+        team = Team.query.get(active_team_id)
+        if team:
+            active_team_members = [m.name_en for m in team.members]
 
     tasks = query.all()
     # Derive projects from the filtered tasks to avoid showing empty projects
@@ -911,7 +910,7 @@ def index():
         else:
             project_teams[project] = None
     
-    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams, active_team_id=active_team_id, q=query_str, mode=mode)
+    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams, active_team_id=active_team_id, active_team_members=active_team_members, q=query_str, mode=mode)
 
 
 

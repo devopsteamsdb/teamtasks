@@ -185,9 +185,24 @@ export function applyFilters() {
 
         if (state.activeTeamFilter && state.activeTeamFilter !== 'archive') {
             const taskTeamId = task.dataset.teamId;
-            if (taskTeamId && taskTeamId !== state.activeTeamFilter) {
-                visible = false;
-            } else if (!taskTeamId) {
+            const isTeamMatch = (taskTeamId && taskTeamId === state.activeTeamFilter);
+
+            let hasTeamMember = false;
+            // Get members of the active team
+            const activeTeamMembers = state.members
+                .filter(m => m.team_id == state.activeTeamFilter)
+                .map(m => m.name_en);
+
+            if (activeTeamMembers.length > 0) {
+                const avatars = task.querySelectorAll('.avatar');
+                avatars.forEach(avatar => {
+                    if (activeTeamMembers.includes(avatar.dataset.memberName)) {
+                        hasTeamMember = true;
+                    }
+                });
+            }
+
+            if (!isTeamMatch && !hasTeamMember) {
                 visible = false;
             }
         }
