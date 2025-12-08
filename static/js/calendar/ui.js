@@ -239,9 +239,9 @@ export function renderWorkloadView() {
                 if (task.is_archived) {
                     taskBlock.style.opacity = '0.5';
                     taskBlock.style.border = '1px dashed #666';
-                    taskBlock.title = '[ארכיון] ' + task.task;
+                    taskBlock.title = `[ארכיון] ${task.task}\nפרויקט: ${task.project}`;
                 } else {
-                    taskBlock.title = task.task;
+                    taskBlock.title = `${task.task}\nפרויקט: ${task.project}`;
                 }
 
                 // Truncate
