@@ -62,7 +62,9 @@ export function attachEventListeners() {
     document.querySelectorAll('.add-task-project-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            UI.openCreateModal(btn.dataset.project);
+            const projectCard = btn.closest('.project-card');
+            const teamId = projectCard ? projectCard.dataset.teamId : null;
+            UI.openCreateModal(btn.dataset.project, teamId);
         });
     });
 

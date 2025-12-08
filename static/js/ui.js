@@ -141,13 +141,22 @@ export function openEditModal(taskItem) {
     elements.modal.style.display = 'block';
 }
 
-export function openCreateModal(projectName = null) {
+export function openCreateModal(projectName = null, teamId = null) {
     elements.createTaskNameInput.value = '';
     elements.createProjectNameInput.value = projectName || '';
     elements.createTaskStatus.value = 'status-notstarted';
     elements.createTaskPriority.value = 'none';
     elements.createTaskNotes.value = '';
-    elements.createTaskTeam.value = state.activeTeamFilter && state.activeTeamFilter !== 'archive' ? state.activeTeamFilter : '';
+
+    // Determine team selection
+    let defaultTeam = '';
+    if (teamId) {
+        defaultTeam = teamId;
+    } else if (state.activeTeamFilter && state.activeTeamFilter !== 'archive') {
+        defaultTeam = state.activeTeamFilter;
+    }
+    elements.createTaskTeam.value = defaultTeam;
+
     elements.createTaskStartDate.value = '';
     elements.createTaskEndDate.value = '';
 

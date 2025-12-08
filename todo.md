@@ -6,7 +6,7 @@
 - [x] In the calendar view, both at the view "חברי צוות" and the "שבוע" view when clicking a task it should taskModal and not the scheduleModal. 
 
 ## Tasks Page
-- [ ] After creating a project, when clicking the plus icon in the project to create a new task, the team should be already selected. Currently it works only if the filter on a specific team is selected. 
+- [x] After creating a project, when clicking the plus icon in the project to create a new task, the team should be already selected. Currently it works only if the filter on a specific team is selected. 
 - [ ] 
 
 ## Print Page
