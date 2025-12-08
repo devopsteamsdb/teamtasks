@@ -343,34 +343,19 @@ function populateTaskModalDropdowns(task) {
 
 function renderMembersCheckboxes(teamId, selectedNames) {
     if (!elements.taskMembersContainer) return;
-    elements.taskMembersContainer.innerHTML = '';
 
     const teamMembers = state.members.filter(m => m.team_id == teamId);
 
-    teamMembers.forEach(member => {
-        const div = document.createElement('div');
-        div.className = 'member-option';
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = `member-${member.id}`;
-        checkbox.value = member.name_en;
-        checkbox.className = 'member-checkbox';
-
-        // Check if selected
-        // selectedNames is array of strings
-        if (selectedNames && selectedNames.includes(member.name_en)) {
-            checkbox.checked = true;
-        }
-
-        const label = document.createElement('label');
-        label.htmlFor = `member-${member.id}`;
-        label.textContent = member.name_he;
-
-        div.appendChild(checkbox);
-        div.appendChild(label);
-        elements.taskMembersContainer.appendChild(div);
-    });
+    elements.taskMembersContainer.innerHTML = teamMembers.map(member => `
+        <label class="member-checkbox">
+            <input type="checkbox" value="${member.name_en}" 
+                ${selectedNames && selectedNames.includes(member.name_en) ? 'checked' : ''}
+                id="member-${member.id}">
+            <img src="/uploads/avatars/${member.avatar_path}" class="avatar-sm"
+                onerror="this.src='/static/images/default.png'">
+            ${member.name_he}
+        </label>
+    `).join('');
 }
 
 export function closeTaskModal() {
