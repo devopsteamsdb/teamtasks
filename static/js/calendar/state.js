@@ -6,8 +6,18 @@ export const state = {
     activeTeamFilter: null,
     tasks: [],
     specialDays: [],
-    currentTaskId: null
+    currentTaskId: null,
+    teams: [],
+    members: []
 };
+
+export function setTeams(teams) {
+    state.teams = teams;
+}
+
+export function setMembers(members) {
+    state.members = members;
+}
 
 export function setCurrentView(view) {
     state.currentView = view;

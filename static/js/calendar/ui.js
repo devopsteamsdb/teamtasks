@@ -19,15 +19,25 @@ export function updateDOMElements() {
     elements.weekView = document.getElementById('weekView');
     elements.workloadView = document.getElementById('workloadView');
 
-    elements.scheduleModal = document.getElementById('scheduleModal');
-    elements.closeModalBtn = elements.scheduleModal ? elements.scheduleModal.querySelector('.close-modal') : null;
-    elements.scheduleSaveBtn = document.getElementById('scheduleSaveBtn');
-    elements.scheduleCancelBtn = document.getElementById('scheduleCancelBtn');
+    // Task Modal
+    elements.taskModal = document.getElementById('taskModal');
+    elements.closeTaskModalBtn = elements.taskModal ? elements.taskModal.querySelector('.close-modal') : null;
+    elements.taskSaveBtn = document.getElementById('saveBtn'); // Note IDs from copied HTML
+    elements.taskDeleteBtn = document.getElementById('deleteBtn');
 
-    // Inputs
-    elements.scheduleTaskName = document.getElementById('scheduleTaskName');
-    elements.scheduleStartDate = document.getElementById('scheduleStartDate');
-    elements.scheduleEndDate = document.getElementById('scheduleEndDate');
+    // Task Inputs
+    elements.taskTeam = document.getElementById('taskTeam');
+    elements.taskProject = document.getElementById('projectNameInput');
+    elements.taskName = document.getElementById('taskNameInput');
+    elements.taskStatus = document.getElementById('taskStatus');
+    elements.taskPriority = document.getElementById('taskPriority');
+    elements.taskStartDate = document.getElementById('taskStartDate');
+    elements.taskEndDate = document.getElementById('taskEndDate');
+    elements.taskNotes = document.getElementById('taskNotes');
+    elements.taskMembersContainer = elements.taskModal ? elements.taskModal.querySelector('.members-select') : null;
+
+    // Keep old references just in case, or remove if unused
+    elements.scheduleModal = document.getElementById('scheduleModal');
 
     // Special Days
     elements.specialDaysModal = document.getElementById('specialDaysModal');
@@ -42,8 +52,8 @@ export function initializeFlatpickr() {
         locale: "he"
     };
 
-    if (elements.scheduleStartDate) flatpickr(elements.scheduleStartDate, config);
-    if (elements.scheduleEndDate) flatpickr(elements.scheduleEndDate, config);
+    if (elements.taskStartDate) flatpickr(elements.taskStartDate, config);
+    if (elements.taskEndDate) flatpickr(elements.taskEndDate, config);
 
     // Also init for Special Days
     const specialDayParams = { ...config };
@@ -51,6 +61,7 @@ export function initializeFlatpickr() {
     if (specialDayInput) flatpickr(specialDayInput, specialDayParams);
 }
 
+// ... existing switchView ...
 export function switchView(newView) {
     if (!elements.weekView || !elements.workloadView) return;
 
@@ -70,6 +81,7 @@ export function switchView(newView) {
     });
 }
 
+// ... existing renderWeekView ...
 export function renderWeekView() {
     if (!elements.periodTitle || !elements.weekView) return;
 
@@ -139,6 +151,7 @@ export function renderWeekView() {
     }
 }
 
+// ... existing renderWorkloadView ...
 export function renderWorkloadView() {
     if (!elements.periodTitle || !elements.workloadView) return;
 
@@ -153,8 +166,6 @@ export function renderWorkloadView() {
     container.innerHTML = '';
 
     if (!Array.isArray(state.tasks)) {
-        // Workload data from API structure: { workload: [...] } which sets state.tasks to array
-        // But let's verify
         console.error('Workload data invalid');
         return;
     }
@@ -247,11 +258,11 @@ export function renderWorkloadView() {
                 // Truncate
                 taskBlock.textContent = task.task.substring(0, 30) + (task.task.length > 30 ? '...' : '');
 
-                // Click
+                // Click - use openTaskModal
                 taskBlock.style.cursor = 'pointer';
                 taskBlock.onclick = (e) => {
                     e.stopPropagation();
-                    openScheduleModal(task);
+                    openTaskModal(task);
                 };
 
                 dayCell.appendChild(taskBlock);
@@ -276,23 +287,94 @@ export function createTaskCard(task) {
         <div class="task-card-project">${task.project}</div>
     `;
 
-    card.addEventListener('click', () => openScheduleModal(task));
+    card.addEventListener('click', () => openTaskModal(task));
     card.addEventListener('dragstart', Events.handleDragStart);
 
     return card;
 }
 
-export function openScheduleModal(task) {
+export function openTaskModal(task) {
     setCurrentTaskId(task.id);
-    elements.scheduleTaskName.value = task.task;
-    elements.scheduleStartDate.value = parseDateFromISO(task.start_date) || '';
-    elements.scheduleEndDate.value = parseDateFromISO(task.end_date) || '';
 
-    elements.scheduleModal.style.display = 'block';
+    // Populate simple fields
+    if (elements.taskProject) elements.taskProject.value = task.project;
+    if (elements.taskName) elements.taskName.value = task.task;
+    if (elements.taskStatus) elements.taskStatus.value = task.status;
+    if (elements.taskPriority) elements.taskPriority.value = task.priority || 'none';
+    if (elements.taskNotes) elements.taskNotes.value = task.notes || '';
+
+    // Dates
+    if (elements.taskStartDate) elements.taskStartDate.value = parseDateFromISO(task.start_date) || '';
+    if (elements.taskEndDate) elements.taskEndDate.value = parseDateFromISO(task.end_date) || '';
+
+    // Populate Teams and Members
+    populateTaskModalDropdowns(task);
+
+    if (elements.taskModal) elements.taskModal.style.display = 'block';
 }
 
-export function closeScheduleModal() {
-    if (elements.scheduleModal) elements.scheduleModal.style.display = 'none';
+function populateTaskModalDropdowns(task) {
+    // We rely on state.teams and state.members which we need to fetch in main.js
+    if (!state.teams || !state.members) return;
+
+    // Team Select
+    if (elements.taskTeam) {
+        elements.taskTeam.innerHTML = '';
+        state.teams.forEach(team => {
+            const option = document.createElement('option');
+            option.value = team.id;
+            option.textContent = team.name_he;
+            if (task.team_id == team.id) option.selected = true;
+            elements.taskTeam.appendChild(option);
+        });
+
+        // Add change listener to update members when team changes (if needed?)
+        // Ideally we should re-render members when team changes.
+        // But for now let's just populate based on current team or all?
+        // Logic: Main app filters members by team.
+        elements.taskTeam.onchange = () => {
+            renderMembersCheckboxes(parseInt(elements.taskTeam.value), task.members || []);
+        };
+    }
+
+    // Initial render of members
+    renderMembersCheckboxes(task.team_id || (state.teams[0] ? state.teams[0].id : null), task.members || []);
+}
+
+function renderMembersCheckboxes(teamId, selectedNames) {
+    if (!elements.taskMembersContainer) return;
+    elements.taskMembersContainer.innerHTML = '';
+
+    const teamMembers = state.members.filter(m => m.team_id == teamId);
+
+    teamMembers.forEach(member => {
+        const div = document.createElement('div');
+        div.className = 'member-option';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `member-${member.id}`;
+        checkbox.value = member.name_en;
+        checkbox.className = 'member-checkbox';
+
+        // Check if selected
+        // selectedNames is array of strings
+        if (selectedNames && selectedNames.includes(member.name_en)) {
+            checkbox.checked = true;
+        }
+
+        const label = document.createElement('label');
+        label.htmlFor = `member-${member.id}`;
+        label.textContent = member.name_he;
+
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        elements.taskMembersContainer.appendChild(div);
+    });
+}
+
+export function closeTaskModal() {
+    if (elements.taskModal) elements.taskModal.style.display = 'none';
 }
 
 // Special Days UI

@@ -2,7 +2,7 @@
 import * as API from './api.js';
 import * as UI from './ui.js';
 import * as Events from './events.js';
-import { state, setCurrentView, setActiveTeamFilter, setSpecialDays, setTasks } from './state.js';
+import { state, setCurrentView, setActiveTeamFilter, setSpecialDays, setTasks, setTeams, setMembers } from './state.js';
 
 async function init() {
     UI.updateDOMElements();
@@ -32,6 +32,12 @@ async function init() {
     // Special Days load
     const specialDays = await API.fetchSpecialDays();
     setSpecialDays(specialDays);
+
+    // Initial Fetch of Teams and Members for Modal
+    const teams = await API.fetchTeams();
+    setTeams(teams);
+    const members = await API.fetchMembers();
+    setMembers(members);
 
     await renderCurrentView();
 

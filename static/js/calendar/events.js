@@ -11,14 +11,6 @@ export function attachEventListeners() {
         UI.elements.viewBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const view = btn.dataset.view;
-                // Update state via main module or directly if state is shared?
-                // Better to update state and trigger UI update.
-                // But we need to switch logic.
-                // We'll call a function in main that orchestrates switching view.
-                // Circular dependency issue if main imports events?
-                // Let's use custom events or callbacks?
-                // Simpler: Dispatch event or modify state and call render directly if imported.
-                // I'll dispatch a custom event on window for simplicity in this architecture.
                 window.dispatchEvent(new CustomEvent('calendar:switchView', { detail: { view } }));
             });
         });
@@ -58,10 +50,14 @@ export function attachEventListeners() {
         });
     }
 
-    // Modal
+    // Task Modal - New
+    if (UI.elements.closeTaskModalBtn) UI.elements.closeTaskModalBtn.addEventListener('click', UI.closeTaskModal);
+    if (UI.elements.taskSaveBtn) UI.elements.taskSaveBtn.addEventListener('click', saveTask);
+    if (UI.elements.taskDeleteBtn) UI.elements.taskDeleteBtn.addEventListener('click', deleteTaskHandler);
+
+    // Schedule Modal (Legacy Support if elements still exist)
     if (UI.elements.closeModalBtn) UI.elements.closeModalBtn.addEventListener('click', UI.closeScheduleModal);
     if (UI.elements.scheduleCancelBtn) UI.elements.scheduleCancelBtn.addEventListener('click', UI.closeScheduleModal);
-    if (UI.elements.scheduleSaveBtn) UI.elements.scheduleSaveBtn.addEventListener('click', saveTaskSchedule);
 
     // Special Days Modal links
     if (UI.elements.manageHolidaysBtn) {
@@ -78,6 +74,7 @@ export function attachEventListeners() {
     // Modal Background Click
     window.addEventListener('click', (e) => {
         if (UI.elements.scheduleModal && e.target === UI.elements.scheduleModal) UI.closeScheduleModal();
+        if (UI.elements.taskModal && e.target === UI.elements.taskModal) UI.closeTaskModal();
         if (UI.elements.specialDaysModal && e.target === UI.elements.specialDaysModal) UI.closeSpecialDaysModal();
     });
 
@@ -90,11 +87,7 @@ export function attachEventListeners() {
                 if (res.success) {
                     // Refresh data
                     const specialDays = await API.fetchSpecialDays();
-                    state.specialDays = specialDays; // Directly update state reference (or use setter if available)
-                    // Or setSpecialDays(specialDays) if imported? Not imported.
-                    // Let's import setSpecialDays if possible, or modify state directly.
-                    // state is imported.
-                    // We need to re-render the list inside modal AND re-render calendar views.
+                    setSpecialDays(specialDays);
                     UI.renderSpecialDaysList();
                     window.dispatchEvent(new CustomEvent('calendar:refresh'));
                 }
@@ -105,7 +98,13 @@ export function attachEventListeners() {
     });
 }
 
-
+function navigatePeriod(direction) {
+    const d = new Date(state.currentDate);
+    // 7 days jump
+    d.setDate(d.getDate() + (direction * 7));
+    setCurrentDate(d);
+    window.dispatchEvent(new CustomEvent('calendar:refresh'));
+}
 
 async function handleAddSpecialDay() {
     const dateInput = document.getElementById('specialDayDate');
@@ -142,7 +141,7 @@ async function handleAddSpecialDay() {
 
             // Refresh
             const specialDays = await API.fetchSpecialDays();
-            setSpecialDays(specialDays); // We need to make sure this is available
+            setSpecialDays(specialDays);
             UI.renderSpecialDaysList();
             window.dispatchEvent(new CustomEvent('calendar:refresh'));
         } else {
@@ -154,43 +153,81 @@ async function handleAddSpecialDay() {
     }
 }
 
-function navigatePeriod(direction) {
-    const d = new Date(state.currentDate);
-    // 7 days jump
-    d.setDate(d.getDate() + (direction * 7));
-    setCurrentDate(d);
-    window.dispatchEvent(new CustomEvent('calendar:refresh'));
-}
-
-async function saveTaskSchedule() {
+async function saveTask() {
     if (!state.currentTaskId) return;
 
-    const startDateInput = UI.elements.scheduleStartDate.value;
-    const endDateInput = UI.elements.scheduleEndDate.value;
+    // Gather Data
+    const teamId = UI.elements.taskTeam ? UI.elements.taskTeam.value : null;
+    const project = UI.elements.taskProject ? UI.elements.taskProject.value : '';
+    const taskName = UI.elements.taskName ? UI.elements.taskName.value : '';
+    const status = UI.elements.taskStatus ? UI.elements.taskStatus.value : 'status-notstarted';
+    const priority = UI.elements.taskPriority ? UI.elements.taskPriority.value : 'none';
+    const notes = UI.elements.taskNotes ? UI.elements.taskNotes.value : '';
 
-    // Parse dd/mm/yyyy to ISO
-    let startDate = null;
-    let endDate = null;
+    // Dates (dd/mm/yyyy to ISO)
+    const startDateInput = UI.elements.taskStartDate.value;
+    const endDateInput = UI.elements.taskEndDate.value;
+    let start_date = null;
+    let end_date = null;
 
     if (startDateInput) {
         const parts = startDateInput.split('/');
-        if (parts.length === 3) startDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        if (parts.length === 3) start_date = `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
     if (endDateInput) {
         const parts = endDateInput.split('/');
-        if (parts.length === 3) endDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        if (parts.length === 3) end_date = `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
 
+    // Members
+    const selectedMembers = [];
+    if (UI.elements.taskMembersContainer) {
+        const checkboxes = UI.elements.taskMembersContainer.querySelectorAll('input[type="checkbox"]:checked');
+        checkboxes.forEach(cb => selectedMembers.push(cb.value));
+    }
+    const membersStr = selectedMembers.join(',');
+
+    const taskData = {
+        team_id: teamId,
+        project: project,
+        task: taskName,
+        status: status,
+        priority: priority,
+        notes: notes,
+        start_date: start_date,
+        end_date: end_date,
+        members: membersStr
+    };
+
     try {
-        const data = await API.updateTaskSchedule(state.currentTaskId, startDate, endDate, null);
-        if (data.success) {
-            UI.closeScheduleModal();
+        const res = await API.updateTask(state.currentTaskId, taskData);
+        if (res.success) {
+            UI.closeTaskModal();
             window.dispatchEvent(new CustomEvent('calendar:refresh'));
         } else {
-            alert('שגיאה בשמירת תזמון המשימה');
+            alert('שגיאה בשמירת המשימה');
         }
-    } catch (e) {
-        alert('שגיאה בשמירת תזמון המשימה');
+    } catch (error) {
+        console.error(error);
+        alert('שגיאה בשמירת המשימה');
+    }
+}
+
+async function deleteTaskHandler() {
+    if (!state.currentTaskId) return;
+    if (!confirm('האם אתה בטוח שברצונך למחוק משימה זו?')) return;
+
+    try {
+        const res = await API.deleteTask(state.currentTaskId);
+        if (res.success) {
+            UI.closeTaskModal();
+            window.dispatchEvent(new CustomEvent('calendar:refresh'));
+        } else {
+            alert('שגיאה במחיקת המשימה');
+        }
+    } catch (error) {
+        console.error(error);
+        alert('שגיאה במחיקת המשימה');
     }
 }
 
@@ -209,24 +246,11 @@ export function handleDragOver(e) {
 export async function handleDrop(e) {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('text/plain');
-    // Find closest day column date
     const col = e.target.closest('.calendar-day-column');
     const newDate = col ? col.dataset.date : null;
 
     if (taskId && newDate) {
-        // Update task start date to newDate
-        // We typically clean the end date or shift it? 
-        // Original code just updated start_date.
         try {
-            const data = await API.updateTaskSchedule(taskId, newDate, null, null); // passing null for end/est? 
-            // Warning: if we pass null for end, it might clear it.
-            // But verify API: updateTaskSchedule sends {start_date: newDate} in original code.
-            // My implementation of API.updateTaskSchedule sends all 3.
-            // I should fetch the task first or allow partial update?
-            // Let's modify API wrapper or logic.
-            // Let's create a specialized partial update or just call API directly here if customized.
-
-            // To be safe, let's just do a fetch here matching original logic:
             const response = await fetch(`/api/tasks/${taskId}/schedule`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },

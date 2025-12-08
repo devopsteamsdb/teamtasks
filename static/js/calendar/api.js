@@ -104,3 +104,49 @@ export async function deleteSpecialDay(id) {
         throw error;
     }
 }
+
+export async function updateTask(id, taskData) {
+    try {
+        const response = await fetch(`/api/tasks/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(taskData)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error updating task:', error);
+        throw error;
+    }
+}
+
+export async function deleteTask(id) {
+    try {
+        const response = await fetch(`/api/tasks/${id}`, {
+            method: 'DELETE'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        throw error;
+    }
+}
+
+export async function fetchTeams() {
+    try {
+        const response = await fetch('/api/teams?mode=active');
+        return await response.json();
+    } catch (error) {
+        console.error('Error loading teams:', error);
+        return [];
+    }
+}
+
+export async function fetchMembers() {
+    try {
+        const response = await fetch('/api/members');
+        return await response.json();
+    } catch (error) {
+        console.error('Error loading members:', error);
+        return [];
+    }
+}

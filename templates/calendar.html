@@ -115,6 +115,72 @@
         </div>
     </div>
 
+    <!-- Edit Task Modal (Full) -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modalTitle">עריכת משימה</h2>
+            <div class="form-group">
+                <label for="taskTeam">צוות:</label>
+                <select id="taskTeam" class="form-control">
+                    <!-- Populated dynamically by JavaScript -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="projectNameInput">שם הפרויקט:</label>
+                <input type="text" id="projectNameInput" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="taskNameInput">שם המשימה:</label>
+                <input type="text" id="taskNameInput" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>חברי צוות:</label>
+                <div class="members-select">
+                    <!-- Populated dynamically by JavaScript -->
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="taskStatus">סטטוס:</label>
+                    <select id="taskStatus" class="form-control">
+                        <option value="status-notstarted">טרם החל</option>
+                        <option value="status-inprogress">בתהליך</option>
+                        <option value="status-done">הושלם</option>
+                        <option value="status-delayed">מעוכב</option>
+                    </select>
+                </div>
+                <div class="form-group half">
+                    <label for="taskPriority">עדיפות:</label>
+                    <select id="taskPriority" class="form-control">
+                        <option value="none">ללא</option>
+                        <option value="low">נמוכה</option>
+                        <option value="medium">בינונית</option>
+                        <option value="high">גבוהה</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="taskStartDate">תאריך התחלה (אופציונלי):</label>
+                    <input type="text" id="taskStartDate" class="form-control" placeholder="dd/mm/yyyy">
+                </div>
+                <div class="form-group half">
+                    <label for="taskEndDate">תאריך סיום (אופציונלי):</label>
+                    <input type="text" id="taskEndDate" class="form-control" placeholder="dd/mm/yyyy">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="taskNotes">הערות:</label>
+                <textarea id="taskNotes" rows="4" placeholder="הוסף הערות כאן..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button id="saveBtn" class="btn btn-primary">שמור שינויים</button>
+                <button id="deleteBtn" class="btn btn-danger">מחק משימה</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Special Days Management Modal -->
     <div id="specialDaysModal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
