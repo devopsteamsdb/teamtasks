@@ -247,6 +247,12 @@ export function renderWorkloadView() {
                 const taskBlock = document.createElement('div');
                 taskBlock.className = 'workload-task-block';
                 taskBlock.style.backgroundColor = priorityColors[task.priority || 'none'];
+
+                // Better visibility for low priority (yellow background needs dark text)
+                if ((task.priority || 'none') === 'low') {
+                    taskBlock.style.color = '#1f2937'; // Dark Slate
+                }
+
                 if (task.is_archived) {
                     taskBlock.style.opacity = '0.5';
                     taskBlock.style.border = '1px dashed #666';

@@ -18,4 +18,4 @@
 - [ ] 
 
 ## Layout & Design
-- [ ] 
+- [x] Add Dark Mode toggle and styling for all pages. 

@@ -154,6 +154,9 @@ textarea {
 .navbar-meta {
     font-size: 0.875rem;
     color: var(--secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
 }
 
 /* Main Layout */
@@ -1043,10 +1046,11 @@ textarea {
 
 /* Navbar Icon Links */
 .navbar-icon-link {
-    margin-left: 16px;
-    vertical-align: middle;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: #555;
+    text-decoration: none;
 }
 
 .navbar-icon-link.print-link {
@@ -1103,4 +1107,373 @@ textarea {
     display: flex;
     gap: 0.5rem;
     align-items: center;
+}
+
+/* =========================================
+   DARK MODE OVERRIDES
+   ========================================= */
+
+html.dark-mode body {
+    --primary: #818cf8;
+    /* Lighter Indigo */
+    --primary-hover: #6366f1;
+    --bg-body: #0f172a;
+    /* Slate 900 */
+    --bg-card: #1e293b;
+    /* Slate 800 */
+    --dark: #f1f5f9;
+    /* Slate 100 (Text) */
+    --light: #334155;
+    /* Slate 700 */
+    --border: #334155;
+    /* Slate 700 */
+    --white: #1e293b;
+    /* Slate 800 (Navbar background) */
+    --secondary: #94a3b8;
+    /* Slate 400 */
+
+    background-color: var(--bg-body);
+    color: var(--dark);
+}
+
+/* Global Text */
+html.dark-mode h1,
+html.dark-mode h2,
+html.dark-mode h3,
+html.dark-mode h4,
+html.dark-mode h5,
+html.dark-mode h6,
+html.dark-mode .dashboard-title,
+html.dark-mode .project-title,
+html.dark-mode .task-name,
+html.dark-mode .period-title,
+html.dark-mode .team-name,
+html.dark-mode .navbar-brand-link {
+    color: var(--dark);
+}
+
+/* Navbar */
+html.dark-mode .navbar {
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html.dark-mode .navbar-brand {
+    color: var(--primary);
+}
+
+/* Cards & Containers */
+html.dark-mode .project-card,
+html.dark-mode .team-card,
+html.dark-mode .settings-card,
+html.dark-mode .calendar-container,
+html.dark-mode .calendar-header,
+html.dark-mode .modal-content {
+    background-color: var(--bg-card);
+    border-color: var(--border);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Inputs & Forms */
+html.dark-mode input,
+html.dark-mode select,
+html.dark-mode textarea,
+html.dark-mode .form-control {
+    background-color: #0f172a;
+    border-color: var(--border);
+    color: var(--dark);
+}
+
+html.dark-mode input:focus,
+html.dark-mode select:focus,
+html.dark-mode textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Task Items */
+html.dark-mode .task-item {
+    background-color: #334155;
+    /* Slate 700 */
+    border-color: #475569;
+}
+
+html.dark-mode .task-item:hover {
+    background-color: #475569;
+    /* Slate 600 */
+    border-color: #64748b;
+}
+
+html.dark-mode .task-card-name,
+html.dark-mode .task-card-project,
+html.dark-mode .workload-member-name {
+    color: var(--dark);
+}
+
+/* Calendar Specifics */
+html.dark-mode .calendar-day-column {
+    background-color: #0f172a;
+    border-color: var(--border);
+}
+
+html.dark-mode .calendar-day-header {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+html.dark-mode .calendar-task-card {
+    background-color: #334155;
+    border-color: #475569;
+    color: var(--dark);
+}
+
+html.dark-mode .calendar-task-card:hover {
+    background-color: #475569;
+}
+
+html.dark-mode .calendar-month-cell {
+    background-color: var(--bg-card);
+    border-color: var(--border);
+}
+
+html.dark-mode .calendar-month-cell:hover {
+    background-color: #334155;
+}
+
+html.dark-mode .cell-date {
+    color: var(--dark);
+}
+
+html.dark-mode .workload-header-row,
+html.dark-mode .workload-day-header,
+html.dark-mode .workload-member-row,
+html.dark-mode .workload-member-info {
+    background-color: var(--bg-card);
+    border-color: var(--border);
+    color: var(--dark);
+}
+
+html.dark-mode .workload-day-cell {
+    border-color: var(--border);
+}
+
+/* Special Days */
+html.dark-mode .special-day-item {
+    background-color: var(--bg-card);
+    border-color: var(--border);
+}
+
+html.dark-mode .special-day-date {
+    color: var(--secondary);
+}
+
+html.dark-mode .special-day-name {
+    color: var(--dark);
+}
+
+/* Admin Specifics */
+html.dark-mode .nav-item {
+    color: var(--secondary);
+}
+
+html.dark-mode .nav-item:hover {
+    background-color: #334155;
+    color: var(--dark);
+}
+
+html.dark-mode .nav-item.active {
+    background-color: #312e81;
+    /* Dark indigo */
+    color: #e0e7ff;
+}
+
+html.dark-mode .member-item {
+    background-color: #0f172a;
+}
+
+html.dark-mode .member-item:hover {
+    background-color: #1e293b;
+}
+
+html.dark-mode .member-name-he {
+    color: var(--dark);
+}
+
+html.dark-mode .team-card-header {
+    border-bottom-color: var(--border);
+}
+
+/* Icons Inversion */
+html.dark-mode .icon-img,
+html.dark-mode .btn-back img,
+html.dark-mode .nav-item img,
+html.dark-mode .section-header img,
+html.dark-mode .filter-avatar-btn.archive-filter-btn img {
+    filter: invert(1) brightness(2);
+}
+
+html.dark-mode .nav-item img {
+    opacity: 1;
+}
+
+/* Search Box */
+html.dark-mode .search-input {
+    background-color: #0f172a;
+    color: white;
+    border-color: var(--border);
+}
+
+html.dark-mode .search-icon {
+    color: var(--secondary);
+}
+
+/* Avatars */
+html.dark-mode .avatar {
+    border-color: var(--bg-card);
+}
+
+html.dark-mode .filter-avatar-btn {
+    border-color: var(--bg-card);
+}
+
+/* Flatpickr Dark Overrides */
+html.dark-mode .flatpickr-calendar {
+    background: #1e293b;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    border: 1px solid #334155;
+}
+
+html.dark-mode .flatpickr-day {
+    color: #e2e8f0;
+}
+
+html.dark-mode .flatpickr-day.prevMonthDay,
+html.dark-mode .flatpickr-day.nextMonthDay {
+    color: #64748b;
+}
+
+html.dark-mode .flatpickr-day:hover,
+html.dark-mode .flatpickr-day.today:hover {
+    background: #334155;
+    border-color: #334155;
+}
+
+html.dark-mode .flatpickr-day.selected {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: #fff;
+}
+
+html.dark-mode .flatpickr-months .flatpickr-month {
+    background: #1e293b;
+    color: #fff;
+}
+
+html.dark-mode .flatpickr-current-month .flatpickr-monthDropdown-months,
+html.dark-mode .flatpickr-current-month input.cur-year {
+    color: #fff;
+}
+
+html.dark-mode .flatpickr-weekday {
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+/* Modals */
+html.dark-mode .close-modal,
+html.dark-mode .close-modal-create,
+html.dark-mode .close-member-modal {
+    color: var(--secondary);
+}
+
+html.dark-mode .close-modal:hover {
+    color: var(--dark);
+}
+
+/* Member Checkbox in Modals */
+html.dark-mode .member-checkbox {
+    background-color: #0f172a;
+    border-color: var(--border);
+    color: var(--dark);
+}
+
+html.dark-mode .member-checkbox:hover {
+    background-color: #334155;
+}
+
+/* Fix Admin Title Color */
+html.dark-mode .navbar-brand span {
+    color: var(--primary);
+}
+
+/* Fix Admin Icons */
+html.dark-mode .btn-icon-small {
+    color: var(--dark);
+    border-color: var(--border);
+}
+
+html.dark-mode .btn-icon-small:hover {
+    background-color: var(--light);
+}
+
+html.dark-mode .btn-icon-small.delete {
+    color: #f87171;
+    /* lighter red for visibility */
+}
+
+html.dark-mode .btn-icon-small.delete:hover {
+    background-color: rgba(220, 38, 38, 0.2);
+    border-color: #f87171;
+}
+
+/* Fix Calendar Workload Headers */
+html.dark-mode .workload-day-header {
+    background-color: var(--bg-card) !important;
+    color: var(--dark) !important;
+    border-color: var(--border);
+}
+
+html.dark-mode .workload-day-header.special-day {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #fbbf24 !important;
+    /* Amber 400 */
+    border-bottom-color: #f59e0b;
+}
+
+/* Fix Special Days Form */
+html.dark-mode .special-days-form-container,
+html.dark-mode .special-days-list-container {
+    background-color: var(--bg-card) !important;
+    /* Override inline style */
+    border: 1px solid var(--border);
+}
+
+html.dark-mode .special-days-form-container h3,
+html.dark-mode .special-days-list-container h3 {
+    color: var(--dark);
+}
+
+html.dark-mode .special-day-item {
+    background-color: #0f172a;
+    /* Darker than card */
+    border-color: var(--border);
+}
+
+html.dark-mode .special-day-date {
+    color: var(--primary);
+}
+
+html.dark-mode .special-day-name {
+    color: var(--dark);
+}
+
+html.dark-mode .special-day-type {
+    background-color: var(--light);
+    color: var(--dark);
+}
+
+html.dark-mode .btn-delete-special:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #f87171;
 }

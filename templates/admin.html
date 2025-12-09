@@ -7,6 +7,7 @@
     <title>ניהול צוותים - DevOps</title>
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='admin.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 
 <body>
@@ -14,10 +15,16 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <span>ניהול צוותים</span>
+            <a href="/admin" class="navbar-brand-link" id="navAdminLink"><span>ממשק ניהול</span></a>
         </div>
-        <div class="navbar-meta">
-            <a href="/" class="btn-back">חזרה ללוח משימות</a>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <button id="themeToggleBtn" title="מצב לילה" class="navbar-icon-link"
+                style="background:none; border:none; cursor:pointer; font-size:1.2rem; padding: 0 0.5rem;">🌙</button>
+            <a href="/" class="btn-back">
+                <img src="{{ url_for('static', filename='icons/arrow-right.svg') }}" width="16" height="16"
+                    style="margin-left: 0.5rem; filter: brightness(0) invert(1);">
+                חזרה ללוח המשימות
+            </a>
         </div>
     </nav>
 

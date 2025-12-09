@@ -185,8 +185,6 @@ async function saveTask() {
         const checkboxes = UI.elements.taskMembersContainer.querySelectorAll('input[type="checkbox"]:checked');
         checkboxes.forEach(cb => selectedMembers.push(cb.value));
     }
-    const membersStr = selectedMembers.join(',');
-
     const taskData = {
         team_id: teamId,
         project: project,
@@ -196,7 +194,7 @@ async function saveTask() {
         notes: notes,
         start_date: start_date,
         end_date: end_date,
-        members: membersStr
+        members: selectedMembers
     };
 
     try {
