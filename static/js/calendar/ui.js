@@ -387,7 +387,7 @@ export function renderSpecialDaysList() {
         item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:0.5rem; border-bottom:1px solid #e5e7eb;';
 
         const info = document.createElement('div');
-        info.innerHTML = `<strong>${formatDateDisplay(parseDateFromISO(day.date))}</strong> - ${day.name} <span style="font-size:0.8rem; color:#6b7280;">(${getDayTypeLabel(day.type)})</span>`;
+        info.innerHTML = `<strong>${parseDateFromISO(day.date)}</strong> - ${day.name} <span style="font-size:0.8rem; color:#6b7280;">(${getDayTypeLabel(day.type)})</span>`;
 
         const actions = document.createElement('div');
         const deleteBtn = document.createElement('button');
