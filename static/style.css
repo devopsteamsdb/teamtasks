@@ -1477,3 +1477,30 @@ html.dark-mode .btn-delete-special:hover {
     background-color: rgba(239, 68, 68, 0.2);
     color: #f87171;
 }
+
+/* Custom Flatpickr Design Overrides */
+.flatpickr-calendar {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    /* cleaner corners */
+    box-shadow: var(--shadow-lg);
+}
+
+.flatpickr-rContainer {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.flatpickr-months {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 5px;
+}
+
+html.dark-mode .flatpickr-months {
+    border-bottom-color: var(--border);
+}
+
+.flatpickr-days {
+    border: none !important;
+    padding: 5px;
+}
