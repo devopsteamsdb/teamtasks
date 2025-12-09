@@ -340,7 +340,7 @@ function renderMembersCheckboxes(selectedNames) {
     const allMembers = state.members;
 
     elements.taskMembersContainer.innerHTML = allMembers.map(member => `
-        <label class="member-checkbox">
+        <label class="member-checkbox" title="${member.name_he} - ${member.team_name}">
             <input type="checkbox" value="${member.name_en}" 
                 ${selectedNames && selectedNames.includes(member.name_en) ? 'checked' : ''}
                 id="member-${member.id}">

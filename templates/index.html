@@ -64,7 +64,7 @@
                     <!-- Member Filter Buttons (existing) -->
                     {% for member in members %}
                     <button class="filter-avatar-btn" data-member="{{ member.name_en }}"
-                        data-team-id="{{ member.team_id }}" title="{{ member.name_he }}"
+                        data-team-id="{{ member.team_id }}" title="{{ member.name_he }} - {{ member.team.name_he }}"
                         style="{% if active_team_id and member.team_id != active_team_id %}display:none;{% endif %}">
                         <img src="/uploads/avatars/{{ member.avatar_path }}" class="filter-avatar"
                             onerror="this.src='{{ url_for('static', filename='images/default.png') }}'">
@@ -175,7 +175,7 @@
                                     {% if member_obj %}
                                     <img src="/uploads/avatars/{{ member_obj.avatar_path }}"
                                         onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
-                                        class="avatar" title="{{ member_obj.name_he }}"
+                                        class="avatar" title="{{ member_obj.name_he }} - {{ member_obj.team.name_he }}"
                                         data-member-name="{{ member_obj.name_en }}">
                                     {% endif %}
                                     {% endif %}

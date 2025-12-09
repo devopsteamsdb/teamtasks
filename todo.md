@@ -10,6 +10,9 @@
 ## Tasks Page
 - [x] After creating a project, when clicking the plus icon in the project to create a new task, the team should be already selected. Currently it works only if the filter on a specific team is selected.
 - [x] Filter tasks by team members (not just team ID) when a team filter is active.
+- [x] Fix special days list rendering date format.
+- [x] Fix seed data generation logic (consistent teams per project).
+- [x] Add tooltips to team members (team name on hover) in all views.
 
 ## Print Page
 - [ ] 

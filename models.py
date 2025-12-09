@@ -38,7 +38,8 @@ class TeamMember(db.Model):
             'team_id': self.team_id,
             'name_en': self.name_en,
             'name_he': self.name_he,
-            'avatar_path': self.avatar_path
+            'avatar_path': self.avatar_path,
+            'team_name': self.team.name_he if self.team else ''
         }
     
     def __repr__(self):

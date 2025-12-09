@@ -69,7 +69,7 @@ export function populateMemberCheckboxes() {
 
     containers.forEach(container => {
         container.innerHTML = members.map(member => `
-                <label class="member-checkbox">
+                <label class="member-checkbox" title="${member.name_he} - ${member.team_name}">
                     <input type="checkbox" value="${member.name_en}"
                         data-img="/uploads/avatars/${member.avatar_path}">
                     <img src="/uploads/avatars/${member.avatar_path}" class="avatar-sm"

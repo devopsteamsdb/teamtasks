@@ -51,6 +51,8 @@ A modern, bilingual (Hebrew/English) task management application built with Flas
 - 💾 **Persistent Storage** - Database and uploads persist
 - 🔒 **Secure** - Production-ready security settings
 - 📊 **RESTful API** - Full API for automation
+- ✅ **Advanced Calendar** - Weekly view and Workload view for team capacity planning
+- ✅ **Enhanced Filtering** - Filter by Team AND specific Members, including cross-team collaboration context
 - 🏥 **Health Checks** - Built-in health monitoring
 
 ---
