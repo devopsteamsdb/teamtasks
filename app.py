@@ -73,16 +73,22 @@ def api_add_task():
     
     # Parse date strings to date objects if provided
     from datetime import datetime
-    if start_date:
+    from datetime import datetime
+    if start_date and start_date.strip():
         try:
             start_date = datetime.fromisoformat(start_date).date()
         except (ValueError, AttributeError):
             start_date = None
-    if end_date:
+    else:
+        start_date = None
+        
+    if end_date and end_date.strip():
         try:
             end_date = datetime.fromisoformat(end_date).date()
         except (ValueError, AttributeError):
             end_date = None
+    else:
+        end_date = None
             
     new_task = Task(
         project=project, 
@@ -948,6 +954,15 @@ def print_view():
     members = TeamMember.query.all()
     
     return render_template('printable.html', tasks=tasks, projects=projects, members=members, teams=teams)
+
+
+@app.route('/table-editor')
+def table_editor():
+    """Table editor for quick task management"""
+    teams = [team.to_dict() for team in Team.query.all()]
+    members = [member.to_dict() for member in TeamMember.query.all()]
+    tasks = [task.to_dict() for task in Task.query.filter_by(is_archived=False).all()]
+    return render_template('table_editor.html', teams=teams, members=members, tasks=tasks)
 
 
 @app.route('/calendar')
