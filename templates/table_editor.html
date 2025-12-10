@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>עריכת משימות בטבלה</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='flatpickr.min.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <style>
+        .table-container {
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-table th,
+        .task-table td {
+            padding: 12px;
+            text-align: right;
+            border: 1px solid var(--border);
+        }
+
+        .task-table th {
+            background-color: var(--card-bg);
+            font-weight: 600;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .task-table tr:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .editable-cell {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .editable-cell:hover::after {
+            content: '✎';
+            position: absolute;
+            left: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.3;
+        }
+
+        .editable-input {
+            width: 100%;
+            padding: 4px;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .status-select,
+        .priority-select,
+        .team-select {
+            background: transparent;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="/" class="navbar-brand-link"><span>לוח משימות</span></a>
+            <a href="/calendar" class="navbar-brand-link"><span>לוח שנה</span></a>
+        </div>
+
+
+        <div class="navbar-meta">
+            <a href="/table-editor" class="navbar-icon-link active" title="עריכה בטבלה">
+                <img src="{{ url_for('static', filename='icons/table.svg') }}" width="20" height="20" alt="Table Editor"
+                    class="icon-img">
+            </a>
+            <a href="/admin" title="ממשק ניהול" class="navbar-icon-link">
+                <img src="{{ url_for('static', filename='icons/settings.svg') }}" width="20" height="20" alt="Settings"
+                    class="icon-img">
+            </a>
+
+            <a href="/print" title="גרסת הדפסה" class="navbar-icon-link print-link">
+                <img src="{{ url_for('static', filename='icons/print.svg') }}" width="20" height="20" alt="Print"
+                    class="icon-img">
+            </a>
+            <button id="themeToggleBtn" title="מצב לילה" class="navbar-icon-link"
+                style="background:none; border:none; cursor:pointer; font-size:1.2rem; padding: 0 0.5rem;">🌙</button>
+            <span style="padding-right: 1px; font-weight: 500; font-size: 0.9rem;">{{ now.strftime('%d/%m/%Y') }}</span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Filters -->
+        <div style="display: flex; gap: 15px; margin-bottom: 20px; padding: 0 20px; align-items: center;">
+            <div style="flex: 0 0 200px;">
+                <label for="teamFilter"
+                    style="display: block; font-size: 0.8em; margin-bottom: 4px; color: var(--text-secondary);">סינון
+                    לפי צוות</label>
+                <select id="teamFilter" class="editable-input" style="width: 100%; padding: 8px;">
+                    <option value="all">כל הצוותים</option>
+                    {% for team in teams %}
+                    <option value="{{ team.id }}">{{ team.name_he }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label for="searchInput"
+                    style="display: block; font-size: 0.8em; margin-bottom: 4px; color: var(--text-secondary);">חיפוש</label>
+                <input type="text" id="searchInput" class="editable-input" style="width: 100%; padding: 8px;"
+                    placeholder="חפש לפי פרויקט, משימה, חברים או הערות...">
+            </div>
+        </div>
+
+        <!-- Add Task Form (Standalone) -->
+        <div class="add-task-form-container" style="padding: 0 20px; margin-bottom: 20px;">
+            <div class="add-task-form"
+                style="display: flex; gap: 10px; padding: 15px; background: var(--card-bg); border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; align-items: flex-end;">
+                <div style="flex: 0 0 150px;">
+                    <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">צוות</label>
+                    <select class="editable-input input-team" style="width: 100%;">
+                        {% for team in teams %}
+                        <option value="{{ team.id }}">{{ team.name_he }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">פרויקט</label>
+                    <input type="text" class="editable-input input-project" placeholder="שם פרויקט"
+                        style="width: 100%;">
+                </div>
+                <div style="flex: 1.5; min-width: 150px;">
+                    <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">משימה</label>
+                    <input type="text" class="editable-input input-task" placeholder="שם משימה" style="width: 100%;">
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">חברים</label>
+                    <input type="text" class="editable-input input-members" placeholder="חברים" style="width: 100%;">
+                </div>
+                <div style="flex: 0 0 110px;">
+                    <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">תאריך התחלה</label>
+                    <input type="text" class="editable-input input-start-date" placeholder="dd/mm/yyyy"
+                        style="width: 100%;">
+                </div>
+                <div style="flex: 0 0 110px;">
+                    <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">תאריך סיום</label>
+                    <input type="text" class="editable-input input-end-date" placeholder="dd/mm/yyyy"
+                        style="width: 100%;">
+                </div>
+                <div style="flex: 0 0 110px;">
+                    <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">סטטוס</label>
+                    <select class="editable-input input-status" style="width: 100%;">
+                        <option value="status-notstarted">טרם החל</option>
+                        <option value="status-inprogress">בתהליך</option>
+                        <option value="status-done">הושלם</option>
+                        <option value="status-delayed">מעוכב</option>
+                    </select>
+                </div>
+                <div style="flex: 0 0 100px;">
+                    <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">עדיפות</label>
+                    <select class="editable-input input-priority" style="width: 100%;">
+                        <option value="none">ללא</option>
+                        <option value="low">נמוכה</option>
+                        <option value="medium">בינונית</option>
+                        <option value="high">גבוהה</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">הערות</label>
+                    <textarea class="editable-input input-notes" placeholder="הערות"
+                        style="width: 100%; height: 36px; resize: vertical;"></textarea>
+                </div>
+                <div style="flex: 0 0 80px; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                    <button type="button" class="btn btn-primary btn-sm btn-add-task-submit"
+                        style="width: 100%; height: 36px; display: flex; align-items: center; justify-content: center;">
+                        <img src="{{ url_for('static', filename='icons/plus-small.svg') }}" width="20" height="20"
+                            class="icon-img" style="filter: brightness(0) invert(1);">
+                    </button>
+                    <label
+                        style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" class="input-keep-values"> שמור
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="task-table" id="taskTable">
+                <thead>
+                    <tr>
+                        <th>צוות</th>
+                        <th>פרויקט</th>
+                        <th>משימה</th>
+                        <th>חברים</th>
+                        <th>תאריך התחלה</th>
+                        <th>תאריך סיום</th>
+                        <th>סטטוס</th>
+                        <th>עדיפות</th>
+                        <th>הערות</th>
+                        <th>פעולות</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTableBody">
+                    <!-- Tasks will be rendered here by JS -->
+                </tbody>
+                <tfoot>
+                    <!-- No input row in tfoot anymore -->
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Pass initial data to JS
+        const initialTasks = {{ tasks| tojson }};
+        const allTeams = {{ teams| tojson }};
+        const allMembers = {{ members| tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='flatpickr.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='flatpickr.he.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/table_editor.js') }}"></script>
+</body>
+
+</html>
