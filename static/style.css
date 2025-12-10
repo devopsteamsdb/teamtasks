@@ -336,8 +336,8 @@ textarea {
 }
 
 .avatar {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     border: 2px solid var(--white);
     object-fit: cover;
@@ -347,6 +347,7 @@ textarea {
 
 .avatar:hover {
     transform: translateY(-2px);
+    transform: scale(1.4);
     z-index: 10;
 }
 
@@ -623,7 +624,7 @@ textarea {
     padding: 0;
     cursor: pointer;
     transition: all 0.2s;
-    margin-right: -12px;
+    margin-right: -20px;
     /* Overlap */
     position: relative;
     z-index: 1;
@@ -633,7 +634,7 @@ textarea {
 
 .filter-avatar-btn:hover {
     border-color: var(--primary);
-    transform: scale(1.1);
+    transform: scale(1.4);
     z-index: 100;
 }
 
@@ -641,12 +642,12 @@ textarea {
     border-color: var(--primary);
     z-index: 50;
     /* Keep active above normal but below hover */
-    transform: scale(1.05);
+    transform: scale(1.1);
 }
 
 .filter-avatar {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     display: block;
 }
