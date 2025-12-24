@@ -1,6 +1,6 @@
-# TeamTasks - DevOps Task Management System
+# TeamTasks - Infrastructure Task Management System
 
-A modern, bilingual (Hebrew/English) task management application built with Flask, designed for DevOps teams. Features team-based organization, real-time updates, and easy deployment to Docker and Kubernetes/OpenShift.
+A modern, bilingual (Hebrew/English) task management application built with Flask, designed for Infrastructure teams. Features team-based organization, real-time updates, and easy deployment to Docker and Kubernetes/OpenShift.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)

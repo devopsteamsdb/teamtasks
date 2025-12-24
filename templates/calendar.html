@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>לוח שנה - תכנון צוות</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
     <link href="{{ url_for('static', filename='flatpickr.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='calendar.css') }}" rel="stylesheet">
@@ -16,7 +17,9 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/" class="navbar-brand-link" id="navTasksLink"><span>לוח משימות</span></a>
+            <a href="/" class="navbar-brand-link" id="navTasksLink"><img
+                    src="{{ url_for('static', filename='logo.svg') }}" alt="Logo" class="navbar-logo"><span>לוח
+                    משימות</span></a>
             <a href="/calendar" class="navbar-brand-link active" id="navCalendarLink"><span>לוח שנה</span></a>
         </div>
 

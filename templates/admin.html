@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ניהול צוותים - DevOps</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='admin.css') }}" rel="stylesheet">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
@@ -15,16 +16,30 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/admin" class="navbar-brand-link" id="navAdminLink"><span>ממשק ניהול</span></a>
+            <a href="/" class="navbar-brand-link" id="navTasksLink"><img
+                    src="{{ url_for('static', filename='logo.svg') }}" alt="Logo" class="navbar-logo"><span>לוח
+                    משימות</span></a>
+            <a href="/calendar" class="navbar-brand-link" id="navCalendarLink"><span>לוח שנה</span></a>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
+
+        <div class="navbar-meta">
+            <a href="/table-editor" class="navbar-icon-link" title="עריכה בטבלה">
+                <img src="{{ url_for('static', filename='icons/table.svg') }}" width="20" height="20" alt="Table Editor"
+                    class="icon-img">
+            </a>
+            <a href="/admin" title="ממשק ניהול" class="navbar-icon-link">
+                <img src="{{ url_for('static', filename='icons/settings.svg') }}" width="20" height="20" alt="Settings"
+                    class="icon-img">
+            </a>
+
+            <a href="/print" title="גרסת הדפסה" class="navbar-icon-link print-link">
+                <img src="{{ url_for('static', filename='icons/print.svg') }}" width="20" height="20" alt="Print"
+                    class="icon-img">
+            </a>
             <button id="themeToggleBtn" title="מצב לילה" class="navbar-icon-link"
                 style="background:none; border:none; cursor:pointer; font-size:1.2rem; padding: 0 0.5rem;">🌙</button>
-            <a href="/" class="btn-back">
-                <img src="{{ url_for('static', filename='icons/arrow-right.svg') }}" width="16" height="16"
-                    style="margin-left: 0.5rem; filter: brightness(0) invert(1);">
-                חזרה ללוח המשימות
-            </a>
+
+            <span style="padding-right: 1px;">{{ now.strftime('%d/%m/%Y') }}</span>
         </div>
     </nav>
 
