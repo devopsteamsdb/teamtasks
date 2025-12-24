@@ -12,9 +12,21 @@ export function attachGlobalListeners() {
         UI.applyFilters();
     });
 
-    window.addEventListener('click', (e) => {
-        if (UI.elements.modal && e.target == UI.elements.modal) UI.elements.modal.style.display = 'none';
-        if (UI.elements.createModal && e.target == UI.elements.createModal) UI.elements.createModal.style.display = 'none';
+    let mouseDownTarget = null;
+
+    window.addEventListener('mousedown', (e) => {
+        mouseDownTarget = e.target;
+    });
+
+    window.addEventListener('mouseup', (e) => {
+        // Only close if both mousedown and mouseup happened on the modal backdrop (not the content)
+        if (UI.elements.modal && mouseDownTarget === UI.elements.modal && e.target === UI.elements.modal) {
+            UI.elements.modal.style.display = 'none';
+        }
+        if (UI.elements.createModal && mouseDownTarget === UI.elements.createModal && e.target === UI.elements.createModal) {
+            UI.elements.createModal.style.display = 'none';
+        }
+        mouseDownTarget = null;
     });
 
     // Navbar calendar link logic
