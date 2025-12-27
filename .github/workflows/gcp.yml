@@ -1,0 +1,106 @@
+name: Deploy to GCP
+
+on:
+  workflow_run:
+    workflows: ["Docker Image CI"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: devopsteamsdb/devopsteamsdb
+  IMAGE_TAG: teamtasks_latest
+  CONTAINER_NAME: teamtasks
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Resolve IP
+        id: resolve_ip
+        run: |
+          echo "GCP_IP=$(dig +short ${{ secrets.GCP_HOST }} | tail -n1)" >> $GITHUB_ENV
+
+      - name: Check server availability
+        id: ping_check
+        continue-on-error: true
+        run: |
+          if nc -z -v -w 5 ${{ env.GCP_IP }} 22; then
+            echo "server_available=true" >> $GITHUB_OUTPUT
+            echo "✅ Server is reachable at ${{ env.GCP_IP }}:22"
+          else
+            echo "server_available=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Server at ${{ env.GCP_IP }}:22 is not reachable, skipping all deployment steps"
+          fi
+
+      - name: Deploy to GCP instance
+        if: steps.ping_check.outputs.server_available == 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.GCP_IP }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            # Create deployment directory
+            mkdir -p ~/teamtasks
+            cd ~/teamtasks
+            
+            # Create docker-compose.yml
+            cat > docker-compose.yml << 'EOF'
+            services:
+              teamtasks:
+                image: "devopsteamsdb/devopsteamsdb:teamtasks_latest"
+                container_name: "teamtasks"
+                restart: unless-stopped
+                #ports:
+                #  - "80:8080"
+                environment:
+                  - FLASK_ENV=production
+                  - FLASK_APP=app.py
+                volumes:
+                  - "/var/teamtasks/db:/app/instance"
+                  - "/var/teamtasks/uploads:/app/uploads"
+                networks:
+                      - web_transport
+            networks:
+              web_transport:
+                external: true
+            EOF
+            
+            # Stop and remove existing containers
+            docker compose down 2>/dev/null || true
+            docker stop ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+            docker rm ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+            
+            # Pull latest image from Docker Hub
+            docker pull ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            
+            # Run with Docker Compose
+            docker compose up -d
+            
+            # Remove old images (keep last 3)
+            docker image prune -af --filter "until=72h"
+            
+            # Show running containers
+            docker compose ps
+
+      - name: Verify deployment
+        if: steps.ping_check.outputs.server_available == 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.GCP_IP }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            if docker ps | grep -q "teamtasks"; then
+              echo "✅ Deployment successful - Container is running"
+            else
+              echo "❌ Deployment failed - Container is not running"
+              exit 1
+            fi
