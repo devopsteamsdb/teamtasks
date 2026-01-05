@@ -930,30 +930,52 @@ def print_view():
     project_filter = request.args.get('project')
     member_filter = request.args.get('member')
     team_filter = request.args.get('team')
+    status_filter = request.args.get('status')
+    priority_filter = request.args.get('priority')
 
+    # Base query for filtering
+    query = Task.query.filter(Task.is_archived == False)
+
+    # Apply filters that limit the SCOPE of projects (Team, Member, Status, Priority)
+    # We apply these FIRST so we can get the list of relevant projects.
+    if member_filter:
+        query = query.filter(Task.members.contains(member_filter))
+    if team_filter:
+        query = query.filter(Task.team_id == team_filter)
+    if status_filter and status_filter != 'all':
+        query = query.filter(Task.status == status_filter)
+    if priority_filter and priority_filter != 'all':
+        query = query.filter(Task.priority == priority_filter)
+    
+    # Helper to get distinct projects from the currently filtered scope
+    # This list allows switching between projects that match the other criteria
+    # e.g. If specific Team is selected, only show projects from that Team.
+    available_projects_query = query.with_entities(Task.project).distinct()
+    available_projects = sorted([p[0] for p in available_projects_query.all()])
+
+    # Now apply the specific project filter if selected
+    if project_filter:
+        query = query.filter(Task.project == project_filter)
+
+    # Apply ordering for display
     priority_order = case(
         (Task.priority == 'high', 1),
         (Task.priority == 'medium', 2),
         (Task.priority == 'low', 3),
         (Task.priority == 'none', 4),
     )
-    query = Task.query.filter(Task.is_archived == False).order_by(priority_order, Task.project)
-
-    if project_filter:
-        query = query.filter(Task.project == project_filter)
-    if member_filter:
-        query = query.filter(Task.members.contains(member_filter))
-    if team_filter:
-        query = query.filter(Task.team_id == team_filter)
+    query = query.order_by(priority_order, Task.project)
 
     tasks = query.all()
-    projects = [project[0] for project in db.session.query(distinct(Task.project)).all()]
+    
+    # Projects to actually display sections for in the report
+    display_projects = sorted(list(set(task.project for task in tasks)))
     
     # Get all teams and members dynamically
     teams = Team.query.all()
     members = TeamMember.query.all()
     
-    return render_template('printable.html', tasks=tasks, projects=projects, members=members, teams=teams)
+    return render_template('printable.html', tasks=tasks, projects=display_projects, all_projects=available_projects, members=members, teams=teams)
 
 
 @app.route('/table-editor')

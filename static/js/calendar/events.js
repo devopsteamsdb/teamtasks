@@ -1,5 +1,5 @@
 // Calendar Events
-import { state, setCurrentDate, setActiveTeamFilter, setCurrentTaskId, setSpecialDays } from './state.js';
+import { state, setCurrentDate, setActiveTeamFilter, setCurrentTaskId, setSpecialDays, setStatusFilter, setPriorityFilter } from './state.js';
 import * as UI from './ui.js';
 import * as API from './api.js';
 import { formatDateToISO, parseDateFromISO } from './utils.js';
@@ -47,6 +47,22 @@ export function attachEventListeners() {
                 }
                 window.dispatchEvent(new CustomEvent('calendar:refresh'));
             });
+        });
+    }
+
+    // Status Filter
+    if (UI.elements.filterStatus) {
+        UI.elements.filterStatus.addEventListener('change', (e) => {
+            setStatusFilter(e.target.value);
+            window.dispatchEvent(new CustomEvent('calendar:refresh'));
+        });
+    }
+
+    // Priority Filter
+    if (UI.elements.filterPriority) {
+        UI.elements.filterPriority.addEventListener('change', (e) => {
+            setPriorityFilter(e.target.value);
+            window.dispatchEvent(new CustomEvent('calendar:refresh'));
         });
     }
 

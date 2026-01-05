@@ -40,6 +40,10 @@ export function updateDOMElements() {
     elements.teamFilterButtons = document.querySelectorAll('.filter-team-btn');
     elements.memberFilterButtons = document.querySelectorAll('.filter-avatar-btn');
     elements.resetMemberFiltersBtn = document.getElementById('resetMemberFiltersBtn');
+
+    // New Filters
+    elements.filterStatus = document.getElementById('filterStatus');
+    elements.filterPriority = document.getElementById('filterPriority');
 }
 
 export function initializeFlatpickr() {
@@ -207,6 +211,7 @@ export function applyFilters() {
             }
         }
 
+        // Check Member Filter
         if (state.activeMemberFilter && visible) {
             const avatars = task.querySelectorAll('.avatar');
             let hasMember = false;
@@ -217,6 +222,24 @@ export function applyFilters() {
                 }
             });
             if (!hasMember) visible = false;
+        }
+
+        // Check Status Filter
+        if (state.statusFilter && state.statusFilter !== 'all' && visible) {
+            const taskStatus = task.dataset.status;
+            if (taskStatus !== state.statusFilter) {
+                visible = false;
+            }
+        }
+
+        // Check Priority Filter
+        if (state.priorityFilter && state.priorityFilter !== 'all' && visible) {
+            const taskPriority = task.dataset.priority;
+            // task.dataset.priority can be 'none' if empty, or 'high', etc.
+            // Our filter values match existing values.
+            if (taskPriority !== state.priorityFilter) {
+                visible = false;
+            }
         }
 
         if (task.classList.contains('search-hidden')) {

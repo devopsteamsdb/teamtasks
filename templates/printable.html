@@ -29,16 +29,48 @@
                 style="margin-left: 10px; padding: 5px 10px; background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">
                 חזרה ללוח המשימות
             </button>
-            <select id="teamFilter" class="no-print"
-                onchange="const val=this.value; window.location.href = val ? '?team='+val : window.location.pathname"
-                style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 10px;">
+
+            <select id="teamFilter" class="no-print" onchange="updateFilter('team', this.value)"
+                style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 5px;">
                 <option value="">כל הצוותים</option>
                 {% for team in teams %}
                 <option value="{{ team.id }}" {% if request.args.get('team')==team.id|string %}selected{% endif %}>{{
                     team.name_he }}</option>
                 {% endfor %}
             </select>
-            הופק בתאריך: <span id="printDate"></span>
+
+            <select id="projectFilter" class="no-print" onchange="updateFilter('project', this.value)"
+                style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 5px; max-width: 150px;">
+                <option value="">כל הפרויקטים</option>
+                {% for p in all_projects %}
+                <option value="{{ p }}" {% if request.args.get('project')==p %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+            </select>
+
+            <select id="statusFilter" class="no-print" onchange="updateFilter('status', this.value)"
+                style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 5px;">
+                <option value="">כל הסטטוסים</option>
+                <option value="status-notstarted" {% if request.args.get('status')=='status-notstarted' %}selected{%
+                    endif %}>טרם החל</option>
+                <option value="status-inprogress" {% if request.args.get('status')=='status-inprogress' %}selected{%
+                    endif %}>בתהליך</option>
+                <option value="status-done" {% if request.args.get('status')=='status-done' %}selected{% endif %}>הושלם
+                </option>
+                <option value="status-delayed" {% if request.args.get('status')=='status-delayed' %}selected{% endif %}>
+                    מעוכב</option>
+            </select>
+
+            <select id="priorityFilter" class="no-print" onchange="updateFilter('priority', this.value)"
+                style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 5px;">
+                <option value="">כל העדיפויות</option>
+                <option value="high" {% if request.args.get('priority')=='high' %}selected{% endif %}>גבוהה</option>
+                <option value="medium" {% if request.args.get('priority')=='medium' %}selected{% endif %}>בינונית
+                </option>
+                <option value="low" {% if request.args.get('priority')=='low' %}selected{% endif %}>נמוכה</option>
+                <option value="none" {% if request.args.get('priority')=='none' %}selected{% endif %}>ללא</option>
+            </select>
+
+            <span style="margin-right: 10px;">הופק בתאריך: <span id="printDate"></span></span>
         </div>
     </div>
     <div class="print-projects">
@@ -102,6 +134,16 @@
             var dateStr = d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL');
             document.getElementById('printDate').textContent = dateStr;
         });
+
+        function updateFilter(key, value) {
+            const url = new URL(window.location);
+            if (value) {
+                url.searchParams.set(key, value);
+            } else {
+                url.searchParams.delete(key);
+            }
+            window.location.href = url.toString();
+        }
     </script>
 </body>
 

@@ -1,5 +1,5 @@
 // Event Listeners
-import { state, setActiveTeamFilter, setActiveMemberFilter, setCurrentTaskItem } from './state.js';
+import { state, setActiveTeamFilter, setActiveMemberFilter, setCurrentTaskItem, setStatusFilter, setPriorityFilter } from './state.js';
 import * as UI from './ui.js';
 import * as API from './api.js';
 import * as Utils from './utils.js';
@@ -142,6 +142,22 @@ export function attachEventListeners() {
                 }
                 UI.applyFilters();
             });
+        });
+    }
+
+    // Status Filter
+    if (UI.elements.filterStatus) {
+        UI.elements.filterStatus.addEventListener('change', (e) => {
+            setStatusFilter(e.target.value);
+            UI.applyFilters();
+        });
+    }
+
+    // Priority Filter
+    if (UI.elements.filterPriority) {
+        UI.elements.filterPriority.addEventListener('change', (e) => {
+            setPriorityFilter(e.target.value);
+            UI.applyFilters();
         });
     }
 }

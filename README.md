@@ -43,7 +43,7 @@ A modern, bilingual (Hebrew/English) task management application built with Flas
 - 🎨 **Modern UI** - Clean, responsive design
 - 📱 **Mobile Friendly** - Works on all devices
 - 🔄 **Auto-refresh** - Real-time updates without page reload
-- 🖨️ **Print View** - Clean printable task list
+- 🖨️ **Advanced Print View** - Filterable printable reports with project scoping
 
 ### Technical Features
 - 🐳 **Docker Ready** - Containerized deployment
@@ -52,7 +52,7 @@ A modern, bilingual (Hebrew/English) task management application built with Flas
 - 🔒 **Secure** - Production-ready security settings
 - 📊 **RESTful API** - Full API for automation
 - ✅ **Advanced Calendar** - Weekly view and Workload view for team capacity planning
-- ✅ **Enhanced Filtering** - Filter by Team AND specific Members, including cross-team collaboration context
+- ✅ **Advanced Filtering** - Filter by Team, Member, Status, and Priority across all views (Dashboard, Calendar, Print)
 - 🏥 **Health Checks** - Built-in health monitoring
 
 ---

@@ -2,11 +2,13 @@ version: '3.8'
 
 services:
   teamtasks:
-    image: devopsteamsdb/devopsteamsdb:teamtasks_latest
+    build: .
+    image: teamtasks-dev:latest
     container_name: teamtasks-app
     ports:
       - "5000:5000"
     volumes:
+      - .:/app
       # Database persistence
       - teamtasks-db:/app/instance
       # User-uploaded avatars persistence

@@ -22,3 +22,7 @@ __pycache__/
 *.json
 !package.json
 !package-lock.json
+
+# Ignore archives
+*.tar
+*.tar.gz
