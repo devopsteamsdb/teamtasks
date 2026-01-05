@@ -66,6 +66,31 @@ export function attachEventListeners() {
         });
     }
 
+    // Clear All Filters
+    if (UI.elements.clearFiltersBtn) {
+        UI.elements.clearFiltersBtn.addEventListener('click', () => {
+            // Reset State
+            setActiveTeamFilter(null);
+            setStatusFilter('all');
+            setPriorityFilter('all');
+
+            // Clear Local Storage
+            localStorage.removeItem('activeTeamFilter');
+
+            // Reset UI - Team Filters
+            if (UI.elements.teamFilterBtns) {
+                UI.elements.teamFilterBtns.forEach(btn => btn.classList.remove('active'));
+            }
+
+            // Reset Dropdowns
+            if (UI.elements.filterStatus) UI.elements.filterStatus.value = 'all';
+            if (UI.elements.filterPriority) UI.elements.filterPriority.value = 'all';
+
+            // Refresh
+            window.dispatchEvent(new CustomEvent('calendar:refresh'));
+        });
+    }
+
     // Task Modal - New
     if (UI.elements.closeTaskModalBtn) UI.elements.closeTaskModalBtn.addEventListener('click', UI.closeTaskModal);
     if (UI.elements.taskSaveBtn) UI.elements.taskSaveBtn.addEventListener('click', saveTask);

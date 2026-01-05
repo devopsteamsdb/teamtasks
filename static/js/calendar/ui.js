@@ -47,6 +47,7 @@ export function updateDOMElements() {
     // Filter Controls
     elements.filterStatus = document.getElementById('filterStatus');
     elements.filterPriority = document.getElementById('filterPriority');
+    elements.clearFiltersBtn = document.getElementById('clearFiltersBtn');
 }
 
 export function initializeFlatpickr() {

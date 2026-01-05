@@ -160,6 +160,32 @@ export function attachEventListeners() {
             UI.applyFilters();
         });
     }
+
+    // Clear All Filters
+    if (UI.elements.clearFiltersBtn) {
+        UI.elements.clearFiltersBtn.addEventListener('click', () => {
+            // Reset State
+            setActiveTeamFilter(null);
+            setActiveMemberFilter(null);
+            setStatusFilter('all');
+            setPriorityFilter('all');
+
+            // Clear Local Storage
+            localStorage.removeItem('activeTeamFilter');
+
+            // Reset UI - Team Filters
+            if (UI.elements.teamFilterButtons) {
+                UI.elements.teamFilterButtons.forEach(btn => btn.classList.remove('active'));
+            }
+
+            // Reset Dropdowns
+            if (UI.elements.filterStatus) UI.elements.filterStatus.value = 'all';
+            if (UI.elements.filterPriority) UI.elements.filterPriority.value = 'all';
+
+            // Apply Filters (which will also reset member visibility)
+            UI.applyFilters();
+        });
+    }
 }
 
 async function handleSaveTask() {

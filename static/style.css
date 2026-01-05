@@ -626,6 +626,27 @@ textarea {
     /* Removed gap for manual overlap control */
     padding-right: 5px;
     /* small buffer */
+    gap: 0.5rem;
+}
+
+.filter-group-extras select {
+    padding-left: 2rem !important;
+    /* Make space for arrow to not be crowded */
+    background-position: left 0.5rem center !important;
+    /* Adjust arrow position for RTL */
+    height: 38px !important;
+    /* Match search box height */
+}
+
+.search-input {
+    height: 38px;
+    /* Ensure search input is same height */
+}
+
+.btn-secondary#clearFiltersBtn {
+    height: 38px !important;
+    display: flex;
+    align-items: center;
 }
 
 .filter-avatar-btn {
