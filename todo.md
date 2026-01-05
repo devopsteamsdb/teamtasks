@@ -15,7 +15,9 @@
 - [x] Add tooltips to team members (team name on hover) in all views.
 
 ## Print Page
-- [ ] 
+- [x] Add filtering by Status and Priority.
+- [x] Add filtering by Project.
+- [x] Dynamic project list updates based on other filters. 
 
 ## Layout & Design
 - [x] Add Dark Mode toggle and styling for all pages. 

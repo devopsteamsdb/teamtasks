@@ -4,6 +4,8 @@ export const state = {
     currentView: 'week', // 'week' or 'workload'
     currentDate: new Date(),
     activeTeamFilter: null,
+    statusFilter: 'all',
+    priorityFilter: 'all',
     tasks: [],
     specialDays: [],
     currentTaskId: null,
@@ -29,6 +31,14 @@ export function setCurrentDate(date) {
 
 export function setActiveTeamFilter(filter) {
     state.activeTeamFilter = filter;
+}
+
+export function setStatusFilter(filter) {
+    state.statusFilter = filter;
+}
+
+export function setPriorityFilter(filter) {
+    state.priorityFilter = filter;
 }
 
 export function setTasks(tasks) {

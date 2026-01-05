@@ -43,6 +43,10 @@ export function updateDOMElements() {
     elements.specialDaysModal = document.getElementById('specialDaysModal');
     elements.manageHolidaysBtn = document.getElementById('manageHolidaysBtn');
     elements.closeSpecialModalBtn = elements.specialDaysModal ? elements.specialDaysModal.querySelector('.close-modal') : null;
+
+    // Filter Controls
+    elements.filterStatus = document.getElementById('filterStatus');
+    elements.filterPriority = document.getElementById('filterPriority');
 }
 
 export function initializeFlatpickr() {
@@ -133,6 +137,11 @@ export function renderWeekView() {
 
         const tasksForDay = state.tasks.filter(task => {
             if (!task.start_date) return false;
+
+            // Status & Priority Filter
+            if (state.statusFilter && state.statusFilter !== 'all' && task.status !== state.statusFilter) return false;
+            if (state.priorityFilter && state.priorityFilter !== 'all' && (task.priority || 'none') !== state.priorityFilter) return false;
+
             // Display logic: show if task falls on this day
             return task.start_date === dayIso || (task.end_date && task.start_date <= dayIso && task.end_date >= dayIso);
         });
@@ -240,6 +249,11 @@ export function renderWorkloadView() {
 
             const tasksForDay = memberData.tasks.filter(task => {
                 if (!task.start_date) return false;
+
+                // Status & Priority Filter
+                if (state.statusFilter && state.statusFilter !== 'all' && task.status !== state.statusFilter) return false;
+                if (state.priorityFilter && state.priorityFilter !== 'all' && (task.priority || 'none') !== state.priorityFilter) return false;
+
                 return task.start_date === dayStr || (task.end_date && task.start_date <= dayStr && task.end_date >= dayStr);
             });
 

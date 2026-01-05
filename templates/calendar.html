@@ -37,6 +37,25 @@
             </button>
         </div>
 
+        <div class="filter-group-extras" style="display: flex; gap: 0.5rem; margin-right: 1rem;">
+            <select id="filterStatus" class="form-control"
+                style="width: auto; padding: 0.2rem 0.5rem; height: 32px; font-size: 0.9rem;">
+                <option value="all">כל הסטטוסים</option>
+                <option value="status-notstarted">טרם החל</option>
+                <option value="status-inprogress">בתהליך</option>
+                <option value="status-done">הושלם</option>
+                <option value="status-delayed">מעוכב</option>
+            </select>
+            <select id="filterPriority" class="form-control"
+                style="width: auto; padding: 0.2rem 0.5rem; height: 32px; font-size: 0.9rem;">
+                <option value="all">כל העדיפויות</option>
+                <option value="high">גבוהה</option>
+                <option value="medium">בינונית</option>
+                <option value="low">נמוכה</option>
+                <option value="none">ללא</option>
+            </select>
+        </div>
+
         <div class="navbar-meta">
             <a href="/table-editor" class="navbar-icon-link" title="עריכה בטבלה">
                 <img src="{{ url_for('static', filename='icons/table.svg') }}" width="20" height="20" alt="Table Editor"

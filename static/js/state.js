@@ -6,6 +6,8 @@ export const state = {
     currentTaskItem: null,
     activeTeamFilter: null,
     activeMemberFilter: null,
+    statusFilter: 'all',
+    priorityFilter: 'all',
     searchTimeout: null,
     lastUpdateTimestamp: 0
 };
@@ -28,6 +30,14 @@ export function setActiveTeamFilter(filter) {
 
 export function setActiveMemberFilter(filter) {
     state.activeMemberFilter = filter;
+}
+
+export function setStatusFilter(filter) {
+    state.statusFilter = filter;
+}
+
+export function setPriorityFilter(filter) {
+    state.priorityFilter = filter;
 }
 
 export function setLastUpdateTimestamp(ts) {

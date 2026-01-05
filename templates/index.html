@@ -35,11 +35,28 @@
                 {{ team.name_he }}
             </button>
             {% endfor %}
-            <button class="filter-team-btn archive-filter-btn {% if mode == 'archive' %}active{% endif %}"
+        <button class="filter-team-btn archive-filter-btn {% if mode == 'archive' %}active{% endif %}"
                 data-mode="archive" style="border: 2px solid #ef4444; color: #ef4444;">
                 <img src="{{ url_for('static', filename='icons/archive.svg') }}" width="14" height="14"
                     style="vertical-align: middle; filter: brightness(0) invert(0.4);"> ארכיון
             </button>
+        </div>
+        
+        <div class="filter-group-extras" style="display: flex; gap: 0.5rem; margin-right: 1rem;">
+             <select id="filterStatus" class="form-control" style="width: auto; padding: 0.2rem 0.5rem; height: 32px; font-size: 0.9rem;">
+                <option value="all">כל הסטטוסים</option>
+                <option value="status-notstarted">טרם החל</option>
+                <option value="status-inprogress">בתהליך</option>
+                <option value="status-done">הושלם</option>
+                <option value="status-delayed">מעוכב</option>
+            </select>
+            <select id="filterPriority" class="form-control" style="width: auto; padding: 0.2rem 0.5rem; height: 32px; font-size: 0.9rem;">
+                <option value="all">כל העדיפויות</option>
+                <option value="high">גבוהה</option>
+                <option value="medium">בינונית</option>
+                <option value="low">נמוכה</option>
+                <option value="none">ללא</option>
+            </select>
         </div>
         <div class="navbar-meta">
             <a href="/table-editor" class="navbar-icon-link" title="עריכה בטבלה">
@@ -161,7 +178,8 @@
                             data-priority="{{ task.priority|default('none') }}" data-team-id="{{ task.team_id }}"
                             data-start-date="{{ task.start_date.isoformat() if task.start_date else '' }}"
                             data-end-date="{{ task.end_date.isoformat() if task.end_date else '' }}"
-                            data-is-archived="{{ task.is_archived|lower }}">
+                            data-is-archived="{{ task.is_archived|lower }}"
+                            data-status="{{ task.status }}">
                             <div class="task-info">
                                 <span class="task-marker"
                                     style="background-color: {{ priority_colors.get(task.priority, '#cbd5e1') }};"></span>
