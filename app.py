@@ -73,7 +73,6 @@ def api_add_task():
     
     # Parse date strings to date objects if provided
     from datetime import datetime
-    from datetime import datetime
     if start_date and start_date.strip():
         try:
             start_date = datetime.fromisoformat(start_date).date()
