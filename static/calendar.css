@@ -337,6 +337,9 @@
     color: #4F46E5;
     font-weight: 600;
 }
+html.dark-mode .navbar-brand-link.active {
+    color: #818cf8;
+}
 
 /* Responsive */
 @media (max-width: 1024px) {
@@ -369,12 +372,30 @@
 }
 
 /* Special Days Styles */
+.special-days-form-container {
+    background: #f9fafb;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+}
+
+html.dark-mode .special-days-form-container {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+}
+
 .special-days-form-container h3,
 .special-days-list-container h3 {
     margin-top: 0;
     margin-bottom: 1rem;
     font-size: 1.1rem;
     color: #374151;
+}
+
+html.dark-mode .special-days-form-container h3,
+html.dark-mode .special-days-list-container h3 {
+    color: #f1f5f9;
 }
 
 .special-day-item {
@@ -489,6 +510,149 @@
 
 .workload-day-cell.special-day {
     background-color: #FFFBEB;
+}
+
+.workload-day-cell.special-day::before {
+    content: '';
+}
+
+/* Dark mode calendar overrides */
+html.dark-mode .calendar-header {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+}
+
+html.dark-mode .calendar-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+}
+
+html.dark-mode .period-title {
+    color: var(--dark);
+}
+
+html.dark-mode .view-btn {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+    border: 1px solid #334155 !important;
+}
+
+html.dark-mode .view-btn:hover {
+    background: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark-mode .view-btn.active {
+    background: #4f46e5 !important;
+    color: #ffffff !important;
+    border-color: #4f46e5 !important;
+}
+
+html.dark-mode .calendar-day-column {
+    background: #0f172a;
+    border-color: var(--border);
+}
+
+html.dark-mode .calendar-day-header {
+    background: #4338ca;
+    color: #ffffff;
+}
+
+html.dark-mode .calendar-day-header.special-day {
+    background-color: rgba(245, 158, 11, 0.18) !important;
+    color: #fbbf24 !important;
+    border-bottom: 2px solid #f59e0b !important;
+}
+
+html.dark-mode .special-day-label {
+    color: #fcd34d !important;
+}
+
+html.dark-mode .calendar-task-card {
+    background: #1e293b;
+    border-color: var(--border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html.dark-mode .task-card-name {
+    color: var(--dark);
+}
+
+html.dark-mode .task-card-project {
+    color: #94a3b8;
+}
+
+html.dark-mode .workload-header-row {
+    background: #0f172a;
+    border-color: var(--border);
+    border-bottom-color: #4f46e5;
+}
+
+html.dark-mode .workload-day-header {
+    background: #0f172a;
+    color: var(--dark);
+}
+
+html.dark-mode .workload-day-header.special-day {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #fbbf24 !important;
+    border-bottom: 2px solid #f59e0b !important;
+}
+
+html.dark-mode .workload-member-row {
+    background: var(--bg-card);
+    border-color: var(--border);
+}
+
+html.dark-mode .workload-member-info {
+    background: #0f172a;
+    border-color: var(--border);
+}
+
+html.dark-mode .workload-member-name {
+    color: var(--dark);
+}
+
+html.dark-mode .workload-day-cell {
+    border-color: var(--border) !important;
+    background-color: var(--bg-card) !important;
+}
+
+html.dark-mode .workload-day-cell.special-day {
+    background-color: rgba(245, 158, 11, 0.08) !important;
+    border-left-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+html.dark-mode .special-day-item {
+    background: #0f172a;
+    border-color: var(--border);
+}
+
+html.dark-mode .special-day-date {
+    color: #a5b4fc;
+}
+
+html.dark-mode .special-day-name {
+    color: #e2e8f0;
+}
+
+html.dark-mode .special-day-type {
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+html.dark-mode .calendar-month-cell {
+    background: var(--bg-card);
+    border-color: var(--border);
+}
+
+html.dark-mode .calendar-month-cell.special-day {
+    background-color: rgba(245, 158, 11, 0.08) !important;
+}
+
+html.dark-mode .month-special-day-label {
+    background: rgba(245, 158, 11, 0.2) !important;
+    color: #fbbf24 !important;
 }
 
 .workload-day-cell.special-day::before {

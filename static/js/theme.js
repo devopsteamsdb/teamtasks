@@ -26,20 +26,14 @@ function toggleTheme() {
 function updateIcon(isDark) {
     const btn = document.getElementById(themeConfig.toggleBtnId);
     if (!btn) return;
-    // Simple text or icon switch. 
-    // Let's assume the button contains an image and we filter it or swap it.
-    // For now, toggle a class on the button or icon.
-    // Or simpler: The button stays the same "moon" icon, but maybe active state?
-    // User asked for "Dark mode toggle button".
-    // Let's make the icon look "filled" or "active" if dark.
     if (isDark) {
         btn.classList.add('active');
-        btn.innerHTML = '☀️'; // Sun icon for switching to light
-        btn.title = 'Switch to Light Mode';
+        btn.innerHTML = '<img src="/static/icons/sun.svg" width="20" height="20" alt="החלף למצב יום" class="icon-img">';
+        btn.title = 'החלף למצב יום';
     } else {
         btn.classList.remove('active');
-        btn.innerHTML = '🌙'; // Moon icon for switching to dark
-        btn.title = 'Switch to Dark Mode';
+        btn.innerHTML = '<img src="/static/icons/moon.svg" width="20" height="20" alt="החלף למצב לילה" class="icon-img">';
+        btn.title = 'החלף למצב לילה';
     }
 }
 

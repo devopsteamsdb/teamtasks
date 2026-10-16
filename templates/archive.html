@@ -109,6 +109,15 @@
             }
         }
 
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function renderTasks(tasks) {
             const tbody = document.getElementById('archiveList');
             const loading = document.getElementById('loading');
@@ -128,20 +137,20 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>
-                        <div style="font-weight: 500;">${task.task}</div>
+                        <div style="font-weight: 500;">${escapeHtml(task.task)}</div>
                     </td>
                     <td>
-                        ${task.notes ? `<div style="font-size: 0.875rem; color: #6b7280;">${task.notes}</div>` : '-'}
+                        ${task.notes ? `<div style="font-size: 0.875rem; color: #6b7280;">${escapeHtml(task.notes)}</div>` : '-'}
                     </td>
-                    <td>${task.project}</td>
-                    <td>${teamsMap[task.team_id] || '-'}</td>
+                    <td>${escapeHtml(task.project)}</td>
+                    <td>${escapeHtml(teamsMap[task.team_id] || '-')}</td>
                     <td>
                         <div class="avatar-group">
-                            ${task.members.map(m => `<span class="member-tag">${membersMap[m] || m}</span>`).join(', ')}
+                            ${(task.members || []).map(m => `<span class="member-tag">${escapeHtml(membersMap[m] || m)}</span>`).join(', ')}
                         </div>
                     </td>
                     <td>
-                        <button class="restore-btn" onclick="restoreTask(${task.id})">
+                        <button class="restore-btn" onclick="restoreTask(${Number(task.id)})">
                             שחזר
                         </button>
                     </td>
@@ -154,14 +163,18 @@
             if (!confirm('האם לשחזר את המשימה ללוח?')) return;
 
             try {
-                const response = await fetch(`/api/tasks/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ is_archived: false })
+                const response = await fetch(`/api/tasks/${id}/unarchive`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
                 if (response.ok) {
                     loadArchivedTasks(); // Reload list
+                    if (typeof BroadcastChannel !== 'undefined') {
+                        try {
+                            new BroadcastChannel('teamtasks_live_sync').postMessage({ type: 'teamtasks:data_changed', timestamp: Date.now() });
+                        } catch (e) {}
+                    }
                 } else {
                     alert('שגיאה בשחזור המשימה');
                 }
@@ -169,6 +182,18 @@
                 console.error('Error restoring task:', error);
                 alert('שגיאה בשחזור המשימה');
             }
+        }
+
+        // Cross-tab live sync
+        if (typeof BroadcastChannel !== 'undefined') {
+            try {
+                const liveChannel = new BroadcastChannel('teamtasks_live_sync');
+                liveChannel.onmessage = (event) => {
+                    if (event.data && event.data.type === 'teamtasks:data_changed') {
+                        loadArchivedTasks();
+                    }
+                };
+            } catch (e) {}
         }
 
         // Init

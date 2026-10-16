@@ -2,7 +2,41 @@
 import * as API from './api.js';
 import * as UI from './ui.js';
 import * as Events from './events.js';
-import { state, setCurrentView, setActiveTeamFilter, setSpecialDays, setTasks, setTeams, setMembers } from './state.js';
+import { state, setCurrentView, setActiveTeamFilter, setSpecialDays, setTasks, setTeams, setMembers, setStatusFilter, setPriorityFilter } from './state.js';
+import { subscribeLiveSync } from '../live_sync.js';
+
+// Expose for global coordination (e.g. AI Assistant)
+window.calendarUI = UI;
+window.calendarEvents = Events;
+window.calendarState = state;
+
+let lastCalendarVersion = null;
+let isUpdating = false;
+
+async function checkCalendarUpdates() {
+    if (isUpdating) return;
+    try {
+        const data = await API.fetchVersion();
+        if (data && typeof data.timestamp !== 'undefined') {
+            if (lastCalendarVersion === null) {
+                lastCalendarVersion = data.timestamp;
+                return;
+            }
+            if (data.timestamp > lastCalendarVersion) {
+                lastCalendarVersion = data.timestamp;
+                if (!UI.isModalOpen()) {
+                    isUpdating = true;
+                    const specialDays = await API.fetchSpecialDays();
+                    setSpecialDays(specialDays);
+                    await renderCurrentView();
+                    isUpdating = false;
+                }
+            }
+        }
+    } catch (e) {
+        isUpdating = false;
+    }
+}
 
 async function init() {
     UI.updateDOMElements();
@@ -22,12 +56,45 @@ async function init() {
         }
     }
 
+    const storedStatus = localStorage.getItem('activeStatusFilter');
+    if (storedStatus) {
+        setStatusFilter(storedStatus);
+        if (UI.elements.filterStatus) {
+            UI.elements.filterStatus.value = storedStatus;
+        }
+    }
+
+    const storedPriority = localStorage.getItem('activePriorityFilter');
+    if (storedPriority) {
+        setPriorityFilter(storedPriority);
+        if (UI.elements.filterPriority) {
+            UI.elements.filterPriority.value = storedPriority;
+        }
+    }
+
     // Listen to custom events
     window.addEventListener('calendar:refresh', () => renderCurrentView());
+    window.addEventListener('teamtasks:refresh', async () => {
+        if (!UI.isModalOpen()) {
+            const specialDays = await API.fetchSpecialDays();
+            setSpecialDays(specialDays);
+            await renderCurrentView();
+        }
+    });
+
     window.addEventListener('calendar:switchView', (e) => {
         setCurrentView(e.detail.view);
         UI.switchView(e.detail.view);
         renderCurrentView();
+    });
+
+    // Cross-tab live sync
+    subscribeLiveSync(async () => {
+        if (!UI.isModalOpen()) {
+            const specialDays = await API.fetchSpecialDays();
+            setSpecialDays(specialDays);
+            await renderCurrentView();
+        }
     });
 
     // Special Days load
@@ -35,22 +102,32 @@ async function init() {
     setSpecialDays(specialDays);
 
     // Initial Fetch of Teams and Members for Modal
-    const teams = await API.fetchTeams();
+    const [teams, members, versionData] = await Promise.all([
+        API.fetchTeams(),
+        API.fetchMembers(),
+        API.fetchVersion()
+    ]);
     setTeams(teams);
-    const members = await API.fetchMembers();
     setMembers(members);
+    if (versionData && typeof versionData.timestamp !== 'undefined') {
+        lastCalendarVersion = versionData.timestamp;
+    }
 
     await renderCurrentView();
 
-    // Links to task board
+    // Start fast polling (every 1.5 seconds)
+    setInterval(checkCalendarUpdates, 1500);
+
+    // Links to task board - Preserve all filters
     const navTasks = document.getElementById('navTasksLink');
     if (navTasks) {
         navTasks.addEventListener('click', (e) => {
             e.preventDefault();
-            if (state.activeTeamFilter === 'archive') {
+            const storedTeam = localStorage.getItem('activeTeamFilter');
+            if (storedTeam === 'archive') {
                 window.location.href = '/?mode=archive';
-            } else if (state.activeTeamFilter) {
-                window.location.href = `/?team=${state.activeTeamFilter}`;
+            } else if (storedTeam) {
+                window.location.href = `/?team=${encodeURIComponent(storedTeam)}`;
             } else {
                 window.location.href = '/';
             }

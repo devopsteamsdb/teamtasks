@@ -8,18 +8,27 @@ export function parseDateToISO(dateStr) {
     const parts = cleanStr.split('/');
     if (parts.length !== 3) return null;
 
+    const day = parts[0].trim().padStart(2, '0');
+    const month = parts[1].trim().padStart(2, '0');
+    const year = parts[2].trim();
+
     // Check for valid date
-    const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    const d = new Date(`${year}-${month}-${day}T00:00:00`);
     if (isNaN(d.getTime())) return null;
 
-    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    return `${year}-${month}-${day}`;
 }
 
 export function formatDateFromISO(isoStr) {
     if (!isoStr) return '';
+    const datePart = String(isoStr).split('T')[0];
+    const parts = datePart.split('-');
+    if (parts.length === 3) {
+        return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+    }
     const d = new Date(isoStr);
     if (isNaN(d.getTime())) return '';
-    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
 export function getStatusFromClass(className) {

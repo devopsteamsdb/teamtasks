@@ -4,6 +4,7 @@ import * as UI from './ui.js';
 import * as API from './api.js';
 import { formatDateToISO, parseDateFromISO } from './utils.js';
 import { renderCurrentView } from './main.js'; // We need access to re-render
+import { notifyDataChanged } from '../live_sync.js';
 
 export function attachEventListeners() {
     // View Toggle
@@ -53,7 +54,13 @@ export function attachEventListeners() {
     // Status Filter
     if (UI.elements.filterStatus) {
         UI.elements.filterStatus.addEventListener('change', (e) => {
-            setStatusFilter(e.target.value);
+            const val = e.target.value;
+            setStatusFilter(val);
+            if (val && val !== 'all') {
+                localStorage.setItem('activeStatusFilter', val);
+            } else {
+                localStorage.removeItem('activeStatusFilter');
+            }
             window.dispatchEvent(new CustomEvent('calendar:refresh'));
         });
     }
@@ -61,7 +68,13 @@ export function attachEventListeners() {
     // Priority Filter
     if (UI.elements.filterPriority) {
         UI.elements.filterPriority.addEventListener('change', (e) => {
-            setPriorityFilter(e.target.value);
+            const val = e.target.value;
+            setPriorityFilter(val);
+            if (val && val !== 'all') {
+                localStorage.setItem('activePriorityFilter', val);
+            } else {
+                localStorage.removeItem('activePriorityFilter');
+            }
             window.dispatchEvent(new CustomEvent('calendar:refresh'));
         });
     }
@@ -76,6 +89,9 @@ export function attachEventListeners() {
 
             // Clear Local Storage
             localStorage.removeItem('activeTeamFilter');
+            localStorage.removeItem('activeMemberFilter');
+            localStorage.removeItem('activeStatusFilter');
+            localStorage.removeItem('activePriorityFilter');
 
             // Reset UI - Team Filters
             if (UI.elements.teamFilterBtns) {
@@ -131,6 +147,7 @@ export function attachEventListeners() {
                     setSpecialDays(specialDays);
                     UI.renderSpecialDaysList();
                     window.dispatchEvent(new CustomEvent('calendar:refresh'));
+                    notifyDataChanged();
                 }
             } catch (err) {
                 alert('שגיאה במחיקת יום מיוחד');
@@ -158,8 +175,10 @@ async function handleAddSpecialDay() {
     const dateVal = dateInput.value;
     let isoDate = null;
     if (dateVal) {
-        const parts = dateVal.split('/');
-        if (parts.length === 3) isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        const parts = dateVal.trim().replace(/[\.\-]/g, '/').split('/');
+        if (parts.length === 3) {
+            isoDate = `${parts[2].trim()}-${parts[1].trim().padStart(2, '0')}-${parts[0].trim().padStart(2, '0')}`;
+        }
     }
 
     if (!isoDate) {
@@ -185,6 +204,7 @@ async function handleAddSpecialDay() {
             setSpecialDays(specialDays);
             UI.renderSpecialDaysList();
             window.dispatchEvent(new CustomEvent('calendar:refresh'));
+            notifyDataChanged();
         } else {
             alert('שגיאה בהוספת יום מיוחד');
         }
@@ -212,12 +232,21 @@ async function saveTask() {
     let end_date = null;
 
     if (startDateInput) {
-        const parts = startDateInput.split('/');
-        if (parts.length === 3) start_date = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        const parts = startDateInput.trim().replace(/[\.\-]/g, '/').split('/');
+        if (parts.length === 3) {
+            start_date = `${parts[2].trim()}-${parts[1].trim().padStart(2, '0')}-${parts[0].trim().padStart(2, '0')}`;
+        }
     }
     if (endDateInput) {
-        const parts = endDateInput.split('/');
-        if (parts.length === 3) end_date = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        const parts = endDateInput.trim().replace(/[\.\-]/g, '/').split('/');
+        if (parts.length === 3) {
+            end_date = `${parts[2].trim()}-${parts[1].trim().padStart(2, '0')}-${parts[0].trim().padStart(2, '0')}`;
+        }
+    }
+
+    if (start_date && end_date && start_date > end_date) {
+        alert('תאריך ההתחלה לא יכול להיות מאוחר מתאריך הסיום');
+        return;
     }
 
     // Members
@@ -243,6 +272,7 @@ async function saveTask() {
         if (res.success) {
             UI.closeTaskModal();
             window.dispatchEvent(new CustomEvent('calendar:refresh'));
+            notifyDataChanged();
         } else {
             alert('שגיאה בשמירת המשימה');
         }
@@ -261,6 +291,7 @@ async function deleteTaskHandler() {
         if (res.success) {
             UI.closeTaskModal();
             window.dispatchEvent(new CustomEvent('calendar:refresh'));
+            notifyDataChanged();
         } else {
             alert('שגיאה במחיקת המשימה');
         }
@@ -299,6 +330,7 @@ export async function handleDrop(e) {
 
             if (res.success) {
                 window.dispatchEvent(new CustomEvent('calendar:refresh'));
+                notifyDataChanged();
             }
         } catch (err) {
             console.error(err);

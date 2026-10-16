@@ -1,26 +1,39 @@
 # TeamTasks - Infrastructure Task Management System
 
-A modern, bilingual (Hebrew/English) task management application built with Flask, designed for Infrastructure teams. Features team-based organization, real-time updates, and easy deployment to Docker and Kubernetes/OpenShift.
+A modern, bilingual (Hebrew/English) task and project management platform built with Python & Flask, tailored for Infrastructure and DevOps teams. Features an intelligent natural-language AI Assistant, dual AI engine support (Local/Air-Gapped Ollama or Cloudflare Workers AI), real-time live synchronization, an advanced workload calendar, a collection of 30 3D superhero avatars, and automated CI/CD deployment to Docker Hub and GCP.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
-![Flask](https://img.shields.io/badge/flask-2.0+-green.svg)
+![Python](https://img.shields.io/badge/python-3.12+-blue.svg)
+![Flask](https://img.shields.io/badge/flask-3.1+-green.svg)
+![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
+![WSGI](https://img.shields.io/badge/server-gunicorn-orange.svg)
 
 ---
 
 ## 📋 Table of Contents
 
 - [Features](#-features)
+  - [🤖 AI Assistant & Automation](#-ai-assistant--automation)
+  - [📋 Core Task & Project Management](#-core-task--project-management)
+  - [📅 Calendar & Workload Planning](#-calendar--workload-planning)
+  - [🦸 3D Avatars & Customization](#-3d-avatars--customization)
+  - [⚙️ Admin & System Diagnostics](#-admin--system-diagnostics)
+  - [💾 Backup & Restore](#-backup--restore)
+- [Architecture & AI Engine](#-architecture--ai-engine)
 - [Screenshots](#-screenshots)
 - [Quick Start](#-quick-start)
+- [Configuration (.env)](#-configuration-env)
 - [Deployment](#-deployment)
   - [Docker](#docker)
   - [Docker Compose](#docker-compose)
+  - [CI/CD Automated Deployment](#cicd-automated-deployment)
   - [Kubernetes/OpenShift](#kubernetesopenshift)
-- [Configuration](#-configuration)
-- [Development](#-development)
 - [API Documentation](#-api-documentation)
-- [Backup & Restore](#-backup--restore)
+  - [AI Assistant API](#ai-assistant-api)
+  - [System Settings & Diagnostics API](#system-settings--diagnostics-api)
+  - [Tasks API](#tasks-api)
+  - [Teams & Members API](#teams--members-api)
+  - [Backup & Restore API](#backup--restore-api)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -28,77 +41,138 @@ A modern, bilingual (Hebrew/English) task management application built with Flas
 
 ## ✨ Features
 
-### Core Functionality
-- ✅ **Task Management** - Create, edit, delete, and track tasks
-- ✅ **Team Organization** - Organize tasks by teams and projects
-- ✅ **Member Management** - Assign tasks to team members
-- ✅ **Priority Levels** - High, Medium, Low, None
-- ✅ **Status Tracking** - Not Started, In Progress, Done, Delayed
-- ✅ **Notes Support** - Add detailed notes to tasks
-- ✅ **Task Archiving** - Archive completed tasks and view them in a dedicated mode
+### 🤖 AI Assistant & Automation
+- 💬 **Bilingual Natural Language Chat** - Interact in natural Hebrew or English directly in a slide-out assistant panel.
+- ⚡ **Full Free-Text System Management** - Create, update, reassign, postpone, complete, archive, or delete tasks and projects using natural conversational prompts (e.g. *"תשני את המשימה 82 בתהליך"*, *"תוסיף משימה דחופה לפרויקט אבטחה"*).
+- 🧠 **Dual AI Provider Architecture**:
+  - **Local & Air-Gapped AI**: Compatible with local LLM gateways (Ollama, vLLM, LocalAI) using standard OpenAI API format (zero external data leaks).
+  - **Cloudflare Workers AI**: Serverless cloud option using `@cf/meta/llama-3.1-8b-instruct`.
+- 🛡️ **Built-in Guardrails & Fallbacks** - Deterministic validation ensures the LLM never executes hallucinated mutations or invents non-existent entity IDs.
+- 📊 **Executive Insights & Deadline Monitoring** - Instant executive summaries, delayed task alerts, and workload distribution breakdowns.
+- 🔄 **Conversational Memory** - Remembers referenced tasks, ordinals (*"הראשונה"*, *"השנייה"*), and follow-up commands across the conversation.
 
-### User Experience
-- 🌐 **Bilingual Interface** - Full Hebrew and English support
-- 🔍 **Real-time Search** - Instant search across all tasks
-- 🎨 **Modern UI** - Clean, responsive design
-- 📱 **Mobile Friendly** - Works on all devices
-- 🔄 **Auto-refresh** - Real-time updates without page reload
-- 🖨️ **Advanced Print View** - Filterable printable reports with project scoping
+### 📋 Core Task & Project Management
+- ✅ **Task Management** - Create, edit, prioritize, assign, and track tasks.
+- 👥 **Team & Member Scoping** - Filter by Team, Member, Project, Status, and Priority across all views.
+- 🏷️ **Statuses & Priorities** - *Not Started* (`status-notstarted`), *In Progress* (`status-inprogress`), *Done* (`status-done`), *Delayed* (`status-delayed`) with High, Medium, Low, None priorities.
+- 📦 **Task & Project Archiving** - Dedicated archive view with one-click restore.
+- 🖨️ **Printable Reports** - Clean, scoped printable summaries with instant filtering.
 
-### Technical Features
-- 🐳 **Docker Ready** - Containerized deployment
-- ☸️ **Kubernetes/OpenShift** - Helm chart included
-- 💾 **Persistent Storage** - Database and uploads persist
-- 🔒 **Secure** - Production-ready security settings
-- 📊 **RESTful API** - Full API for automation
-- ✅ **Advanced Calendar** - Weekly view and Workload view for team capacity planning
-- ✅ **Advanced Filtering** - Filter by Team, Member, Status, and Priority across all views (Dashboard, Calendar, Print)
-- 🏥 **Health Checks** - Built-in health monitoring
+### 📅 Calendar & Workload Planning
+- 🗓️ **Weekly & Monthly Views** - Drag-and-drop planning and deadline tracking.
+- ⚖️ **Workload Capacity View** - Real-time workload analysis per team member.
+- 🎈 **Special Days & Holidays** - Manage organizational holidays and events with custom colors.
+
+### 🦸 3D Avatars & Customization
+- 🎨 **30 Built-in 3D Clay Avatars** - High-resolution characters including:
+  - Superhero collection: Superman, Batman, Spider-Man, Iron Man, Wonder Woman, Hulk, Captain America, Flash, Deadpool, Goku, etc.
+  - Fun cartoons & mascots: SpongeBob, Pikachu, Ninja, Mario, Sonic, Minion, Ninja Turtle, Baby Yoda (Grogu), and more.
+- 🖼️ **Custom Avatar Uploads** - Built-in avatar picker and image uploader.
+
+### ⚙️ Admin & System Diagnostics
+- 🛠️ **General Settings ("הגדרות כלליות")** - Live configuration manager for `.env` settings:
+  - Toggle between Local AI Gateway and Cloudflare.
+  - Change model names and base endpoints on-the-fly without restart.
+  - Test AI connectivity with real-time latency diagnostics.
+- 🩺 **System Diagnostics & Health** - Database size calculation, SQLite integrity check (`PRAGMA integrity_check`), uploads storage metrics, and active process runtime metrics.
+
+### 💾 Backup & Restore
+- 📦 **Full System JSON Backup** - Export all tables (teams, members, projects, tasks, associations, special days) in a single JSON package.
+- 🔄 **Atomic Restore** - One-click full restore with foreign key preservation, or single-table restore.
 
 ---
 
-## 🖼️ Screenshots
+## 🏛️ Architecture & AI Engine
 
-### Main Dashboard
-The main task board with team filtering and search capabilities.
-<img width="1912" height="907" alt="image" src="https://github.com/user-attachments/assets/baf73720-620d-44ad-9695-ab0be1abe49f" />
-
-
-### Admin Panel
-Manage teams and members, upload avatars, and configure settings.
-<img width="1915" height="729" alt="image" src="https://github.com/user-attachments/assets/0f5d9854-24ad-4635-a6d0-45fd2706e054" />
-
+```
+                     ┌──────────────────────────────────────┐
+                     │          Browser Frontend            │
+                     │  (Vanilla JS, Tailwind, Live Sync)   │
+                     └──────────────────┬───────────────────┘
+                                        │ HTTP / REST
+                                        ▼
+                     ┌──────────────────────────────────────┐
+                     │          Flask WSGI App              │
+                     │      (Gunicorn Production)           │
+                     └───────┬──────────────────────┬───────┘
+                             │                      │
+                 Tool Calls  │                      │ System Context
+                 & Actions   ▼                      ▼
+        ┌──────────────────────────┐      ┌─────────────────────────┐
+        │  ai_tools.py (Guardrails)│      │    ai_context.py        │
+        │  - Fallback Intent       │      │  - Active Tasks & Teams │
+        │  - Hallucination Filter  │      │  - Deadlines & Workload │
+        │  - Database Mutations    │      │  - Hebrew Formatter     │
+        └────────────┬─────────────┘      └────────────┬────────────┘
+                     │                                 │
+                     └────────────────┬────────────────┘
+                                      │ Prompt + Schema
+                                      ▼
+                     ┌──────────────────────────────────────┐
+                     │             ai_service.py            │
+                     │  ┌────────────────────────────────┐  │
+                     │  │ Local / Air-Gapped Gateway     │  │
+                     │  │ (Ollama, vLLM, LocalAI)        │  │
+                     │  ├────────────────────────────────┤  │
+                     │  │ Cloudflare Workers AI          │  │
+                     │  │ (@cf/meta/llama-3.1-8b)        │  │
+                     │  └────────────────────────────────┘  │
+                     └──────────────────────────────────────┘
+```
 
 ---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.9+
+- Python 3.10+
 - pip
 
-### Local Development
+### 1. Clone & Install
+```bash
+git clone https://github.com/devopsteamsdb/teamtasks.git
+cd teamtasks
+pip install -r requirements.txt
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/devopsteamsdb/teamtasks.git
-   cd teamtasks
-   ```
+### 2. Configure Environment
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
 
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+Edit `.env` to configure your AI provider (Local Ollama or Cloudflare):
+```ini
+AI_PROVIDER=local_openai
+OPENAI_API_BASE=http://localhost:11434/v1
+OPENAI_MODEL=llama3.3
+```
 
-3. **Run the application**
-   ```bash
-   python app.py
-   ```
+### 3. Run Development Server
+```bash
+python app.py
+```
+Visit:
+- **Dashboard:** http://localhost:5000
+- **Admin Panel:** http://localhost:5000/admin
+- **Calendar:** http://localhost:5000/calendar
 
-4. **Access the application**
-   - Main dashboard: http://localhost:5000
-   - Admin panel: http://localhost:5000/admin
-   - Print view: http://localhost:5000/print
+---
+
+## ⚙️ Configuration (.env)
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `APP_NAME` | Display name of the application | `TeamTasks` |
+| `FLASK_APP` | Flask application entry point | `app.py` |
+| `FLASK_DEBUG` | Enable debug mode (`1` or `0`) | `0` |
+| `AI_PROVIDER` | Active AI provider (`local_openai` or `cloudflare`) | `local_openai` |
+| `OPENAI_API_BASE` | Local or OpenAI-compatible endpoint URL | `http://localhost:11434/v1` |
+| `OPENAI_MODEL` | Local LLM model identifier | `llama3.3` |
+| `OPENAI_API_KEY` | Optional API key for Local Gateway / OpenAI | *empty* |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID | *empty* |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token | *empty* |
+| `CLOUDFLARE_MODEL` | Cloudflare Workers AI model tag | `@cf/meta/llama-3.1-8b-instruct` |
 
 ---
 
@@ -106,340 +180,170 @@ Manage teams and members, upload avatars, and configure settings.
 
 ### Docker
 
-#### Build and Run
-```bash
-# Build the image
-docker build -t teamtasks:latest .
-
-# Run the container
-docker run -d \
-  -p 5000:5000 \
-  -v teamtasks-db:/app/instance \
-  -v teamtasks-uploads:/app/uploads \
-  --name teamtasks \
-  teamtasks:latest
-```
-
-#### Using Pre-built Image
+#### Run Pre-built Image from Docker Hub
 ```bash
 docker run -d \
   -p 5000:5000 \
-  -v teamtasks-db:/app/instance \
-  -v teamtasks-uploads:/app/uploads \
+  -v /var/teamtasks/db:/app/instance \
+  -v /var/teamtasks/uploads:/app/uploads \
   --name teamtasks \
+  --restart unless-stopped \
   devopsteamsdb/devopsteamsdb:teamtasks_latest
 ```
 
+#### Build Local Docker Image
+```bash
+docker build -t teamtasks:latest .
+docker run -d -p 5000:5000 -v $(pwd)/instance:/app/instance teamtasks:latest
+```
+
 ### Docker Compose
+Deploy easily with persistent storage:
 
-The easiest way to deploy with persistent storage:
+```yaml
+version: '3.8'
+
+services:
+  teamtasks:
+    image: devopsteamsdb/devopsteamsdb:teamtasks_latest
+    container_name: teamtasks
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_DEBUG=0
+      - FLASK_APP=app.py
+      - AI_PROVIDER=local_openai
+      - OPENAI_API_BASE=http://host.docker.internal:11434/v1
+      - OPENAI_MODEL=llama3.3
+    volumes:
+      - ./instance:/app/instance
+      - ./uploads:/app/uploads
+```
 
 ```bash
-# Start the application
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop the application
-docker-compose down
+docker compose up -d
 ```
 
-**docker-compose.yml** includes:
-- Persistent volumes for database and uploads
-- Health checks
-- Automatic restart policy
-- Production environment variables
+### CI/CD Automated Deployment
 
-For detailed Docker documentation, see [README-DOCKER.md](README-DOCKER.md).
-
-### Kubernetes/OpenShift
-
-Deploy using the included Helm chart:
-
-#### Quick Install
-```bash
-# Create namespace/project
-kubectl create namespace teamtasks
-# or for OpenShift
-oc new-project teamtasks
-
-# Install with Helm
-helm install teamtasks ./helm/teamtasks
-```
-
-#### Custom Configuration
-```bash
-# Custom hostname and storage
-helm install teamtasks ./helm/teamtasks \
-  --set route.host=teamtasks.apps.mycluster.com \
-  --set persistence.database.size=5Gi \
-  --set persistence.uploads.size=20Gi
-```
-
-#### Production Deployment
-```bash
-helm install teamtasks-prod ./helm/teamtasks \
-  --set replicaCount=3 \
-  --set resources.limits.cpu=1000m \
-  --set resources.limits.memory=1Gi \
-  --set persistence.database.storageClass=fast-ssd
-```
-
-For detailed Helm chart documentation, see [helm/teamtasks/README.md](helm/teamtasks/README.md).
-
----
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `FLASK_ENV` | Environment mode | `production` |
-| `FLASK_APP` | Application entry point | `app.py` |
-
-### Storage Configuration
-
-**Database Location:** `/app/instance/tasks.db`
-- SQLite database
-- Stores all tasks, teams, and members
-
-**Uploads Location:** `/app/uploads/avatars/`
-- User-uploaded avatar images
-- Default avatar bundled in `/app/static/images/default.png`
-
-### Resource Limits (Kubernetes)
-
-Default resource allocation:
-- **CPU**: 250m request, 500m limit
-- **Memory**: 256Mi request, 512Mi limit
-
-Adjust in `values.yaml` or via `--set` flags.
-
----
-
-## 🛠️ Development
-
-### Project Structure
-```
-teamtasks/
-├── app.py                 # Main Flask application
-├── models.py              # Database models
-├── requirements.txt       # Python dependencies
-├── Dockerfile            # Docker image definition
-├── docker-compose.yml    # Docker Compose configuration
-├── static/               # Static assets
-│   ├── style.css        # Main styles
-│   ├── script.js        # Frontend logic
-│   ├── admin.css        # Admin panel styles
-│   ├── admin.js         # Admin panel logic
-│   └── images/          # Static images
-├── templates/            # HTML templates
-│   ├── index.html       # Main dashboard
-│   ├── admin.html       # Admin panel
-│   └── print.html       # Print view
-├── scripts/             # Utility scripts
-│   ├── seed_data.py     # Sample data generator
-│   └── clear_data.py    # Database cleanup
-└── helm/                # Helm chart
-    └── teamtasks/       # Chart files
-```
-
-### Database Schema
-
-**Teams**
-- `id`: Primary key
-- `name_en`: English name
-- `name_he`: Hebrew name
-
-**TeamMembers**
-- `id`: Primary key
-- `team_id`: Foreign key to Teams
-- `name_en`: English name
-- `name_he`: Hebrew name
-- `avatar_path`: Avatar image filename
-
-**Tasks**
-- `id`: Primary key
-- `project`: Project name
-- `task`: Task description
-- `members`: Comma-separated member names
-- `status`: Task status
-- `priority`: Priority level
-- `notes`: Additional notes
-- `team_id`: Foreign key to Teams
-
-### Running Tests
-
-```bash
-# Install development dependencies
-pip install -r requirements.txt
-
-# Run the application in debug mode
-FLASK_ENV=development python app.py
-```
+The repository includes GitHub Actions workflows configured in `.github/workflows/`:
+1. **Docker Image CI (`docker-image.yml`):**
+   - Triggers on push to `main`.
+   - Builds timestamped and `teamtasks_latest` multi-platform Docker images.
+   - Pushes to Docker Hub (`devopsteamsdb/devopsteamsdb`).
+   - Generates a GitHub Release with an image artifact archive.
+2. **Deploy to GCP (`gcp.yml`):**
+   - Automatically triggered after Docker Image CI succeeds.
+   - Resolves target GCP server IP.
+   - Verifies SSH port connectivity.
+   - Pulls the latest container and executes zero-downtime container replacement.
+   - Verifies deployment health.
 
 ---
 
 ## 📡 API Documentation
 
-### Tasks
+### AI Assistant API
 
-**Get all tasks**
-```bash
-GET /api/tasks
-```
-
-**Create task**
-```bash
-POST /api/tasks
+#### 1. Chat with AI Assistant & Execute Free-Text Actions
+```http
+POST /api/ai/chat
 Content-Type: application/json
 
 {
-  "project": "Infrastructure",
-  "task": "Setup monitoring",
-  "members": "john,jane",
-  "status": "status-inprogress",
-  "priority": "high",
-  "notes": "Use Prometheus",
-  "team_id": 1
+  "message": "תשני את המשימה 82 בתהליך",
+  "history": [
+    {"role": "user", "content": "מה המשימות הפתוחות של צוות DEVOPS?"},
+    {"role": "assistant", "content": "להלן 14 משימות פתוחות..."}
+  ]
 }
 ```
 
-**Update task**
-```bash
-PUT /api/tasks/{id}
-Content-Type: application/json
-
+**Response:**
+```json
 {
-  "status": "status-done"
+  "success": true,
+  "reply": "",
+  "actions": [
+    {
+      "action": "edit_task",
+      "status": "success",
+      "task_id": 82,
+      "description": "עודכנה משימה #82: 'שדרוג פרודקשן'"
+    }
+  ],
+  "refresh_needed": true
 }
 ```
 
-**Delete task**
-```bash
-DELETE /api/tasks/{id}
-```
-
-### Teams
-
-**Get all teams**
-```bash
-GET /api/teams
-```
-
-**Create team**
-```bash
-POST /api/teams
-Content-Type: application/json
-
-{
-  "name_en": "devops",
-  "name_he": "צוות DevOps"
-}
-```
-
-### Members
-
-**Get all members**
-```bash
-GET /api/members
-```
-
-**Upload avatar**
-```bash
-POST /api/members/{id}/avatar
-Content-Type: multipart/form-data
-
-avatar: <file>
-```
-
-### Health Check
-
-**Version endpoint**
-```bash
-GET /api/version
+#### 2. Get AI Engine Status
+```http
+GET /api/ai/status
 ```
 
 ---
 
-## 💾 Backup & Restore
+### System Settings & Diagnostics API
 
-### Via Admin Interface (Recommended)
-You can easily backup and restore data via the Admin Panel (`/admin > Backup & Restore`):
-- **Backup**: Select a table (or "All System") and download a JSON file.
-- **Restore**: Select a target table (or "All System") and upload a JSON backup file.
-  - **All System Restore**: WARNING! This will wipe existing data and replace it with the backup content to ensure consistency.
+#### 1. Get Settings & Runtime Metrics
+```http
+GET /api/system/settings
+```
+Returns system configuration, masked tokens, database metrics, storage size, active project/task counts, and runtime information.
 
-### Via API
+#### 2. Update .env Settings Live
+```http
+POST /api/system/settings
+Content-Type: application/json
 
-**Backup Table**
-```bash
-GET /api/backup/{table_name}
-# table_name can be: teams, members, tasks, special_days, or all
+{
+  "ai_provider": "local_openai",
+  "openai_base_url": "http://localhost:11434/v1",
+  "openai_model": "llama3.3"
+}
 ```
 
-**Restore Table**
-```bash
-POST /api/restore/{table_name}
-Content-Type: multipart/form-data
-file: <backup_file.json>
+#### 3. Test AI Connection
+```http
+POST /api/system/test-ai
+Content-Type: application/json
+
+{
+  "provider": "local_openai",
+  "openai_base_url": "http://localhost:11434/v1",
+  "openai_model": "llama3.3"
+}
 ```
 
-### Manual (Docker/K8s)
-Legacy method for full volume backup:
-
-#### Docker
-
-**Backup**
-```bash
-# Database
-docker exec teamtasks tar czf - /app/instance > db-backup.tar.gz
-
-# Uploads
-docker exec teamtasks tar czf - /app/uploads > uploads-backup.tar.gz
+#### 4. Database Integrity Check
+```http
+POST /api/system/check-db
 ```
+Executes SQLite `PRAGMA integrity_check`.
 
-**Restore**
-```bash
-# Database
-cat db-backup.tar.gz | docker exec -i teamtasks tar xzf - -C /
+---
 
-# Uploads
-cat uploads-backup.tar.gz | docker exec -i teamtasks tar xzf - -C /
-```
+### Tasks API
 
-#### Kubernetes/OpenShift
+- `GET /api/tasks` - List all tasks (supports query filtering by `project`, `team_id`, `status`).
+- `POST /api/tasks` - Create a new task.
+- `PUT /api/tasks/{id}` - Update task details or status.
+- `DELETE /api/tasks/{id}` - Delete task.
+- `POST /api/tasks/{id}/archive` - Move task to archive.
+- `POST /api/tasks/{id}/unarchive` - Restore task from archive.
 
-**Backup**
-```bash
-# Database
-kubectl exec deployment/teamtasks -- tar czf - /app/instance > db-backup.tar.gz
+### Backup & Restore API
 
-# Uploads
-kubectl exec deployment/teamtasks -- tar czf - /app/uploads > uploads-backup.tar.gz
-```
-
-**Restore**
-```bash
-# Database
-cat db-backup.tar.gz | kubectl exec -i deployment/teamtasks -- tar xzf - -C /
-
-# Uploads
-cat uploads-backup.tar.gz | kubectl exec -i deployment/teamtasks -- tar xzf - -C /
-```
+- `GET /api/backup/{table_name}` - Download JSON backup (`table_name`: `all`, `tasks`, `projects`, `teams`, `members`, `special_days`).
+- `POST /api/restore/{table_name}` - Upload and restore JSON backup.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Development Workflow
-
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
@@ -448,27 +352,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-## 🙏 Acknowledgments
-
-- Built with [Flask](https://flask.palletsprojects.com/)
-- Database: [SQLAlchemy](https://www.sqlalchemy.org/)
-- Icons: Custom SVG icons
-- Deployment: Docker, Kubernetes, OpenShift
-
----
-
-## 📞 Support
-
-For issues, questions, or contributions:
-- Open an issue on GitHub
-- Check the [Docker documentation](README-DOCKER.md)
-- Review the [Helm chart documentation](helm/teamtasks/README.md)
-
----
-
-**Made with ❤️ by the DevOps Team**
-
+**Made with ❤️ for DevOps & Infrastructure Teams**

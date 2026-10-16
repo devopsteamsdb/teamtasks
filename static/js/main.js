@@ -3,32 +3,65 @@ import * as API from './api.js';
 import * as UI from './ui.js';
 import * as Events from './events.js';
 import * as Utils from './utils.js';
-import { state, setTeams, setMembers, setLastUpdateTimestamp, setActiveTeamFilter } from './state.js';
+import { state, setTeams, setMembers, setProjects, setLastUpdateTimestamp, setActiveTeamFilter, setActiveMemberFilter, setStatusFilter, setPriorityFilter, setCurrentTaskItem } from './state.js';
+import { subscribeLiveSync } from './live_sync.js';
+
+// Expose for global coordination (e.g. AI Assistant)
+window.mainUI = UI;
+window.mainEvents = Events;
+window.mainState = state;
+window.setCurrentTaskItem = setCurrentTaskItem;
+
+let isUpdating = false;
+
+async function checkForUpdates() {
+    if (isUpdating) return;
+    try {
+        const data = await API.fetchVersion();
+        if (data && data.timestamp && state.lastUpdateTimestamp && data.timestamp > state.lastUpdateTimestamp) {
+            isUpdating = true;
+            setLastUpdateTimestamp(data.timestamp);
+            await UI.refreshContent(Events.attachEventListeners);
+            isUpdating = false;
+        }
+    } catch (e) {
+        isUpdating = false;
+    }
+}
 
 async function init() {
     UI.updateDOMElements();
     UI.initializeFlatpickr();
 
     // Load Initial Data
-    const [teams, members, versionData] = await Promise.all([
+    const [teams, members, projects, versionData] = await Promise.all([
         API.fetchTeams(),
         API.fetchMembers(),
+        API.fetchProjects(),
         API.fetchVersion()
     ]);
 
     setTeams(teams);
     setMembers(members);
+    setProjects(projects);
     if (versionData) {
         setLastUpdateTimestamp(versionData.timestamp);
     }
 
     UI.populateDropdowns();
+    UI.populateProjectDropdowns();
+    UI.populateProjectTeamCheckboxes();
     UI.populateMemberCheckboxes();
     Events.attachEventListeners();
     Events.attachGlobalListeners();
 
-    // Start polling
-    setInterval(checkForUpdates, 5000);
+    // Start fast polling (every 1.5 seconds)
+    setInterval(checkForUpdates, 1500);
+
+    // Live cross-tab sync listener
+    subscribeLiveSync(async () => {
+        await UI.refreshContent(Events.attachEventListeners);
+    });
 
     // Initial State from URL / LocalStorage
     const urlParams = new URLSearchParams(window.location.search);
@@ -38,39 +71,46 @@ async function init() {
 
     if (mode === 'archive') {
         setActiveTeamFilter('archive');
+        localStorage.setItem('activeTeamFilter', 'archive');
     } else if (teamId) {
         setActiveTeamFilter(teamId);
+        localStorage.setItem('activeTeamFilter', teamId);
     } else if (storedTeamId) {
-        // Determine if we should apply stored filter
-        // If stored is 'archive', we probably want to switch to archive mode?
+        setActiveTeamFilter(storedTeamId);
         if (storedTeamId === 'archive') {
-            setActiveTeamFilter('archive');
-            // Update URL
             const url = new URL(window.location);
             url.searchParams.set('mode', 'archive');
             window.history.replaceState({}, '', url);
-            // We might need to refresh content if the server didn't render archive mode?
-            // But if we just loaded the page, the server rendered what the URL said.
-            // If URL didn't have mode=archive, but we force it now, we might need reload.
-            // However, let's assume if user landed without params, server rendered active tasks.
-            // If we switch to archive locally, we need to fetch archive content?
-            // Yes, because archive is server-side filtered usually (or maybe not? original code refreshed for archive).
-            // Let's safe bet: if we change mode from default to archive based on LS, we should refresh.
-            if (mode !== 'archive') {
-                await UI.refreshContent(Events.attachEventListeners);
-                return; // refreshContent will re-run logic eventually or we stop here?
-                // refreshContent re-runs nothing of main.js, just updates DOM and re-attaches listeners.
-                // So we are good.
-            }
+            await UI.refreshContent(Events.attachEventListeners);
+            return;
         } else {
-            setActiveTeamFilter(storedTeamId);
-            // Update URL
             const url = new URL(window.location);
             url.searchParams.set('team', storedTeamId);
-            // Ensure mode is active
-            url.searchParams.set('mode', 'active');
             window.history.replaceState({}, '', url);
         }
+    } else {
+        setActiveTeamFilter(null);
+    }
+
+    const storedStatus = localStorage.getItem('activeStatusFilter');
+    if (storedStatus) {
+        setStatusFilter(storedStatus);
+        if (UI.elements.filterStatus) {
+            UI.elements.filterStatus.value = storedStatus;
+        }
+    }
+
+    const storedPriority = localStorage.getItem('activePriorityFilter');
+    if (storedPriority) {
+        setPriorityFilter(storedPriority);
+        if (UI.elements.filterPriority) {
+            UI.elements.filterPriority.value = storedPriority;
+        }
+    }
+
+    const storedMember = localStorage.getItem('activeMemberFilter');
+    if (storedMember) {
+        setActiveMemberFilter(storedMember);
     }
 
     UI.applyFilters();

@@ -6,8 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ניהול צוותים - DevOps</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
-    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='admin.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}?v=5" rel="stylesheet">
+    <link href="{{ url_for('static', filename='admin.css') }}?v=5" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/ai_assistant.css') }}" rel="stylesheet">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 
@@ -16,17 +17,16 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/" class="navbar-brand-link" id="navTasksLink"><img
-                    src="{{ url_for('static', filename='logo.svg') }}" alt="Logo" class="navbar-logo"><span>לוח
-                    משימות</span></a>
-            <a href="/calendar" class="navbar-brand-link" id="navCalendarLink"><span>לוח שנה</span></a>
+            <a href="/" class="navbar-brand-logo" title="TeamTasks">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="Logo" class="navbar-logo">
+            </a>
+            <div class="navbar-nav-tabs">
+                <a href="/" class="navbar-brand-link active" id="navTasksLink"><span>לוח משימות</span></a>
+                <a href="/calendar" class="navbar-brand-link" id="navCalendarLink"><span>לוח שנה</span></a>
+            </div>
         </div>
 
         <div class="navbar-meta">
-            <a href="/table-editor" class="navbar-icon-link" title="עריכה בטבלה">
-                <img src="{{ url_for('static', filename='icons/table.svg') }}" width="20" height="20" alt="Table Editor"
-                    class="icon-img">
-            </a>
             <a href="/admin" title="ממשק ניהול" class="navbar-icon-link">
                 <img src="{{ url_for('static', filename='icons/settings.svg') }}" width="20" height="20" alt="Settings"
                     class="icon-img">
@@ -36,8 +36,10 @@
                 <img src="{{ url_for('static', filename='icons/print.svg') }}" width="20" height="20" alt="Print"
                     class="icon-img">
             </a>
-            <button id="themeToggleBtn" title="מצב לילה" class="navbar-icon-link"
-                style="background:none; border:none; cursor:pointer; font-size:1.2rem; padding: 0 0.5rem;">🌙</button>
+            <button id="themeToggleBtn" title="החלף למצב לילה" class="navbar-icon-link">
+                <img src="{{ url_for('static', filename='icons/moon.svg') }}" width="20" height="20" alt="מצב תצוגה"
+                    class="icon-img">
+            </button>
 
             <span style="padding-right: 1px;">{{ now.strftime('%d/%m/%Y') }}</span>
         </div>
@@ -79,11 +81,18 @@
                 <section id="section-teams" class="settings-section active">
                     <div class="section-header">
                         <h2>צוותים וחברי צוות</h2>
-                        <button id="addTeamBtn" class="btn btn-primary">
-                            <img src="{{ url_for('static', filename='icons/plus-medium.svg') }}" width="18" height="18"
-                                alt="Add" style="vertical-align:middle;">
-                            הוסף צוות חדש
-                        </button>
+                        <div class="section-header-actions">
+                            <button id="addTeamBtn" class="btn btn-primary">
+                                <img src="{{ url_for('static', filename='icons/plus-medium.svg') }}" width="18" height="18"
+                                    alt="Add" style="vertical-align:middle;">
+                                הוסף צוות חדש
+                            </button>
+                            <button id="addMemberBtn" class="btn btn-primary">
+                                <img src="{{ url_for('static', filename='icons/plus-medium.svg') }}" width="18" height="18"
+                                    alt="Add" style="vertical-align:middle;">
+                                הוסף חבר צוות
+                            </button>
+                        </div>
                     </div>
 
                     <div id="teamsContainer" class="teams-grid">
@@ -91,13 +100,216 @@
                     </div>
                 </section>
 
-                <!-- System Section (New Placeholder) -->
+                <!-- System Section (General Settings & .env Management) -->
                 <section id="section-system" class="settings-section">
                     <div class="section-header">
-                        <h2>הגדרות כלליות</h2>
+                        <div>
+                            <h2>הגדרות כלליות ומערכת</h2>
+                            <p class="section-subtitle">ניהול משתני סביבה (.env), מנוע בינה מלאכותית, ומשאבי מערכת</p>
+                        </div>
+                        <div class="section-header-actions">
+                            <button id="btnRefreshSystem" class="btn btn-secondary" title="רענן נתוני מערכת">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M23 4v6h-6"></path>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                                רענן
+                            </button>
+                            <button id="btnSaveSystemSettings" class="btn btn-primary" title="שמור הגדרות לקובץ .env">
+                                <img src="{{ url_for('static', filename='icons/save.svg') }}" width="18" height="18" style="vertical-align:middle; filter: brightness(0) invert(1);">
+                                שמור הגדרות
+                            </button>
+                        </div>
                     </div>
-                    <div class="settings-card">
-                        <p>הגדרות מערכת נוספות יופיעו כאן בקרוב.</p>
+
+                    <!-- AI Status Overview Card -->
+                    <div class="settings-card ai-status-card">
+                        <div class="ai-status-header">
+                            <div class="ai-status-title-box">
+                                <div class="ai-status-icon-wrapper">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                                        <path d="M12 12 2.1 7.1"></path>
+                                        <path d="M12 12v9"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">מנוע בינה מלאכותית (AI Assistant)</h3>
+                                    <div class="ai-status-badges" id="aiStatusBadges">
+                                        <span class="status-pill status-pill-active" id="badgeAiStatus">בטעינה...</span>
+                                        <span class="status-pill" id="badgeAiProvider">---</span>
+                                        <span class="status-pill" id="badgeAirgap">---</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ai-status-actions">
+                                <button type="button" id="btnTestAiConnection" class="btn btn-test-ai">
+                                    <span class="btn-spinner" id="testAiSpinner" style="display: none;"></span>
+                                    <svg class="btn-test-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                    </svg>
+                                    <span id="testAiBtnText">בדיקת חיבור מודל</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Test result banner -->
+                        <div id="aiTestResultBox" class="test-result-box" style="display: none;">
+                            <span class="test-result-icon" id="testResultIcon">✓</span>
+                            <div class="test-result-content">
+                                <div class="test-result-title" id="testResultTitle">חיבור תקין</div>
+                                <div class="test-result-details" id="testResultDetails"></div>
+                            </div>
+                            <button type="button" class="test-result-close" id="btnDismissTestResult">×</button>
+                        </div>
+
+                        <!-- Provider Selection Form -->
+                        <div class="settings-form-section">
+                            <label class="form-label-heading">בחר ספק מנוע AI פעיל (AI Provider):</label>
+                            <div class="provider-selector-grid">
+                                <label class="provider-radio-card" id="cardProviderLocal">
+                                    <input type="radio" name="ai_provider_radio" value="local_openai" id="radioProviderLocal">
+                                    <div class="provider-card-content">
+                                        <div class="provider-card-icon">🛡️</div>
+                                        <div class="provider-card-text">
+                                            <div class="provider-card-title">שער מקומי מבודד רשת (Local Airgapped)</div>
+                                            <div class="provider-card-desc">OpenAI-Compatible Gateway, Ollama, vLLM או LMStudio ברשת המקומית ללא תעבורת אינטרנט חיצונית.</div>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="provider-radio-card" id="cardProviderCloudflare">
+                                    <input type="radio" name="ai_provider_radio" value="cloudflare" id="radioProviderCloudflare">
+                                    <div class="provider-card-content">
+                                        <div class="provider-card-icon">☁️</div>
+                                        <div class="provider-card-text">
+                                            <div class="provider-card-title">Cloudflare Workers AI (ענן)</div>
+                                            <div class="provider-card-desc">שירות ענן מהיר המריץ מודלים (כגון Llama 3.1 / 3.3) באמצעות API Token ו-Account ID.</div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Local AI Fields -->
+                            <div id="boxLocalAiFields" class="provider-config-box">
+                                <div class="form-grid-2">
+                                    <div class="form-group">
+                                        <label for="inputOpenAiBaseUrl">כתובת שרת מקומי (OPENAI_API_BASE / AI_BASE_URL):</label>
+                                        <input type="text" id="inputOpenAiBaseUrl" class="form-control" placeholder="http://localhost:11434/v1">
+                                        <small class="form-hint">כתובת ה-API Gateway ברשת המקומית (לדוגמה: <code>http://localhost:11434/v1</code> עבור Ollama, או <code>http://10.0.0.5:8000/v1</code> עבור vLLM).</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inputOpenAiModel">שם מודל מקומי (OPENAI_MODEL):</label>
+                                        <input type="text" id="inputOpenAiModel" class="form-control" placeholder="llama3.3">
+                                        <small class="form-hint">שם המודל הטעון בשרת המקומי (לדוגמה: <code>llama3.3</code>, <code>llama3.1:8b</code>, <code>qwen2.5</code>, <code>mistral</code>).</small>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-top: 0.75rem;">
+                                    <label for="inputOpenAiApiKey">מפתח API מקומי (OPENAI_API_KEY):</label>
+                                    <div class="password-input-wrapper">
+                                        <input type="password" id="inputOpenAiApiKey" class="form-control" placeholder="sk-local (ברירת מחדל)">
+                                        <button type="button" class="btn-toggle-visibility" data-target="inputOpenAiApiKey" title="הצג/הסתר מפתח">👁️</button>
+                                    </div>
+                                    <small class="form-hint">בשרת מקומי מבודד ניתן להשתמש ב-<code>sk-local</code> או להשאיר ריק אלא אם הוגדר מפתח אבטחה ב-Gateway.</small>
+                                </div>
+                            </div>
+
+                            <!-- Cloudflare Fields -->
+                            <div id="boxCloudflareFields" class="provider-config-box">
+                                <div class="form-grid-2">
+                                    <div class="form-group">
+                                        <label for="inputCfAccountId">מזהה חשבון (CLOUDFLARE_ACCOUNT_ID):</label>
+                                        <input type="text" id="inputCfAccountId" class="form-control" placeholder="df3b7711cdf4d315c39dd000021eca4a">
+                                        <small class="form-hint">מזהה החשבון המופיע בלוח הבקרה של Cloudflare (32 תווים).</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inputCfModel">שם מודל Cloudflare (CLOUDFLARE_MODEL):</label>
+                                        <input type="text" id="inputCfModel" class="form-control" placeholder="@cf/meta/llama-3.1-8b-instruct">
+                                        <small class="form-hint">לדוגמה: <code>@cf/meta/llama-3.1-8b-instruct</code> או <code>@cf/meta/llama-3.3-70b-instruct-fp8-fast</code></small>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-top: 0.75rem;">
+                                    <label for="inputCfApiToken">מפתח גישה (CLOUDFLARE_API_TOKEN):</label>
+                                    <div class="password-input-wrapper">
+                                        <input type="password" id="inputCfApiToken" class="form-control" placeholder="הזן מפתח חדש או השאר ללא שינוי">
+                                        <button type="button" class="btn-toggle-visibility" data-target="inputCfApiToken" title="הצג/הסתר מפתח">👁️</button>
+                                    </div>
+                                    <small class="form-hint" id="hintCfTokenStatus">מפתח API נשמר מוצפן בקובץ .env. השאר שדה זה ללא שינוי אם אינך מעוניין להחליפו.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Resources & Metrics Cards -->
+                    <div class="settings-grid-cards">
+                        <!-- Metrics Card -->
+                        <div class="settings-card">
+                            <h3 class="card-section-title">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                                    <path d="M7 12h10"></path>
+                                    <path d="M12 7v10"></path>
+                                </svg>
+                                נתוני ומשאבי מערכת (Live Metrics)
+                            </h3>
+                            <div class="metrics-stat-grid">
+                                <div class="metric-stat-item">
+                                    <div class="metric-stat-value" id="statTasksCount">--</div>
+                                    <div class="metric-stat-label">משימות סה"כ</div>
+                                    <div class="metric-stat-sub" id="statTasksSub">-- הושלמו</div>
+                                </div>
+                                <div class="metric-stat-item">
+                                    <div class="metric-stat-value" id="statProjectsCount">--</div>
+                                    <div class="metric-stat-label">פרויקטים</div>
+                                    <div class="metric-stat-sub" id="statProjectsSub">-- פעילים</div>
+                                </div>
+                                <div class="metric-stat-item">
+                                    <div class="metric-stat-value" id="statTeamsCount">--</div>
+                                    <div class="metric-stat-label">צוותים</div>
+                                    <div class="metric-stat-sub" id="statMembersCount">-- עובדים</div>
+                                </div>
+                                <div class="metric-stat-item">
+                                    <div class="metric-stat-value" id="statDbSize">--</div>
+                                    <div class="metric-stat-label">גודל מסד נתונים</div>
+                                    <div class="metric-stat-sub">SQLite (tasks.db)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Storage & Database Integrity Card -->
+                        <div class="settings-card">
+                            <h3 class="card-section-title">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                    <polyline points="3.29 7 12 12 20.71 7"></polyline>
+                                    <line x1="12" y1="22" x2="12" y2="12"></line>
+                                </svg>
+                                אחסון וסביבת ריצה
+                            </h3>
+                            <div class="system-info-list">
+                                <div class="system-info-row">
+                                    <span class="info-row-title">מסד נתונים (Path):</span>
+                                    <span class="info-row-value code-pill" id="infoDbPath">tasks.db</span>
+                                </div>
+                                <div class="system-info-row">
+                                    <span class="info-row-title">תיקיית אווטארים (Uploads):</span>
+                                    <span class="info-row-value" id="infoUploadsSummary">-- קבצים (--)</span>
+                                </div>
+                                <div class="system-info-row">
+                                    <span class="info-row-title">סביבת ריצה (Platform):</span>
+                                    <span class="info-row-value" id="infoPlatform">--</span>
+                                </div>
+                                <div class="system-info-row">
+                                    <span class="info-row-title">גרסת Python:</span>
+                                    <span class="info-row-value" id="infoPythonVersion">--</span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                <button type="button" id="btnCheckDbIntegrity" class="btn btn-secondary btn-sm">
+                                    בדוק שלמות מסד נתונים (Integrity Check)
+                                </button>
+                                <span id="dbIntegrityResult" style="font-size: 0.825rem; font-weight: 600;"></span>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -119,6 +331,7 @@
                                 <select id="backupTableSelect" class="form-control">
                                     <option value="all" style="font-weight: bold;">כל המערכת (All System)</option>
                                     <option value="teams">צוותים (Teams)</option>
+                                    <option value="projects">פרויקטים (Projects)</option>
                                     <option value="members">חברי צוות (Team Members)</option>
                                     <option value="tasks">משימות (Tasks)</option>
                                     <option value="special_days">ימים מיוחדים (Special Days)</option>
@@ -143,6 +356,7 @@
                                 <select id="restoreTableSelect" class="form-control">
                                     <option value="all" style="font-weight: bold;">כל המערכת (All System)</option>
                                     <option value="teams">צוותים (Teams)</option>
+                                    <option value="projects">פרויקטים (Projects)</option>
                                     <option value="members">חברי צוות (Team Members)</option>
                                     <option value="tasks">משימות (Tasks)</option>
                                     <option value="special_days">ימים מיוחדים (Special Days)</option>
@@ -196,25 +410,45 @@
         <div class="modal-content">
             <span class="close-member-modal">&times;</span>
             <h2 id="memberModalTitle">הוסף חבר צוות</h2>
-            <div class="form-group">
-                <label for="memberNameEn">שם באנגלית (קוד):</label>
-                <input type="text" id="memberNameEn" class="form-control" placeholder="john">
-                <small>השם באנגלית ישמש בקוד (אותיות קטנות בלבד)</small>
-            </div>
-            <div class="form-group">
-                <label for="memberNameHe">שם בעברית (תצוגה):</label>
-                <input type="text" id="memberNameHe" class="form-control" placeholder="ג'ון">
-                <small>השם בעברית יוצג בממשק המשתמש</small>
-            </div>
-            <div class="form-group">
-                <label for="memberAvatar">תמונת פרופיל:</label>
-                <div class="avatar-upload">
-                    <img id="avatarPreview" src="{{ url_for('static', filename='images/default.png') }}"
-                        class="avatar-preview">
-                    <input type="file" id="memberAvatar" accept="image/png,image/jpeg,image/jpg,image/gif">
-                    <label for="memberAvatar" class="btn btn-secondary">בחר תמונה</label>
+            <div class="form-row" style="display: flex; gap: 1rem;">
+                <div class="form-group" style="flex: 1; margin-top: 0.4rem;">
+                    <label for="memberNameEn">שם באנגלית (קוד):</label>
+                    <input type="text" id="memberNameEn" class="form-control" placeholder="john">
+                    <small style="display: block; margin-top: 2px;">אותיות קטנות בלבד</small>
                 </div>
-                <small>גודל מקסימלי: 5MB. פורמטים נתמכים: PNG, JPG, GIF</small>
+                <div class="form-group" style="flex: 1; margin-top: 0.4rem;">
+                    <label for="memberNameHe">שם בעברית (תצוגה):</label>
+                    <input type="text" id="memberNameHe" class="form-control" placeholder="ג'ון">
+                    <small style="display: block; margin-top: 2px;">שם לתצוגה בממשק</small>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>שיוך לצוותים <span style="color: #ef4444;">*</span>:</label>
+                <div id="memberTeamsContainer" class="teams-checkbox-grid">
+                    <!-- Populated dynamically -->
+                </div>
+                <small>ניתן לשייך את חבר הצוות לצוות אחד או יותר (יש לבחור לפחות צוות אחד)</small>
+            </div>
+            <div class="form-group avatar-form-group">
+                <label>תמונת פרופיל או אווטאר:</label>
+                <div class="avatar-selection-layout">
+                    <div class="avatar-preview-box">
+                        <img id="avatarPreview" src="{{ url_for('static', filename='images/default.png') }}"
+                            class="avatar-preview" alt="תמונת פרופיל">
+                        <input type="file" id="memberAvatar" accept="image/png,image/jpeg,image/jpg,image/gif" style="display: none;">
+                        <input type="hidden" id="selectedPredefinedAvatar" value="">
+                        <label for="memberAvatar" class="btn btn-secondary btn-sm upload-custom-avatar-btn">
+                            העלה תמונה אישית
+                        </label>
+                    </div>
+                    
+                    <div class="predefined-avatars-box">
+                        <div class="predefined-avatars-title">או בחר אווטאר מעוצב:</div>
+                        <div id="predefinedAvatarsGrid" class="predefined-avatars-grid">
+                            <!-- Populated dynamically with predefined avatars -->
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-actions">
                 <button id="saveMemberBtn" class="btn btn-primary">שמור</button>
@@ -227,6 +461,8 @@
     <div id="toast" class="toast"></div>
 
     <script src="{{ url_for('static', filename='admin.js') }}"></script>
+    {% include 'ai_assistant.html' %}
+    <script src="{{ url_for('static', filename='js/ai_assistant.js') }}"></script>
 </body>
 
 </html>

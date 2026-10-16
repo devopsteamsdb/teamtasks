@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="he" dir="rtl">
 
 <head>
@@ -6,8 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>לוח משימות</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
-    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}?v=5" rel="stylesheet">
     <link href="{{ url_for('static', filename='flatpickr.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/ai_assistant.css') }}" rel="stylesheet">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 
@@ -16,10 +17,13 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/" class="navbar-brand-link active" id="navTasksLink"><img
-                    src="{{ url_for('static', filename='logo.svg') }}" alt="Logo" class="navbar-logo"><span>לוח
-                    משימות</span></a>
-            <a href="/calendar" class="navbar-brand-link" id="navCalendarLink"><span>לוח שנה</span></a>
+            <a href="/" class="navbar-brand-logo" title="TeamTasks">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="Logo" class="navbar-logo">
+            </a>
+            <div class="navbar-nav-tabs">
+                <a href="/" class="navbar-brand-link active" id="navTasksLink"><span>לוח משימות</span></a>
+                <a href="/calendar" class="navbar-brand-link" id="navCalendarLink"><span>לוח שנה</span></a>
+            </div>
         </div>
 
 
@@ -36,39 +40,36 @@
             </button>
             {% endfor %}
             <button class="filter-team-btn archive-filter-btn {% if mode == 'archive' %}active{% endif %}"
-                data-mode="archive" style="border: 2px solid #ef4444; color: #ef4444;">
-                <img src="{{ url_for('static', filename='icons/archive.svg') }}" width="14" height="14"
-                    style="vertical-align: middle; filter: brightness(0) invert(0.4);"> ארכיון
+                data-mode="archive" title="הצג משימות ופרויקטים בארכיון">
+                <svg class="archive-btn-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                    <rect x="1" y="3" width="22" height="5"></rect>
+                    <line x1="10" y1="12" x2="14" y2="12"></line>
+                </svg>
+                <span>ארכיון</span>
             </button>
         </div>
 
-        <div class="filter-group-extras" style="display: flex; gap: 0.5rem; margin-right: 1rem;">
-            <select id="filterStatus" class="form-control"
-                style="width: auto; padding: 0.2rem 0.5rem; height: 32px; font-size: 0.9rem;">
+        <div class="filter-group-extras">
+            <select id="filterStatus" class="form-control">
                 <option value="all">כל הסטטוסים</option>
                 <option value="status-notstarted">טרם החל</option>
                 <option value="status-inprogress">בתהליך</option>
                 <option value="status-done">הושלם</option>
                 <option value="status-delayed">מעוכב</option>
             </select>
-            <select id="filterPriority" class="form-control"
-                style="width: auto; padding: 0.2rem 0.5rem; height: 32px; font-size: 0.9rem;">
+            <select id="filterPriority" class="form-control">
                 <option value="all">כל העדיפויות</option>
                 <option value="high">גבוהה</option>
                 <option value="medium">בינונית</option>
                 <option value="low">נמוכה</option>
                 <option value="none">ללא</option>
             </select>
-            <button id="clearFiltersBtn" class="btn-secondary" style="height: 32px; padding: 0 10px; font-size: 0.9rem;"
-                title="נקה את כל הסינונים">
+            <button id="clearFiltersBtn" class="btn-secondary" title="נקה את כל הסינונים">
                 נקה
             </button>
         </div>
         <div class="navbar-meta">
-            <a href="/table-editor" class="navbar-icon-link" title="עריכה בטבלה">
-                <img src="{{ url_for('static', filename='icons/table.svg') }}" width="20" height="20" alt="Table Editor"
-                    class="icon-img">
-            </a>
             <a href="/admin" title="ממשק ניהול" class="navbar-icon-link">
                 <img src="{{ url_for('static', filename='icons/settings.svg') }}" width="20" height="20" alt="Settings"
                     class="icon-img">
@@ -78,8 +79,10 @@
                 <img src="{{ url_for('static', filename='icons/print.svg') }}" width="20" height="20" alt="Print"
                     class="icon-img">
             </a>
-            <button id="themeToggleBtn" title="מצב לילה" class="navbar-icon-link"
-                style="background:none; border:none; cursor:pointer; font-size:1.2rem; padding: 0 0.5rem;">🌙</button>
+            <button id="themeToggleBtn" title="החלף למצב לילה" class="navbar-icon-link">
+                <img src="{{ url_for('static', filename='icons/moon.svg') }}" width="20" height="20" alt="מצב תצוגה"
+                    class="icon-img">
+            </button>
             <span style="padding-right: 1px; font-weight: 500; font-size: 0.9rem;">{{ now.strftime('%d/%m/%Y') }}</span>
         </div>
     </nav>
@@ -89,16 +92,20 @@
 
         <header class="dashboard-header">
             <div class="dashboard-title">
-                <button id="addTaskBtn" class="btn-add-task">
-                    <img src="{{ url_for('static', filename='icons/plus.svg') }}" width="18" height="18" alt="Add"> הוסף
+                <button id="addProjectBtn" class="btn-add-task">
+                    <img src="{{ url_for('static', filename='icons/plus.svg') }}" width="18" height="18" alt="Add"> הוסף פרויקט
                 </button>
 
                 <div class="avatar-filter-container">
                     <!-- Member Filter Buttons (existing) -->
                     {% for member in members %}
+                    {% set m_team_ids = member.teams|map(attribute='id')|list %}
+                    {% set m_team_names = member.teams|map(attribute='name_he')|join(', ') if member.teams else (member.team.name_he if member.team else 'ללא צוות') %}
                     <button class="filter-avatar-btn" data-member="{{ member.name_en }}"
-                        data-team-id="{{ member.team_id }}" title="{{ member.name_he }} - {{ member.team.name_he }}"
-                        style="{% if active_team_id and member.team_id != active_team_id %}display:none;{% endif %}">
+                        data-team-id="{{ member.team_id or '' }}"
+                        data-team-ids="{{ m_team_ids|join(',') }}"
+                        title="{{ member.name_he }} - {{ m_team_names }}"
+                        style="{% if active_team_id and (active_team_id not in m_team_ids) and (member.team_id != active_team_id) %}display:none;{% endif %}">
                         <img src="/uploads/avatars/{{ member.avatar_path }}" class="filter-avatar"
                             onerror="this.src='{{ url_for('static', filename='images/default.png') }}'">
                     </button>
@@ -109,26 +116,46 @@
 
         <div class="projects-grid">
             {% for project in projects %}
-            {% set project_tasks = tasks|selectattr('project', 'equalto', project)|list %}
-            {% set project_team_id = project_tasks|map(attribute='team_id')|first %}
+            {% set project_tasks = tasks|selectattr('project', 'equalto', project.name)|list %}
+            {% set project_team_ids = project.teams|map(attribute='id')|list %}
             {% set project_visible = True %}
             {% if active_team_id %}
-            {# Check if any task in project matches active team #}
-            {% set matching_tasks = project_tasks|selectattr('team_id', 'equalto', active_team_id)|list %}
-            {% if matching_tasks|length == 0 %}
-            {% set project_visible = False %}
-            {% endif %}
+                {% set is_team_assigned = (active_team_id in project_team_ids) %}
+                {% set ns = namespace(has_matching_task=false) %}
+                {% for t in project_tasks %}
+                    {% set t_team_match = (t.team_id == active_team_id) %}
+                    {% set t_member_match = false %}
+                    {% if active_team_members %}
+                        {% set tm_list = t.members.split(',') if t.members else [] %}
+                        {% for m in tm_list %}
+                            {% if m in active_team_members %}
+                                {% set t_member_match = true %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {% if t_team_match or t_member_match %}
+                        {% set ns.has_matching_task = true %}
+                    {% endif %}
+                {% endfor %}
+                {% if not is_team_assigned and not ns.has_matching_task %}
+                    {% set project_visible = False %}
+                {% elif is_team_assigned and project_tasks|length > 0 and not ns.has_matching_task %}
+                    {% set project_visible = False %}
+                {% endif %}
             {% endif %}
 
             <div class="project-card {% if not project_visible %}filtered-hidden{% endif %}"
-                data-team-id="{{ project_team_id }}">
+                data-project-id="{{ project.id }}"
+                data-project-name="{{ project.name }}"
+                data-team-ids="{{ project_team_ids|join(',') }}"
+                data-is-empty="{% if project_tasks|length == 0 %}true{% else %}false{% endif %}">
                 <div class="project-header">
                     <span class="project-title">
-                        <button class="add-task-project-btn" data-project="{{ project }}" title="הוסף משימה לפרויקט זה">
+                        <button class="add-task-project-btn" data-project="{{ project.name }}" data-project-id="{{ project.id }}" title="הוסף משימה לפרויקט זה">
                             <img src="{{ url_for('static', filename='icons/plus-small.svg') }}" width="16" height="16"
                                 alt="Add" class="icon-img">
                         </button>
-                        {{ project }}
+                        <span class="project-name-text">{{ project.name }}</span>
                     </span>
                     {% set project_colors = [
                     {'bg': '#EEF2FF', 'color': '#4F46E5'},
@@ -147,7 +174,6 @@
                     {'bg': '#EDE9FE', 'color': '#7C3AED'},
                     {'bg': '#C7D2FE', 'color': '#1D4ED8'}
                     ] %}
-                    {# Priority colors: high=red, medium=orange, low=yellow, none/empty=gray #}
                     {% set priority_colors = {
                     'high': '#ef4444',
                     'medium': '#f59e0b',
@@ -156,12 +182,32 @@
                     '': '#cbd5e1'
                     } %}
                     {% set color = project_colors[(loop.index0) % project_colors|length] %}
-                    <span class="project-badge" style="background-color: {{ color.bg }}; color: {{ color.color }};">{{
-                        project_teams.get(project) or 'כללי' }}</span>
+                    <div class="project-header-actions">
+                        <div class="project-badges">
+                            {% for team in project.teams %}
+                            <span class="project-badge" style="background-color: {{ color.bg }}; color: {{ color.color }};">
+                                {{ team.name_he }}
+                            </span>
+                            {% else %}
+                            <span class="project-badge">כללי</span>
+                            {% endfor %}
+                        </div>
+                        <button class="edit-project-btn" data-project-id="{{ project.id }}" data-project-name="{{ project.name }}" title="ערוך פרויקט">
+                            <img src="{{ url_for('static', filename='icons/edit.svg') }}" width="14" height="14" alt="Edit" class="icon-img">
+                        </button>
+                    </div>
                 </div>
                 <div class="project-body">
+                    {% if project_tasks|length == 0 %}
+                    <div class="empty-project-placeholder">
+                        <span class="empty-project-text">אין עדיין משימות בפרויקט זה</span>
+                        <button class="btn-empty-add-task add-task-project-btn" data-project="{{ project.name }}" data-project-id="{{ project.id }}">
+                            <img src="{{ url_for('static', filename='icons/plus-small.svg') }}" width="14" height="14" alt="Add" class="icon-img"> הוסף משימה
+                        </button>
+                    </div>
+                    {% endif %}
                     <ul class="task-list">
-                        {% for task in tasks if task.project == project %}
+                        {% for task in tasks if task.project == project.name %}
                         {% set show_task = True %}
                         {% if active_team_id %}
                         {% set task_team_match = (task.team_id == active_team_id) %}
@@ -206,9 +252,10 @@
                                     {% set member_obj = members|selectattr('name_en', 'equalto',
                                     member_key)|first %}
                                     {% if member_obj %}
+                                    {% set m_obj_teams = member_obj.teams|map(attribute='name_he')|join(', ') if member_obj.teams else (member_obj.team.name_he if member_obj.team else 'ללא צוות') %}
                                     <img src="/uploads/avatars/{{ member_obj.avatar_path }}"
                                         onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
-                                        class="avatar" title="{{ member_obj.name_he }} - {{ member_obj.team.name_he }}"
+                                        class="avatar" title="{{ member_obj.name_he }} - {{ m_obj_teams }}"
                                         data-member-name="{{ member_obj.name_en }}">
                                     {% endif %}
                                     {% endif %}
@@ -230,8 +277,31 @@
 
 
     </div>
-    </div>
 
+
+    <!-- Create/Edit Project Modal -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal-project">&times;</span>
+            <h2 id="projectModalTitle">הוסף פרויקט חדש</h2>
+            <input type="hidden" id="projectModalId" value="">
+            <div class="form-group">
+                <label for="projectModalNameInput">שם הפרויקט:</label>
+                <input type="text" id="projectModalNameInput" class="form-control" placeholder="הזן שם פרויקט...">
+            </div>
+            <div class="form-group">
+                <label>שיוך לצוותים (בחר אחד או יותר):</label>
+                <div id="projectTeamsSelect" class="project-teams-select">
+                    <!-- Populated dynamically by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="projectModalSaveBtn" class="btn btn-primary">שמור פרויקט</button>
+                <button id="projectModalArchiveBtn" class="btn btn-secondary" style="display: none;">העבר לארכיון</button>
+                <button id="projectModalDeleteBtn" class="btn btn-danger" style="display: none;">מחק פרויקט וכל משימותיו</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Create Task Modal -->
     <div id="createTaskModal" class="modal">
@@ -239,14 +309,16 @@
             <span class="close-modal-create">&times;</span>
             <h2 id="createModalTitle">יצירת משימה חדשה</h2>
             <div class="form-group">
-                <label for="createTaskTeam">צוות:</label>
-                <select id="createTaskTeam" class="form-control">
+                <label for="createTaskProject">פרויקט:</label>
+                <select id="createTaskProject" class="form-control">
                     <!-- Populated dynamically by JavaScript -->
                 </select>
             </div>
             <div class="form-group">
-                <label for="createProjectNameInput">שם הפרויקט:</label>
-                <input type="text" id="createProjectNameInput" class="form-control">
+                <label for="createTaskTeam">צוות:</label>
+                <select id="createTaskTeam" class="form-control">
+                    <!-- Populated dynamically by JavaScript -->
+                </select>
             </div>
             <div class="form-group">
                 <label for="createTaskNameInput">שם המשימה:</label>
@@ -304,23 +376,25 @@
             <span class="close-modal">&times;</span>
             <h2 id="modalTitle">עריכת משימה</h2>
             <div class="form-group">
+                <label for="taskProject">פרויקט:</label>
+                <select id="taskProject" class="form-control">
+                    <!-- Populated dynamically by JavaScript -->
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="taskTeam">צוות:</label>
                 <select id="taskTeam" class="form-control">
                     <!-- Populated dynamically by JavaScript -->
                 </select>
-                <div class="form-group">
-                    <label for="projectNameInput">שם הפרויקט:</label>
-                    <input type="text" id="projectNameInput" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label for="taskNameInput">שם המשימה:</label>
-                    <input type="text" id="taskNameInput" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label>חברי צוות:</label>
-                    <div class="members-select">
-                        <!-- Populated dynamically by JavaScript -->
-                    </div>
+            </div>
+            <div class="form-group">
+                <label for="taskNameInput">שם המשימה:</label>
+                <input type="text" id="taskNameInput" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>חברי צוות:</label>
+                <div class="members-select">
+                    <!-- Populated dynamically by JavaScript -->
                 </div>
             </div>
             <div class="form-row">
@@ -359,6 +433,7 @@
             </div>
             <div class="modal-actions">
                 <button id="saveBtn" class="btn btn-primary">שמור שינויים</button>
+                <button id="archiveBtn" class="btn btn-secondary">העבר לארכיון</button>
                 <button id="deleteBtn" class="btn btn-danger">מחק משימה</button>
             </div>
         </div>
@@ -367,6 +442,8 @@
     <script src="{{ url_for('static', filename='flatpickr.min.js') }}"></script>
     <script src="{{ url_for('static', filename='flatpickr.he.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}?v=4"></script>
+    {% include 'ai_assistant.html' %}
+    <script src="{{ url_for('static', filename='js/ai_assistant.js') }}"></script>
 </body>
 
 </html>

@@ -1,21 +1,28 @@
-
 # Ignore Flask instance folder (Contains SQLite database file)
 /instance/
+*.db
+*.sqlite
+*.sqlite3
 
 # Ignore static files (Contains images)
 /static/images/*
 
-# Ignore uploads
+# Ignore uploads (User-uploaded avatars)
 /uploads/
 
-# Python cache
+# Python cache & temporary files
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.log
 
-# Ignore venv
+# Virtual environments
 /venv/
+/.venv/
+/env/
 
-# Ignore node_modules
+# Node modules
 /node_modules/
 
 # Ignore backups
@@ -26,3 +33,13 @@ __pycache__/
 # Ignore archives
 *.tar
 *.tar.gz
+*.zip
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# OS generated files
+.DS_Store
+Thumbs.db

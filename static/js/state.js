@@ -3,7 +3,9 @@
 export const state = {
     teams: [],
     members: [],
+    projects: [],
     currentTaskItem: null,
+    currentProjectId: null,
     activeTeamFilter: null,
     activeMemberFilter: null,
     statusFilter: 'all',
@@ -18,6 +20,14 @@ export function setTeams(newTeams) {
 
 export function setMembers(newMembers) {
     state.members = newMembers;
+}
+
+export function setProjects(newProjects) {
+    state.projects = newProjects;
+}
+
+export function setCurrentProjectId(id) {
+    state.currentProjectId = id;
 }
 
 export function setCurrentTaskItem(item) {

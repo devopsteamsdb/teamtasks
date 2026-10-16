@@ -1,0 +1,84 @@
+<!-- AI Assistant Floating Widget -->
+<button id="aiFabBtn" class="ai-fab-btn" title="עוזר AI חכם של TeamTasks">
+    <span class="ai-fab-icon">✨</span>
+    <span class="ai-fab-badge" id="aiStatusBadge"></span>
+</button>
+
+<div id="aiPanel" class="ai-panel">
+    <!-- Header -->
+    <div class="ai-header">
+        <div class="ai-header-info">
+            <h3 class="ai-header-title">
+                <span>✨</span>
+                <span>עוזר AI של TeamTasks</span>
+            </h3>
+            <span class="ai-provider-badge" id="aiProviderBadge" title="ספק מודל פעיל">
+                <span class="ai-provider-dot"></span>
+                <span id="aiProviderName">מתחבר...</span>
+            </span>
+        </div>
+        <div class="ai-header-actions">
+            <button id="aiClearBtn" class="ai-header-btn" title="נקה שיחה">🗑️</button>
+            <button id="aiCloseBtn" class="ai-header-btn" title="סגור">✕</button>
+        </div>
+    </div>
+
+    <!-- Quick Actions Bar -->
+    <div class="ai-quick-bar">
+        <button class="ai-chip" data-quick="summary">
+            <span>📊</span>
+            <span>סיכום פרויקטים ומשימות</span>
+        </button>
+        <button class="ai-chip" data-quick="deadlines">
+            <span>⏰</span>
+            <span>בדיקת דדליינים ועיכובים</span>
+        </button>
+        <button class="ai-chip" data-quick="stale">
+            <span>💡</span>
+            <span>הצעות לעדכון משימות</span>
+        </button>
+        <button class="ai-chip" data-quick="prompt" data-text="תוסיף משימה חדשה">
+            <span>➕</span>
+            <span>הוספת משימה מהירה</span>
+        </button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="aiMessages" class="ai-messages-container">
+        <div class="ai-message assistant">
+            <div class="ai-bubble">
+                <p><strong>שלום! אני עוזר ה-AI של TeamTasks 🚀</strong></p>
+                <p>אני כאן לעזור לך לנהל את המערכת, לסכם נתונים ולשמור על סדר:</p>
+                <ul>
+                    <li>📊 <strong>סיכומים מנהליים:</strong> סקירת פרויקטים, עומסים והתקדמות.</li>
+                    <li>⏰ <strong>בקרת דדליינים:</strong> זיהוי משימות באיחור ומשימות קרובות.</li>
+                    <li>💡 <strong>הצעות לשיפור:</strong> איתור משימות ללא משויכים או תקועות.</li>
+                    <li>✍️ <strong>ניהול בטקסט חופשי:</strong> הוספה, עריכה, מחיקה וארכוב של משימות, פרויקטים וצוותים.</li>
+                </ul>
+                <p>איך אוכל לסייע לך עכשיו?</p>
+            </div>
+        </div>
+        <div id="aiTypingIndicator" class="ai-typing-indicator">
+            <span class="ai-dot"></span>
+            <span class="ai-dot"></span>
+            <span class="ai-dot"></span>
+            <span style="font-size: 0.8rem; color: #64748b; margin-right: 4px;">העוזר חושב ומעבד...</span>
+        </div>
+    </div>
+
+    <!-- Input Form -->
+    <div class="ai-input-container">
+        <form id="aiChatForm" class="ai-input-form">
+            <textarea id="aiInputText" class="ai-textarea" rows="1" placeholder="שאל שאלה או בקש פעולה (למשל: 'הוסף משימה')..."></textarea>
+            <button type="submit" id="aiSendBtn" class="ai-send-btn" title="שלח">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(180deg);">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </form>
+        <div class="ai-footer-hint">
+            ניתן לנהל את כל רכיבי המערכת באמצעות פקודות בטקסט חופשי.
+        </div>
+    </div>
+</div>

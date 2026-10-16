@@ -8,7 +8,7 @@
 .navbar .container {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
 }
 
 /* Add Task Button (like clear filter, but primary color) */
@@ -128,46 +128,93 @@ textarea {
 .navbar {
     background-color: var(--white);
     box-shadow: var(--shadow-sm);
-    padding: 1rem 2rem;
+    padding: 0.5rem 1.25rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     position: sticky;
     top: 0;
     z-index: 100;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
 }
 
 .navbar-brand {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
-    font-weight: 700;
-    font-size: 1.25rem;
-    color: var(--primary);
+    gap: 0.6rem;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-
+.navbar-brand-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    flex-shrink: 0;
+}
 
 .navbar-logo {
-    height: 35px;
-    width: 35px;
-    margin-left: 6px;
+    height: 32px;
+    width: 32px;
     vertical-align: middle;
+    transition: transform 0.2s ease;
+}
+
+.navbar-brand-logo:hover .navbar-logo {
+    transform: scale(1.05);
+}
+
+.navbar-nav-tabs {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md, 8px);
+    padding: 2px;
+    gap: 3px;
+    height: 34px;
+    box-sizing: border-box;
 }
 
 .navbar-brand-link {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    height: 28px;
+    min-width: 92px;
+    padding: 0 0.85rem;
     text-decoration: none;
-    color: var(--primary);
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 6px;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.navbar-brand-link:hover {
+    color: #4f46e5;
+    background: rgba(99, 102, 241, 0.08);
+}
+
+.navbar-brand-link.active {
+    color: #4f46e5;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .navbar-meta {
-    font-size: 0.875rem;
+    font-size: 0.825rem;
     color: var(--secondary);
     display: flex;
     align-items: center;
-    gap: 0.1rem;
+    gap: 0.3rem;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* Main Layout */
@@ -337,29 +384,33 @@ textarea {
 
 /* Avatars */
 .avatar-group {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    margin-right: -8px;
-    flex-wrap: wrap;
-    max-width: 115px;
-    row-gap: 5px;
-    /* Overlap effect */
+    flex-wrap: nowrap;
+    flex-shrink: 0;
 }
 
 .avatar {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     border: 2px solid var(--white);
     object-fit: cover;
-    margin-right: -8px;
-    transition: transform 0.2s;
+    margin-right: -7px;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+    background-color: #f1f5f9;
+}
+
+.avatar:first-child {
+    margin-right: 0;
 }
 
 .avatar:hover {
-    transform: translateY(-2px);
-    transform: scale(1.4);
-    z-index: 10;
+    transform: scale(1.3) translateY(-2px);
+    z-index: 20;
+    position: relative;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
 }
 
 /* Status Badges */
@@ -431,27 +482,43 @@ textarea {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 2000;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;
-    background-color: rgb(0, 0, 0);
-    background-color: rgba(0, 0, 0, 0.4);
+    overflow-y: auto;
+    background-color: rgba(15, 23, 42, 0.55);
     backdrop-filter: blur(4px);
 }
 
 .modal-content {
-    background-color: #fefefe;
-    margin: 6% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 600px;
+    background-color: #ffffff;
+    margin: 2vh auto;
+    padding: 18px 22px 20px;
+    border: 1px solid var(--border);
+    width: 90%;
+    max-width: 580px;
+    max-height: 92vh;
+    overflow-y: auto;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
-    animation: slideIn 0.3s ease-out;
+    animation: slideIn 0.25s ease-out;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
 }
 
 @keyframes slideIn {
@@ -468,31 +535,72 @@ textarea {
 
 
 .close-modal,
-.close-modal-create {
-    color: #aaa;
+.close-modal-create,
+.close-modal-project {
+    color: #94a3b8;
     float: left;
     /* RTL support - close on left */
-    font-size: 28px;
+    font-size: 24px;
     font-weight: bold;
+    line-height: 1;
+    transition: color 0.15s;
 }
 
 .close-modal:hover,
 .close-modal:focus,
 .close-modal-create:hover,
-.close-modal-create:focus {
-    color: black;
+.close-modal-create:focus,
+.close-modal-project:hover,
+.close-modal-project:focus {
+    color: #ef4444;
     text-decoration: none;
     cursor: pointer;
 }
 
+.modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 0.6rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
 .form-group {
-    margin-top: 1rem;
+    margin-top: 0.55rem;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+    font-size: 0.825rem;
+}
+
+.modal-content .form-control {
+    width: 100%;
+    height: 34px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.875rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--white);
+    color: var(--dark);
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.modal-content textarea.form-control,
+.modal-content textarea {
+    width: 100%;
+    min-height: 50px;
+    height: 50px;
+    padding: 0.35rem 0.6rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+    font-size: 0.875rem;
 }
 
 .form-group textarea {
@@ -505,16 +613,76 @@ textarea {
 }
 
 .modal-actions {
-    margin-top: 1.5rem;
-    text-align: left;
-    /* RTL - buttons on left */
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.25rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    position: sticky;
+    bottom: -20px;
+    background: #ffffff;
+    z-index: 10;
+}
+
+html.dark-mode .modal-actions {
+    background: var(--bg-card);
+    border-top-color: var(--border);
+}
+
+.modal-actions .btn {
+    height: 38px;
+    min-height: 38px;
+    min-width: 120px;
+    padding: 0 1.25rem;
+    margin: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1;
+    border-radius: var(--radius-md);
+    box-sizing: border-box;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+
+.modal-actions .btn:hover {
+    transform: translateY(-1px);
+}
+
+.modal-actions .btn:active {
+    transform: translateY(0);
+}
+
+.btn {
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    font-family: inherit;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    transition: all 0.2s;
+    line-height: 1.5;
+    box-sizing: border-box;
+    margin: 0;
 }
 
 .btn-primary {
     background-color: var(--primary);
     color: white;
     border: none;
-    padding: 0.5rem 1rem;
     border-radius: var(--radius-md);
     cursor: pointer;
     font-weight: 500;
@@ -528,15 +696,44 @@ textarea {
     background-color: var(--secondary);
     color: white;
     border: none;
-    padding: 0.5rem 1rem;
     border-radius: var(--radius-md);
     cursor: pointer;
     font-weight: 500;
-    margin-right: 0.5rem;
+    margin: 0;
 }
 
 .btn-secondary:hover {
     background-color: #475569;
+}
+
+.btn-success {
+    background-color: var(--success);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    margin: 0;
+    transition: background-color 0.2s;
+}
+
+.btn-success:hover {
+    background-color: #059669;
+}
+
+.btn-danger {
+    background-color: var(--danger);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    margin: 0;
+    transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
 }
 
 
@@ -587,21 +784,29 @@ textarea {
 .members-select {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+    max-height: 115px;
+    overflow-y: auto;
+    padding: 3px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--white);
 }
 
 .member-checkbox {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.5rem;
+    gap: 0.35rem;
+    padding: 0.2rem 0.5rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-full);
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.825rem;
     background-color: var(--light);
-    transition: background-color 0.2s;
+    transition: all 0.15s ease;
+    user-select: none;
+    margin: 0;
 }
 
 .member-checkbox:hover {
@@ -609,7 +814,8 @@ textarea {
 }
 
 .member-checkbox input {
-    margin-right: 0.25rem;
+    margin: 0;
+    cursor: pointer;
 }
 
 .avatar-sm {
@@ -617,6 +823,8 @@ textarea {
     height: 20px;
     border-radius: 50%;
     object-fit: cover;
+    position: relative;
+    top: 2px;
 }
 
 /* Filter Controls */
@@ -630,23 +838,29 @@ textarea {
 }
 
 .filter-group-extras select {
-    padding-left: 2rem !important;
+    padding-left: 1.8rem !important;
     /* Make space for arrow to not be crowded */
-    background-position: left 0.5rem center !important;
+    background-position: left 0.4rem center !important;
     /* Adjust arrow position for RTL */
-    height: 38px !important;
-    /* Match search box height */
+    height: 30px !important;
+    font-size: 0.825rem !important;
+    box-sizing: border-box !important;
 }
 
 .search-input {
-    height: 38px;
+    height: 30px;
     /* Ensure search input is same height */
 }
 
 .btn-secondary#clearFiltersBtn {
-    height: 38px !important;
-    display: flex;
-    align-items: center;
+    height: 30px !important;
+    line-height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 0.65rem !important;
+    font-size: 0.825rem !important;
+    box-sizing: border-box !important;
 }
 
 .filter-avatar-btn {
@@ -665,13 +879,14 @@ textarea {
 }
 
 .filter-avatar-btn:hover {
-    border-color: var(--primary);
+    border-color: #3b82f6;
     transform: scale(1.4);
     z-index: 100;
 }
 
 .filter-avatar-btn.active {
-    border-color: var(--primary);
+    border-color: #3b82f6;
+    box-shadow: none !important;
     z-index: 50;
     /* Keep active above normal but below hover */
     transform: scale(1.1);
@@ -800,16 +1015,7 @@ textarea {
     display: none !important;
 }
 
-/* Delete Button */
-.btn-danger {
-    background-color: var(--danger);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-md);
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-}
+/* End Task Filter Section */
 
 
 
@@ -833,54 +1039,46 @@ textarea {
 
 
 
-/* Search Box */
-.navbar-center {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    padding: 0 2rem;
-}
-
+/* Search Box in Navbar */
 .search-container {
     position: relative;
-    max-width: 300px;
-}
-
-.search-icon {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #9ca3af;
-    pointer-events: none;
+    width: 155px;
+    flex-shrink: 0;
 }
 
 .search-input {
     width: 100%;
-    padding: 0.5rem 2.5rem 0.5rem 2.5rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    transition: all 0.2s;
+    height: 30px;
+    padding: 0.2rem 1.5rem 0.2rem 0.5rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    font-size: 0.825rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    background-color: #f8fafc;
 }
 
 .search-input:focus {
     outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    border-color: var(--primary);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    width: 185px;
 }
 
 .clear-search-btn {
     position: absolute;
-    left: 0.5rem;
+    left: 6px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
     display: none;
-    color: #888;
+    color: #94a3b8;
     font-size: 1.1rem;
+    line-height: 1;
+    padding: 2px 4px;
 }
 
 .clear-search-btn:hover {
@@ -894,7 +1092,7 @@ textarea {
     transform: translateY(-50%);
     background: none;
     border: none;
-    color: #9ca3af;
+    color: #94a3b8;
     cursor: pointer;
     padding: 0.25rem 0.5rem;
     font-size: 1.125rem;
@@ -905,8 +1103,10 @@ textarea {
 }
 
 .search-highlight {
-    background-color: #fef3c7;
+    background-color: #fef08a;
     font-weight: 600;
+    border-radius: 2px;
+    padding: 0 1px;
 }
 
 .task-item.search-hidden,
@@ -914,60 +1114,102 @@ textarea {
     display: none !important;
 }
 
-/* Team Filters */
+/* Team Filter Buttons in Navbar */
+.team-filter-group,
 .team-filters {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+    gap: 0.25rem;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
 }
 
 .filter-team-btn {
-    padding: 0.5rem 1rem;
-    margin: 0 0.25rem;
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 0.5rem;
+    height: 30px;
+    padding: 0 0.6rem;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.18s ease;
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: 0.825rem;
+    font-family: inherit;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    color: #334155;
+    margin: 0;
 }
 
 .filter-team-btn:hover {
-    border-color: #4f46e5;
-    background: #f0f0ff;
+    border-color: #6366f1;
+    color: #4f46e5;
+    background: #f8fafc;
 }
 
 .filter-team-btn.active {
     background: #4f46e5;
-    color: white;
+    color: #ffffff;
     border-color: #4f46e5;
+    font-weight: 600;
 }
 
-/* Navbar Link Styles */
-.navbar-brand-link {
-    text-decoration: none;
-    color: inherit;
+/* Filter Group Extras (Status & Priority Selects, Clear Button) */
+.filter-group-extras {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
 }
 
+.filter-group-extras select.form-control {
+    width: auto;
+    height: 30px;
+    padding: 0 0.4rem;
+    font-size: 0.825rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    background-color: #ffffff;
+    color: #334155;
+    font-family: inherit;
+}
 
-
-
+#clearFiltersBtn {
+    height: 30px;
+    padding: 0 0.65rem;
+    font-size: 0.825rem;
+    white-space: nowrap;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: inherit;
+}
 
 /* Navbar Icon Links */
 .navbar-icon-link {
-    margin-left: 16px;
-    vertical-align: middle;
-    display: inline-block;
-    color: #555;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-md);
+    color: #64748b;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    margin: 0;
+    padding: 0;
 }
 
-.navbar-icon-link.print-link {
-    float: right;
+.navbar-icon-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary);
 }
 
-/* Icon Images */
 .icon-img {
     vertical-align: middle;
 }
@@ -995,16 +1237,7 @@ textarea {
     display: none !important;
 }
 
-/* Delete Button */
-.btn-danger {
-    background-color: var(--danger);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-md);
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-}
+/* End Filter Section */
 
 
 
@@ -1028,145 +1261,7 @@ textarea {
 
 
 
-/* Search Box */
-.navbar-center {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    padding: 0 2rem;
-}
-
-.search-container {
-    position: relative;
-    max-width: 300px;
-}
-
-.search-icon {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #9ca3af;
-    pointer-events: none;
-}
-
-.search-input {
-    width: 100%;
-    padding: 0.5rem 2.5rem 0.5rem 2.5rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    transition: all 0.2s;
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-.clear-search-btn {
-    position: absolute;
-    left: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    display: none;
-    color: #888;
-    font-size: 1.1rem;
-}
-
-.clear-search-btn:hover {
-    color: #4b5563;
-}
-
-.clear-search {
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #9ca3af;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    font-size: 1.125rem;
-}
-
-.clear-search:hover {
-    color: #4b5563;
-}
-
-.search-highlight {
-    background-color: #fef3c7;
-    font-weight: 600;
-}
-
-.task-item.search-hidden,
-.project-card.search-hidden {
-    display: none !important;
-}
-
-/* Team Filters */
-.team-filters {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.filter-team-btn {
-    padding: 0.5rem 1rem;
-    margin: 0 0.25rem;
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 500;
-    font-size: 0.875rem;
-}
-
-.filter-team-btn:hover {
-    border-color: #4f46e5;
-    background: #f0f0ff;
-}
-
-.filter-team-btn.active {
-    background: #4f46e5;
-    color: white;
-    border-color: #4f46e5;
-}
-
-/* Navbar Link Styles */
-.navbar-brand-link {
-    text-decoration: none;
-    color: inherit;
-}
-
-
-
-
-
-/* Navbar Icon Links */
-.navbar-icon-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #555;
-    text-decoration: none;
-}
-
-.navbar-icon-link.print-link {
-    float: right;
-}
-
-/* Icon Images */
-.icon-img {
-    vertical-align: middle;
-}
+/* End Search and Filter Group */
 
 /* Add Task to Project Button */
 .add-task-project-btn {
@@ -1194,16 +1289,38 @@ textarea {
     background-color: #475569;
 }
 
-/* Archive Button Active State Override */
+/* Archive Filter Button States */
+.archive-filter-btn {
+    border: 2px solid transparent !important;
+    background: transparent !important;
+    color: var(--secondary) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.2s ease;
+}
+
+.archive-filter-btn .archive-btn-icon {
+    vertical-align: middle;
+    transition: stroke 0.2s;
+}
+
+.archive-filter-btn:hover {
+    border: 2px solid #ef4444 !important;
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.05) !important;
+}
+
 .archive-filter-btn.active {
     background-color: #ef4444 !important;
-    color: white !important;
+    color: #ffffff !important;
     border-color: #ef4444 !important;
 }
 
-.archive-filter-btn.active img {
-    filter: brightness(0) invert(1) !important;
-    /* Make icon white */
+.archive-filter-btn.active:hover {
+    background-color: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: #ffffff !important;
 }
 
 /* Avatar Filters Container */
@@ -1269,6 +1386,95 @@ html.dark-mode .navbar-brand {
     color: var(--primary);
 }
 
+html.dark-mode .navbar-nav-tabs {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+html.dark-mode .navbar-brand-link {
+    color: #94a3b8;
+}
+
+html.dark-mode .navbar-brand-link:hover {
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+html.dark-mode .navbar-brand-link.active {
+    color: #818cf8;
+    background: #0f172a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+html.dark-mode .filter-team-btn {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+html.dark-mode .filter-team-btn:hover {
+    background-color: #273549;
+    border-color: #818cf8;
+    color: #ffffff;
+}
+
+html.dark-mode .filter-team-btn.active {
+    background-color: #6366f1;
+    border-color: #6366f1;
+    color: #ffffff;
+}
+
+html.dark-mode .search-container .search-input {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+html.dark-mode .search-container .search-input:focus {
+    background-color: #0f172a;
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+}
+
+html.dark-mode .clear-search-btn,
+html.dark-mode .clear-search {
+    color: #64748b;
+}
+
+html.dark-mode .clear-search-btn:hover,
+html.dark-mode .clear-search:hover {
+    color: #94a3b8;
+}
+
+html.dark-mode .filter-group-extras select.form-control {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+html.dark-mode #clearFiltersBtn {
+    background-color: #334155;
+    border-color: #475569;
+    color: #e2e8f0;
+}
+
+html.dark-mode #clearFiltersBtn:hover {
+    background-color: #475569;
+    color: #ffffff;
+}
+
+html.dark-mode .navbar-meta {
+    color: #94a3b8;
+}
+
+html.dark-mode .navbar-icon-link {
+    color: #94a3b8;
+}
+
+html.dark-mode .navbar-icon-link:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
 /* Cards & Containers */
 html.dark-mode .project-card,
 html.dark-mode .team-card,
@@ -1296,6 +1502,21 @@ html.dark-mode select:focus,
 html.dark-mode textarea:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+html.dark-mode .members-select {
+    background-color: #0f172a;
+    border-color: #334155;
+}
+
+html.dark-mode .member-checkbox {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+html.dark-mode .member-checkbox:hover {
+    background-color: #334155;
 }
 
 /* Task Items */
@@ -1610,3 +1831,297 @@ html.dark-mode .flatpickr-months {
     border: none !important;
     padding: 5px;
 }
+
+/* Project Header Actions & Badges */
+.project-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.project-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.edit-project-btn,
+.archive-project-btn,
+.unarchive-project-btn,
+.delete-project-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.65;
+    transition: all 0.2s ease;
+    color: inherit;
+}
+
+.edit-project-btn:hover,
+.archive-project-btn:hover,
+.unarchive-project-btn:hover {
+    opacity: 1;
+    background-color: var(--light);
+}
+
+.delete-project-btn:hover {
+    opacity: 1;
+    background-color: #fee2e2;
+}
+
+.delete-project-btn:hover img {
+    filter: invert(28%) sepia(85%) saturate(2468%) hue-rotate(338deg) brightness(97%) contrast(93%);
+}
+
+html.dark-mode .delete-project-btn:hover {
+    background-color: #451a1a;
+}
+
+/* Empty Project Placeholder */
+.empty-project-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem 1rem;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--light);
+    color: var(--secondary);
+    text-align: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.empty-project-text {
+    font-size: 0.85rem;
+}
+
+.btn-empty-add-task {
+    background-color: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.35rem 0.85rem;
+    font-size: 0.825rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--dark);
+    transition: all 0.2s;
+}
+
+.btn-empty-add-task:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.btn-empty-add-task:hover img {
+    filter: brightness(0) invert(1);
+}
+
+/* Project Teams Select in Modal */
+.project-teams-select {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.project-team-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    user-select: none;
+}
+
+.project-team-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Dark Mode Overrides for Project Management */
+html.dark-mode .empty-project-placeholder {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+html.dark-mode .btn-empty-add-task {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+html.dark-mode .btn-empty-add-task:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+html.dark-mode .project-teams-select {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
+html.dark-mode .edit-project-btn:hover {
+    background-color: #334155;
+}
+
+html.dark-mode .unarchive-project-btn:hover {
+    background-color: #064e3b;
+}
+
+html.dark-mode .archive-filter-btn {
+    color: #94a3b8 !important;
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+html.dark-mode .archive-filter-btn:hover {
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.15) !important;
+}
+
+html.dark-mode .archive-filter-btn.active {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+    border-color: #ef4444 !important;
+}
+
+/* Dark Mode Status Badges */
+html.dark-mode .status-done {
+    background-color: rgba(16, 185, 129, 0.16) !important;
+    color: #34d399 !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+html.dark-mode .status-inprogress {
+    background-color: rgba(245, 158, 11, 0.16) !important;
+    color: #fbbf24 !important;
+    border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+html.dark-mode .status-notstarted {
+    background-color: rgba(148, 163, 184, 0.14) !important;
+    color: #cbd5e1 !important;
+    border: 1px solid rgba(148, 163, 184, 0.25) !important;
+}
+
+html.dark-mode .status-delayed {
+    background-color: rgba(239, 68, 68, 0.18) !important;
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+html.dark-mode .status-other {
+    background-color: rgba(168, 85, 247, 0.18) !important;
+    color: #c084fc !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Dark Mode Project Badges */
+html.dark-mode .project-badge {
+    background-color: rgba(99, 102, 241, 0.16) !important;
+    color: #c7d2fe !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Add Task to Project Button */
+.add-task-project-btn {
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    opacity: 0.75;
+}
+
+.add-task-project-btn:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+html.dark-mode .add-task-project-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Dark Mode Archive Page Table */
+html.dark-mode .archive-table {
+    background: var(--bg-card) !important;
+    border-color: var(--border) !important;
+}
+
+html.dark-mode .archive-table th {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: var(--border) !important;
+}
+
+html.dark-mode .archive-table td {
+    border-color: var(--border) !important;
+    color: #cbd5e1 !important;
+}
+
+/* Dark Mode Calendar Refinements */
+html.dark-mode .view-btn {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+    border: 1px solid #334155 !important;
+}
+
+html.dark-mode .view-btn:hover {
+    background: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark-mode .view-btn.active {
+    background: #4f46e5 !important;
+    color: #ffffff !important;
+    border-color: #4f46e5 !important;
+}
+
+html.dark-mode .workload-day-cell {
+    border-color: var(--border) !important;
+    background-color: var(--bg-card) !important;
+}
+
+html.dark-mode .workload-day-cell.special-day {
+    background-color: rgba(245, 158, 11, 0.08) !important;
+    border-left-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+html.dark-mode .workload-day-header.special-day {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #fbbf24 !important;
+    border-bottom: 2px solid #f59e0b !important;
+}
+
+html.dark-mode .calendar-day-header.special-day {
+    background-color: rgba(245, 158, 11, 0.18) !important;
+    color: #fbbf24 !important;
+    border-bottom: 2px solid #f59e0b !important;
+}
+
+html.dark-mode .special-day-label {
+    color: #fcd34d !important;
+}
+
+html.dark-mode .calendar-month-cell.special-day {
+    background-color: rgba(245, 158, 11, 0.08) !important;
+}
+
+html.dark-mode .month-special-day-label {
+    background: rgba(245, 158, 11, 0.2) !important;
+    color: #fbbf24 !important;
+}

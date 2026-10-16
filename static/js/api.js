@@ -20,6 +20,80 @@ export async function fetchMembers() {
     }
 }
 
+export async function fetchProjects(mode = 'all') {
+    try {
+        const response = await fetch(`/api/projects?mode=${encodeURIComponent(mode)}`);
+        return await response.json();
+    } catch (error) {
+        console.error('Error loading projects:', error);
+        return [];
+    }
+}
+
+export async function createProject(payload) {
+    try {
+        const response = await fetch('/api/projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error creating project:', error);
+        throw error;
+    }
+}
+
+export async function updateProject(id, payload) {
+    try {
+        const response = await fetch(`/api/projects/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error updating project:', error);
+        throw error;
+    }
+}
+
+export async function deleteProject(id) {
+    try {
+        const response = await fetch(`/api/projects/${id}`, {
+            method: 'DELETE'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting project:', error);
+        throw error;
+    }
+}
+
+export async function archiveProject(id) {
+    try {
+        const response = await fetch(`/api/projects/${id}/archive`, {
+            method: 'POST'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error archiving project:', error);
+        throw error;
+    }
+}
+
+export async function unarchiveProject(id) {
+    try {
+        const response = await fetch(`/api/projects/${id}/unarchive`, {
+            method: 'POST'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error unarchiving project:', error);
+        throw error;
+    }
+}
+
 export async function fetchVersion() {
     try {
         const response = await fetch('/api/version?t=' + new Date().getTime());
@@ -66,6 +140,30 @@ export async function deleteTask(taskId) {
         return await response.json();
     } catch (error) {
         console.error('Error deleting task:', error);
+        throw error;
+    }
+}
+
+export async function archiveTask(taskId) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/archive`, {
+            method: 'POST'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error archiving task:', error);
+        throw error;
+    }
+}
+
+export async function unarchiveTask(taskId) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/unarchive`, {
+            method: 'POST'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error unarchiving task:', error);
         throw error;
     }
 }

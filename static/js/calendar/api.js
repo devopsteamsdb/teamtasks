@@ -150,3 +150,13 @@ export async function fetchMembers() {
         return [];
     }
 }
+
+export async function fetchVersion() {
+    try {
+        const response = await fetch('/api/version?t=' + Date.now());
+        return await response.json();
+    } catch (error) {
+        return null;
+    }
+}
+

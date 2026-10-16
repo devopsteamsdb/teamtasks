@@ -7,8 +7,9 @@
     <title>לוח שנה - תכנון צוות</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
     <link href="{{ url_for('static', filename='flatpickr.min.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}?v=5" rel="stylesheet">
     <link href="{{ url_for('static', filename='calendar.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/ai_assistant.css') }}" rel="stylesheet">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 
@@ -17,10 +18,13 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">
-            <a href="/" class="navbar-brand-link" id="navTasksLink"><img
-                    src="{{ url_for('static', filename='logo.svg') }}" alt="Logo" class="navbar-logo"><span>לוח
-                    משימות</span></a>
-            <a href="/calendar" class="navbar-brand-link active" id="navCalendarLink"><span>לוח שנה</span></a>
+            <a href="/" class="navbar-brand-logo" title="TeamTasks">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="Logo" class="navbar-logo">
+            </a>
+            <div class="navbar-nav-tabs">
+                <a href="/" class="navbar-brand-link" id="navTasksLink"><span>לוח משימות</span></a>
+                <a href="/calendar" class="navbar-brand-link active" id="navCalendarLink"><span>לוח שנה</span></a>
+            </div>
         </div>
 
         <!-- Team Filter Buttons -->
@@ -31,9 +35,13 @@
             </button>
             {% endfor %}
             <button class="filter-team-btn archive-filter-btn" data-team-id="archive"
-                style="border: 2px solid #ef4444; color: #ef4444;">
-                <img src="{{ url_for('static', filename='icons/archive.svg') }}" width="14" height="14"
-                    style="vertical-align: middle; filter: brightness(0) invert(0.4);"> ארכיון
+                title="הצג משימות בארכיון">
+                <svg class="archive-btn-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                    <rect x="1" y="3" width="22" height="5"></rect>
+                    <line x1="10" y1="12" x2="14" y2="12"></line>
+                </svg>
+                <span>ארכיון</span>
             </button>
         </div>
 
@@ -61,10 +69,6 @@
         </div>
 
         <div class="navbar-meta">
-            <a href="/table-editor" class="navbar-icon-link" title="עריכה בטבלה">
-                <img src="{{ url_for('static', filename='icons/table.svg') }}" width="20" height="20" alt="Table Editor"
-                    class="icon-img">
-            </a>
             <a href="/admin" title="ממשק ניהול" class="navbar-icon-link">
                 <img src="{{ url_for('static', filename='icons/settings.svg') }}" width="20" height="20" alt="Settings"
                     class="icon-img">
@@ -73,8 +77,10 @@
                 <img src="{{ url_for('static', filename='icons/print.svg') }}" width="20" height="20" alt="Print"
                     class="icon-img">
             </a>
-            <button id="themeToggleBtn" title="מצב לילה" class="navbar-icon-link"
-                style="background:none; border:none; cursor:pointer; font-size:1.2rem; padding: 0 0.5rem;">🌙</button>
+            <button id="themeToggleBtn" title="החלף למצב לילה" class="navbar-icon-link">
+                <img src="{{ url_for('static', filename='icons/moon.svg') }}" width="20" height="20" alt="מצב תצוגה"
+                    class="icon-img">
+            </button>
 
             <span style="padding-right: 1px;">{{ now.strftime('%d/%m/%Y') }}</span>
         </div>
@@ -221,8 +227,7 @@
             <span class="close-modal">&times;</span>
             <h2>ניהול ימים מיוחדים</h2>
 
-            <div class="special-days-form-container"
-                style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <div class="special-days-form-container">
                 <h3>הוסף יום מיוחד</h3>
                 <div class="form-row" style="align-items: flex-end;">
                     <div class="form-group" style="flex: 1;">
@@ -259,7 +264,8 @@
     <script src="{{ url_for('static', filename='flatpickr.min.js') }}"></script>
     <script src="{{ url_for('static', filename='flatpickr.he.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/calendar/main.js') }}"></script>
-    </script>
+    {% include 'ai_assistant.html' %}
+    <script src="{{ url_for('static', filename='js/ai_assistant.js') }}"></script>
 </body>
 
 </html>

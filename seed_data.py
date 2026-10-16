@@ -1,4 +1,4 @@
-from app import app, db, Team, TeamMember, Task, SpecialDay
+from app import app, db, Team, TeamMember, Project, Task, SpecialDay
 from datetime import date, timedelta
 import random
 
@@ -47,8 +47,9 @@ def seed():
                         team_id=team.id,
                         name_en=en,
                         name_he=he,
-                        avatar_path='default.png' 
+                        avatar_path=f'avatar_{(member_idx % 30) + 1}.png'
                     )
+                    member.teams.append(team)
                     db.session.add(member)
                     members.append(member)
                     member_idx += 1
@@ -73,6 +74,9 @@ def seed():
         for proj_name in project_names:
             # Assign project primarily to a random team
             primary_team = random.choice(teams)
+            project_obj = Project(name=proj_name, teams=[primary_team], is_archived=False)
+            db.session.add(project_obj)
+            db.session.flush()
             
             # 3-8 tasks per project
             num_tasks = random.randint(3, 8)
@@ -80,7 +84,6 @@ def seed():
             for i in range(1, num_tasks + 1):
                 # Task team (always primary for consistency)
                 task_team = primary_team
-                # Removed random team assignment for individual tasks to ensure project consistency
                 
                 # Pick members primarily from task_team, but allow cross-collab
                 team_members = [m for m in members if m.team_id == task_team.id]
@@ -106,6 +109,7 @@ def seed():
                 end_date = start_date + timedelta(days=duration)
                 
                 task = Task(
+                    project_id=project_obj.id,
                     project=proj_name,
                     task=f'משימה {i} - {proj_name}',
                     members=members_str,

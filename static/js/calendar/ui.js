@@ -303,10 +303,16 @@ export function createTaskCard(task) {
     card.dataset.taskId = task.id;
     card.style.borderRight = `4px solid ${priorityColors[task.priority || 'none']}`;
 
-    card.innerHTML = `
-        <div class="task-card-name">${task.task}</div>
-        <div class="task-card-project">${task.project}</div>
-    `;
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'task-card-name';
+    nameDiv.textContent = task.task || '';
+
+    const projDiv = document.createElement('div');
+    projDiv.className = 'task-card-project';
+    projDiv.textContent = task.project || '';
+
+    card.appendChild(nameDiv);
+    card.appendChild(projDiv);
 
     card.addEventListener('click', () => openTaskModal(task));
     card.addEventListener('dragstart', Events.handleDragStart);
@@ -372,6 +378,14 @@ function renderMembersCheckboxes(selectedNames) {
     `).join('');
 }
 
+export function isModalOpen() {
+    return (
+        (elements.taskModal && elements.taskModal.style.display === 'block') ||
+        (elements.specialDaysModal && elements.specialDaysModal.style.display === 'block') ||
+        (elements.scheduleModal && elements.scheduleModal.style.display === 'block')
+    );
+}
+
 export function closeTaskModal() {
     if (elements.taskModal) elements.taskModal.style.display = 'none';
 }
@@ -408,7 +422,15 @@ export function renderSpecialDaysList() {
         item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:0.5rem; border-bottom:1px solid #e5e7eb;';
 
         const info = document.createElement('div');
-        info.innerHTML = `<strong>${parseDateFromISO(day.date)}</strong> - ${day.name} <span style="font-size:0.8rem; color:#6b7280;">(${getDayTypeLabel(day.type)})</span>`;
+        const dateStrong = document.createElement('strong');
+        dateStrong.textContent = parseDateFromISO(day.date);
+        const nameText = document.createTextNode(` - ${day.name || ''} `);
+        const typeSpan = document.createElement('span');
+        typeSpan.style.cssText = 'font-size:0.8rem; color:#6b7280;';
+        typeSpan.textContent = `(${getDayTypeLabel(day.type)})`;
+        info.appendChild(dateStrong);
+        info.appendChild(nameText);
+        info.appendChild(typeSpan);
 
         const actions = document.createElement('div');
         const deleteBtn = document.createElement('button');

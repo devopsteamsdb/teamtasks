@@ -41,7 +41,7 @@ jobs:
 
       - name: Deploy to GCP instance
         if: steps.ping_check.outputs.server_available == 'true'
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ env.GCP_IP }}
           username: ${{ secrets.GCP_USERNAME }}
@@ -61,7 +61,7 @@ jobs:
                 #ports:
                 #  - "80:8080"
                 environment:
-                  - FLASK_ENV=production
+                  - FLASK_DEBUG=0
                   - FLASK_APP=app.py
                 volumes:
                   - "/var/teamtasks/db:/app/instance"
@@ -92,7 +92,7 @@ jobs:
 
       - name: Verify deployment
         if: steps.ping_check.outputs.server_available == 'true'
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ env.GCP_IP }}
           username: ${{ secrets.GCP_USERNAME }}
