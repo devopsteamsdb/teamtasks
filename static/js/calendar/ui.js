@@ -140,7 +140,13 @@ export function renderWeekView() {
             if (!task.start_date) return false;
 
             // Status & Priority Filter
-            if (state.statusFilter && state.statusFilter !== 'all' && task.status !== state.statusFilter) return false;
+            if (state.statusFilter && state.statusFilter !== 'all') {
+                if (state.statusFilter === 'not-done') {
+                    if (task.status === 'status-done') return false;
+                } else if (task.status !== state.statusFilter) {
+                    return false;
+                }
+            }
             if (state.priorityFilter && state.priorityFilter !== 'all' && (task.priority || 'none') !== state.priorityFilter) return false;
 
             // Display logic: show if task falls on this day
@@ -252,7 +258,13 @@ export function renderWorkloadView() {
                 if (!task.start_date) return false;
 
                 // Status & Priority Filter
-                if (state.statusFilter && state.statusFilter !== 'all' && task.status !== state.statusFilter) return false;
+                if (state.statusFilter && state.statusFilter !== 'all') {
+                    if (state.statusFilter === 'not-done') {
+                        if (task.status === 'status-done') return false;
+                    } else if (task.status !== state.statusFilter) {
+                        return false;
+                    }
+                }
                 if (state.priorityFilter && state.priorityFilter !== 'all' && (task.priority || 'none') !== state.priorityFilter) return false;
 
                 return task.start_date === dayStr || (task.end_date && task.start_date <= dayStr && task.end_date >= dayStr);

@@ -434,7 +434,7 @@ def get_team_tasks_query_info(user_msg, ctx=None):
     if not found_team:
         return None
 
-    is_open_only = bool(re.search(r'\b(?:פתוח|פתוחה|פתוחות|פתוחים|open|פעיל|פעילה|פעילות|פעילים)\b', msg))
+    is_open_only = bool(re.search(r'(?:\b(?:פתוח|פתוחה|פתוחות|פתוחים|open|פעיל|פעילה|פעילות|פעילים)\b|הכל\s+למעט\s+הושלם|למעט\s+הושלם|לא\s+הושלמ)', msg))
     is_count_query = bool(re.search(r'^(?:כמה|מה\s+מספר|מספר|כמות)\b', msg))
 
     all_tasks = ctx.get('tasks', [])
@@ -563,7 +563,7 @@ def get_member_tasks_query_info(user_msg, ctx=None):
     if not found_member_he:
         return None
 
-    is_open_only = bool(re.search(r'\b(?:פתוח|פתוחה|פתוחות|פתוחים|open|פעיל|פעילה|פעילות|פעילים)\b', msg))
+    is_open_only = bool(re.search(r'(?:\b(?:פתוח|פתוחה|פתוחות|פתוחים|open|פעיל|פעילה|פעילות|פעילים)\b|הכל\s+למעט\s+הושלם|למעט\s+הושלם|לא\s+הושלמ)', msg))
     is_count_query = bool(re.search(r'^(?:כמה|מה\s+מספר|מספר|כמות)\b', msg))
 
     matching = []
@@ -1462,9 +1462,13 @@ def _action_list_tasks(params):
     # Filter by status
     status = params.get('status')
     if status:
-        norm_status = normalize_status(status)
-        if norm_status:
-            query = query.filter_by(status=norm_status)
+        status_str = str(status).strip().lower()
+        if status_str in ['not-done', 'status-notdone', 'הכל למעט הושלם', 'למעט הושלם', 'לא הושלם']:
+            query = query.filter(Task.status != 'status-done')
+        else:
+            norm_status = normalize_status(status)
+            if norm_status:
+                query = query.filter_by(status=norm_status)
             
     # Filter by project
     proj_val = params.get('project') or params.get('project_id') or params.get('project_name')

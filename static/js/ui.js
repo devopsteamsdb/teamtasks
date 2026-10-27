@@ -391,7 +391,11 @@ export function applyFilters() {
         // Check Status Filter
         if (state.statusFilter && state.statusFilter !== 'all' && visible) {
             const taskStatus = task.dataset.status;
-            if (taskStatus !== state.statusFilter) {
+            if (state.statusFilter === 'not-done') {
+                if (taskStatus === 'status-done') {
+                    visible = false;
+                }
+            } else if (taskStatus !== state.statusFilter) {
                 visible = false;
             }
         }

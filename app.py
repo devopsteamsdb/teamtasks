@@ -2483,7 +2483,10 @@ def print_view():
         else:
             query = query.filter(Task.team_id == tid)
     if status_filter and status_filter != 'all':
-        query = query.filter(Task.status == status_filter)
+        if status_filter in ['not-done', 'status-notdone']:
+            query = query.filter(Task.status != 'status-done')
+        else:
+            query = query.filter(Task.status == status_filter)
     if priority_filter and priority_filter != 'all':
         query = query.filter(Task.priority == priority_filter)
     

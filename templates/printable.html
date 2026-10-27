@@ -50,6 +50,7 @@
             <select id="statusFilter" class="no-print" onchange="updateFilter('status', this.value)"
                 style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 5px;">
                 <option value="">כל הסטטוסים</option>
+                <option value="not-done" {% if request.args.get('status')=='not-done' %}selected{% endif %}>הכל למעט הושלם</option>
                 <option value="status-notstarted" {% if request.args.get('status')=='status-notstarted' %}selected{%
                     endif %}>טרם החל</option>
                 <option value="status-inprogress" {% if request.args.get('status')=='status-inprogress' %}selected{%
