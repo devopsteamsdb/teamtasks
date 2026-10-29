@@ -5,6 +5,7 @@ A modern, bilingual (Hebrew/English) task and project management platform built 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.12+-blue.svg)
 ![Flask](https://img.shields.io/badge/flask-3.1+-green.svg)
+![MCP Server](https://img.shields.io/badge/MCP%20Server-37%20Tools-purple.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
 ![WSGI](https://img.shields.io/badge/server-gunicorn-orange.svg)
 
@@ -20,6 +21,12 @@ A modern, bilingual (Hebrew/English) task and project management platform built 
   - [⚙️ Admin & System Diagnostics](#-admin--system-diagnostics)
   - [💾 Backup & Restore](#-backup--restore)
 - [Architecture & AI Engine](#-architecture--ai-engine)
+- [🔌 Model Context Protocol (MCP) Server](#-model-context-protocol-mcp-server)
+  - [Supported Transports](#supported-transports)
+  - [Agent Client Setup Examples](#agent-client-setup-examples)
+  - [Complete MCP Tool Catalog (37 Tools)](#complete-mcp-tool-catalog-37-tools)
+  - [MCP Resources & Prompts](#mcp-resources--prompts)
+  - [Interactive Admin Panel Tester](#interactive-admin-panel-tester)
 - [Screenshots](#-screenshots)
 - [Quick Start](#-quick-start)
 - [Configuration (.env)](#-configuration-env)
@@ -34,6 +41,7 @@ A modern, bilingual (Hebrew/English) task and project management platform built 
   - [Tasks API](#tasks-api)
   - [Teams & Members API](#teams--members-api)
   - [Backup & Restore API](#backup--restore-api)
+- [🆕 Recent Updates & Changelog](#-recent-updates--changelog)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -55,7 +63,8 @@ A modern, bilingual (Hebrew/English) task and project management platform built 
 ### 📋 Core Task & Project Management
 - ✅ **Task Management** - Create, edit, prioritize, assign, and track tasks.
 - 👥 **Team & Member Scoping** - Filter by Team, Member, Project, Status, and Priority across all views.
-- 🏷️ **Statuses & Priorities** - *Not Started* (`status-notstarted`), *In Progress* (`status-inprogress`), *Done* (`status-done`), *Delayed* (`status-delayed`) with High, Medium, Low, None priorities.
+- 🎯 **Advanced Status & Priority Filtering** - Filter by Status (*Not Started*, *In Progress*, *Done*, *Delayed*) and Priority (*High*, *Medium*, *Low*, *None*), plus the new **"All except done" (`not-done` / הכל למעט הושלם)** filter to quickly isolate active work.
+- 🧹 **One-Click Clear Filters ("נקה סינון")** - Instant reset for all active filter dimensions on Dashboard and Calendar.
 - 📦 **Task & Project Archiving** - Dedicated archive view with one-click restore.
 - 🖨️ **Printable Reports** - Clean, scoped printable summaries with instant filtering.
 
@@ -123,7 +132,165 @@ A modern, bilingual (Hebrew/English) task and project management platform built 
 
 ---
 
-## 🚀 Quick Start
+## 🔌 Model Context Protocol (MCP) Server
+
+TeamTasks features a first-class, production-grade **Model Context Protocol (MCP)** server ([`mcp_server.py`](file:///d:/projects/teamtasks/mcp_server.py)), allowing external AI Agents—such as **Google Antigravity**, **Anthropic Claude Desktop**, **Cursor**, **Windsurf**, and **VS Code Copilot**—to programmatically inspect, query, schedule, and manipulate the entire task management platform.
+
+### Key Highlights
+- 🧰 **37 Comprehensive Tools**: Full CRUD on Tasks, Projects, Teams, Members, Calendar, Workloads, Analytics, and Backups.
+- 📦 **9 Live Resources**: Instant read-only context URIs (`teamtasks://...`) for quick agent grounding without multiple roundtrips.
+- 💬 **4 Specialized Prompts**: Pre-engineered workflows (`morning_standup`, `deadline_audit`, `workload_rebalance`, `sprint_planning`).
+- ⚡ **Multi-Transport Support**: Run locally via standard input/output (`stdio`), stream over HTTP (`/mcp`), or connect via Server-Sent Events (`/mcp/sse`).
+- 🔒 **Security & Authentication**: Optional Bearer token protection (`MCP_API_KEY`) for remote endpoints.
+- 🧪 **Interactive Web Tester**: Built-in Admin UI (`/admin#mcp`) for testing any tool with visual forms and copying client configurations with one click.
+
+---
+
+### Supported Transports
+
+| Transport | Command / Endpoint | Typical Use Case |
+| :--- | :--- | :--- |
+| **Stdio (Local CLI)** | `python mcp_server.py` | Local Desktop AI Agents (Claude Desktop, Cursor, Antigravity) |
+| **Streamable HTTP** | `POST http://localhost:5000/mcp` | Stateless JSON-RPC 2.0 requests from remote orchestrators |
+| **Server-Sent Events (SSE)** | `GET http://localhost:5000/mcp/sse`<br>`POST http://localhost:5000/mcp/messages` | Streaming agent platforms and containerized remote clients |
+
+---
+
+### Agent Client Setup Examples
+
+#### 1. Anthropic Claude Desktop
+Add to your `claude_desktop_config.json` (`%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "teamtasks": {
+      "command": "python",
+      "args": ["/absolute/path/to/teamtasks/mcp_server.py"],
+      "env": {
+        "TEAMTASKS_DB_PATH": "/absolute/path/to/teamtasks/instance/tasks.db"
+      }
+    }
+  }
+}
+```
+
+#### 2. Cursor & Windsurf
+Add to your project's `.cursor/mcp.json` or global MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "teamtasks": {
+      "command": "python",
+      "args": ["d:/projects/teamtasks/mcp_server.py"]
+    }
+  }
+}
+```
+
+#### 3. Remote HTTP / SSE Client (e.g. Antigravity / Containerized Agent)
+Connect directly to the running Flask server over network:
+
+```json
+{
+  "mcpServers": {
+    "teamtasks-remote": {
+      "url": "http://localhost:5000/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer YOUR_MCP_API_KEY"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Complete MCP Tool Catalog (37 Tools)
+
+#### 📋 Tasks (10 Tools)
+- `list_tasks` - Query tasks with multi-dimensional filters (`team_id`, `member_id`, `project_id`, `status` including `not-done`, `priority`, `search_query`, `limit`, `offset`).
+- `get_task` - Retrieve comprehensive task details including assignees, projects, and timestamps.
+- `create_task` - Create a new task with title, description, team, project, assignees, dates, and priority.
+- `update_task` - Update any task property (title, description, team, project, status, priority, assignees, dates).
+- `update_task_schedule` - Quickly reschedule or postpone a task (update `start_date` and `due_date`).
+- `archive_task` - Move task to archive (soft delete).
+- `unarchive_task` - Restore an archived task to active status.
+- `delete_task` - Permanently remove task from database.
+- `bulk_update_tasks` - Atomically batch update status, team, project, or priority across multiple task IDs.
+- `search_tasks` - Full-text search across task titles and descriptions.
+
+#### 📁 Projects (6 Tools)
+- `list_projects` - List all projects with active task counts and associated teams.
+- `get_project` - Retrieve project details, team associations, and all associated tasks.
+- `create_project` - Create a new project with optional team assignments.
+- `update_project` - Rename, update description, or modify team links for an existing project.
+- `archive_project` - Move project to archive.
+- `delete_project` - Permanently delete project.
+
+#### 👥 Teams (4 Tools)
+- `list_teams` - List all organizational teams, their members, and workload metrics.
+- `create_team` - Create a new team with an optional hex color code.
+- `update_team` - Rename team or adjust its brand color.
+- `delete_team` - Delete team with safe fallback handling.
+
+#### 🦸 Team Members & Avatars (5 Tools)
+- `list_members` - List all members with team affiliations, email, role, and avatar.
+- `create_member` - Add new team member with avatar selection and team assignments.
+- `update_member` - Update member name, email, role, avatar, or team associations.
+- `delete_member` - Remove member from system.
+- `list_avatars` - Retrieve full catalog of 30 predefined 3D superhero and mascot avatar files.
+
+#### 📅 Calendar & Workload Planning (6 Tools)
+- `get_calendar_week` - Fetch weekly task schedule and special days for any target date.
+- `get_calendar_month` - Fetch full monthly view with date-grouped task distributions.
+- `get_member_workload` - Calculate real-time task load and capacity per team member.
+- `list_special_days` - List holidays, corporate events, and off-days.
+- `create_special_day` - Register a holiday or special day with date range and badge color.
+- `delete_special_day` - Remove a special day by ID.
+
+#### 📊 Analytics, Diagnostics & Backups (6 Tools)
+- `get_executive_summary` - High-level executive dashboard: total tasks, status breakdowns, delayed counts, completion rate, and workload.
+- `get_deadlines_analysis` - Proactive deadline audit: overdue tasks, tasks due today, and tasks due in the next 3 days.
+- `get_stale_and_suggestions` - Identify stale/inactive tasks and receive intelligent optimization suggestions.
+- `get_system_diagnostics` - Database size, SQLite integrity (`PRAGMA integrity_check`), table row counts, and upload metrics.
+- `export_system_backup` - Generate complete JSON system backup package (all tables or scoped by table).
+- `restore_system_backup` - Restore database tables atomically from a JSON backup payload.
+
+---
+
+### MCP Resources & Prompts
+
+#### Resources (`teamtasks://...`)
+Agents can attach live context URIs without invoking tool calls:
+- `teamtasks://tasks/active` - Snapshot of all currently active tasks.
+- `teamtasks://tasks/summary` - Aggregated status counts and metrics.
+- `teamtasks://projects/active` - List of all ongoing projects.
+- `teamtasks://teams/all` - Complete organizational team directory.
+- `teamtasks://members/all` - Member list with assigned teams and roles.
+- `teamtasks://calendar/current-week` - Current week's scheduled tasks.
+- `teamtasks://calendar/current-month` - Current month's scheduled tasks.
+- `teamtasks://system/diagnostics` - Health status and database storage metrics.
+- `teamtasks://schema/openapi` - System entity relationship models and schemas.
+
+#### Prompts
+Pre-engineered prompts for common DevOps workflows:
+- `morning_standup` - Generates a daily standup brief for a team or member.
+- `deadline_audit` - Evaluates overdue and at-risk deadlines with proposed action steps.
+- `workload_rebalance` - Analyzes member capacities and suggests balanced task reassignments.
+- `sprint_planning` - Guides scheduling backlog items into upcoming calendar weeks.
+
+---
+
+### Interactive Admin Panel Tester
+
+Navigate to **Admin Panel → שרת MCP (AI Agents)** (`http://localhost:5000/admin#mcp`):
+1. **Interactive Runner**: Select any of the 37 MCP tools, enter parameters into dynamic input fields, and inspect JSON responses in real-time.
+2. **One-Click Config Generator**: Instantly copy customized configuration snippets for Claude Desktop, Cursor, or SSE clients.
+3. **API Key Management**: Set or update your `MCP_API_KEY` directly from the UI without restarting the container.
+
+---
 
 ### Prerequisites
 - Python 3.10+
@@ -174,6 +341,8 @@ Visit:
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID | *empty* |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API Token | *empty* |
 | `CLOUDFLARE_MODEL` | Cloudflare Workers AI model tag | `@cf/meta/llama-3.1-8b-instruct` |
+| `MCP_API_KEY` | Optional Bearer authorization token for remote MCP endpoints (`/mcp`, `/mcp/sse`) | *empty (open access)* |
+| `TEAMTASKS_API_URL` | Base API URL when running MCP server in remote proxy mode | *empty (direct SQLite mode)* |
 
 ---
 
@@ -341,36 +510,41 @@ Executes SQLite `PRAGMA integrity_check`.
 
 ---
 
-### 🔌 MCP Server (Model Context Protocol for AI Agents)
+### MCP (Model Context Protocol) Endpoints
 
-TeamTasks includes a full-featured **Model Context Protocol (MCP)** server (`mcp_server.py`) and built-in HTTP/SSE endpoints (`/mcp`, `/mcp/sse`), exposing **37 tools**, **9 resources**, and **4 prompts** for complete management of the system by AI Agents.
+- `POST /mcp` - Streamable JSON-RPC 2.0 MCP endpoint for AI Agents.
+- `GET /mcp/sse` - Server-Sent Events (SSE) streaming transport for MCP agents.
+- `POST /mcp/messages` - SSE client message receiver endpoint.
+- For complete transport details, tool catalogs, and agent client configurations, see the dedicated [🔌 Model Context Protocol (MCP) Server](#-model-context-protocol-mcp-server) section.
 
-#### Supported Transports
-1. **Stdio Transport (Local IDE / Desktop Agents):**
-   ```json
-   {
-     "mcpServers": {
-       "teamtasks": {
-         "command": "python",
-         "args": ["/path/to/teamtasks/mcp_server.py"]
-       }
-     }
-   }
-   ```
-2. **Streamable HTTP & SSE Transport (Remote / Containerized Agents):**
-   - Streamable HTTP Endpoint: `POST http://localhost:5000/mcp`
-   - SSE Endpoint: `GET http://localhost:5000/mcp/sse`
-   - Optional authentication via `MCP_API_KEY` in `.env` (`Authorization: Bearer <MCP_API_KEY>`).
+---
 
-#### Available MCP Tools (37 Tools)
-- **Tasks (10):** `list_tasks`, `get_task`, `create_task`, `update_task`, `update_task_schedule`, `archive_task`, `unarchive_task`, `delete_task`, `bulk_update_tasks`, `search_tasks`
-- **Projects (6):** `list_projects`, `get_project`, `create_project`, `update_project`, `archive_project`, `delete_project`
-- **Teams (4):** `list_teams`, `create_team`, `update_team`, `delete_team`
-- **Team Members (5):** `list_members`, `create_member`, `update_member`, `delete_member`, `list_avatars`
-- **Calendar & Workload (6):** `get_calendar_week`, `get_calendar_month`, `get_member_workload`, `list_special_days`, `create_special_day`, `delete_special_day`
-- **Analytics, Diagnostics & Backup (6):** `get_executive_summary`, `get_deadlines_analysis`, `get_stale_and_suggestions`, `get_system_diagnostics`, `export_system_backup`, `restore_system_backup`
+## 🆕 Recent Updates & Changelog
 
-You can also view connection snippets and test all 37 MCP tools interactively in the **Admin Panel → שרת MCP (AI Agents)** (`/admin`).
+### v2.2.0 (Latest Release)
+- 🔌 **Full Model Context Protocol (MCP) Integration**:
+  - Implemented standalone `mcp_server.py` supporting both `stdio` and remote HTTP/SSE transports (`/mcp`, `/mcp/sse`).
+  - **37 production-grade MCP tools** for complete agentic automation of Tasks, Projects, Teams, Members, Calendar, Workloads, Analytics, and Backups.
+  - **9 live MCP Resources** (`teamtasks://...`) and **4 specialized Prompts** (`morning_standup`, `deadline_audit`, `workload_rebalance`, `sprint_planning`).
+  - Dedicated interactive **MCP Admin Panel** (`/admin#mcp`) with dynamic parameter forms, live response preview, and auto-generated client configurations.
+  - Optional Bearer token security via `MCP_API_KEY`.
+- 🎯 **Advanced Status & Priority Filtering ("Not-Done" View)**:
+  - Added **"הכל למעט הושלם" (`not-done`)** status filter across Dashboard, Calendar, and Print views to quickly focus on active workloads.
+  - Added instant **"נקה סינון" (Clear Filters)** button to reset all active filter dimensions in one click.
+  - Integrated `not-done` filtering capability into AI Assistant intent handlers.
+- ⚡ **Stability & Frontend Performance**:
+  - Fixed ES module variable scoping (`urlParams`) and ensured resilient event listener registration.
+  - Implemented automated asset cache-busting (`v=5`) for immediate client updates.
+
+### v2.1.0
+- 🤖 **Bilingual Natural-Language AI Assistant**:
+  - Dual AI engine support: Local/Air-gapped LLMs (Ollama, vLLM) and Cloudflare Workers AI.
+  - Deterministic guardrails against hallucinations and invalid database mutations.
+- 🦸 **30 3D Clay Avatars**:
+  - Built-in superhero and mascot avatar suite with custom upload support.
+- 🩺 **Admin Diagnostics & Live Configuration**:
+  - Real-time `.env` live configuration management directly from the web interface without restarting the server.
+  - SQLite integrity diagnostics and database metrics.
 
 ---
 
