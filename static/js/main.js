@@ -92,7 +92,6 @@ async function init() {
         setActiveTeamFilter(null);
     }
 
-    const urlParams = new URLSearchParams(window.location.search);
     const urlStatus = urlParams.get('status');
     const storedStatus = urlStatus || localStorage.getItem('activeStatusFilter');
     if (storedStatus) {
