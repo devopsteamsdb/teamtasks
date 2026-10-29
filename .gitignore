@@ -29,6 +29,7 @@ __pycache__/
 *.json
 !package.json
 !package-lock.json
+!mcp.config.json
 
 # Ignore archives
 *.tar

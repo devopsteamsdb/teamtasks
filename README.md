@@ -42,6 +42,7 @@ A modern, bilingual (Hebrew/English) task and project management platform built 
 ## ✨ Features
 
 ### 🤖 AI Assistant & Automation
+- 🔌 **Built-in MCP Server (Model Context Protocol)** - Full 37-tool MCP Server (`mcp_server.py` + `/mcp` HTTP/SSE endpoints) allowing external AI Agents (Antigravity, Claude Desktop, Cursor, Windsurf, VS Code Copilot) to manage tasks, projects, teams, members, calendar schedules, workloads, and backups.
 - 💬 **Bilingual Natural Language Chat** - Interact in natural Hebrew or English directly in a slide-out assistant panel.
 - ⚡ **Full Free-Text System Management** - Create, update, reassign, postpone, complete, archive, or delete tasks and projects using natural conversational prompts (e.g. *"תשני את המשימה 82 בתהליך"*, *"תוסיף משימה דחופה לפרויקט אבטחה"*).
 - 🧠 **Dual AI Provider Architecture**:
@@ -337,6 +338,39 @@ Executes SQLite `PRAGMA integrity_check`.
 
 - `GET /api/backup/{table_name}` - Download JSON backup (`table_name`: `all`, `tasks`, `projects`, `teams`, `members`, `special_days`).
 - `POST /api/restore/{table_name}` - Upload and restore JSON backup.
+
+---
+
+### 🔌 MCP Server (Model Context Protocol for AI Agents)
+
+TeamTasks includes a full-featured **Model Context Protocol (MCP)** server (`mcp_server.py`) and built-in HTTP/SSE endpoints (`/mcp`, `/mcp/sse`), exposing **37 tools**, **9 resources**, and **4 prompts** for complete management of the system by AI Agents.
+
+#### Supported Transports
+1. **Stdio Transport (Local IDE / Desktop Agents):**
+   ```json
+   {
+     "mcpServers": {
+       "teamtasks": {
+         "command": "python",
+         "args": ["/path/to/teamtasks/mcp_server.py"]
+       }
+     }
+   }
+   ```
+2. **Streamable HTTP & SSE Transport (Remote / Containerized Agents):**
+   - Streamable HTTP Endpoint: `POST http://localhost:5000/mcp`
+   - SSE Endpoint: `GET http://localhost:5000/mcp/sse`
+   - Optional authentication via `MCP_API_KEY` in `.env` (`Authorization: Bearer <MCP_API_KEY>`).
+
+#### Available MCP Tools (37 Tools)
+- **Tasks (10):** `list_tasks`, `get_task`, `create_task`, `update_task`, `update_task_schedule`, `archive_task`, `unarchive_task`, `delete_task`, `bulk_update_tasks`, `search_tasks`
+- **Projects (6):** `list_projects`, `get_project`, `create_project`, `update_project`, `archive_project`, `delete_project`
+- **Teams (4):** `list_teams`, `create_team`, `update_team`, `delete_team`
+- **Team Members (5):** `list_members`, `create_member`, `update_member`, `delete_member`, `list_avatars`
+- **Calendar & Workload (6):** `get_calendar_week`, `get_calendar_month`, `get_member_workload`, `list_special_days`, `create_special_day`, `delete_special_day`
+- **Analytics, Diagnostics & Backup (6):** `get_executive_summary`, `get_deadlines_analysis`, `get_stale_and_suggestions`, `get_system_diagnostics`, `export_system_backup`, `restore_system_backup`
+
+You can also view connection snippets and test all 37 MCP tools interactively in the **Admin Panel → שרת MCP (AI Agents)** (`/admin`).
 
 ---
 

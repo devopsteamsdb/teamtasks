@@ -2139,6 +2139,9 @@ def api_get_system_settings():
         openai_key = env_vars.get('OPENAI_API_KEY', '') or env_vars.get('AI_API_KEY', '')
         openai_key_masked = (openai_key[:4] + '••••••••' + openai_key[-3:]) if len(openai_key) > 8 else ('••••••••' if openai_key else '')
 
+        mcp_key = env_vars.get('MCP_API_KEY', '') or os.environ.get('MCP_API_KEY', '')
+        mcp_key_masked = (mcp_key[:4] + '••••••••' + mcp_key[-3:]) if len(mcp_key) > 8 else ('••••••••' if mcp_key else '')
+
         # Active provider
         active_provider = env_vars.get('AI_PROVIDER', '').lower().strip()
         if not active_provider:
@@ -2158,6 +2161,9 @@ def api_get_system_settings():
                 'cloudflare_api_token_masked': cf_token_masked,
                 'has_cloudflare_token': bool(cf_token),
                 'cloudflare_model': env_vars.get('CLOUDFLARE_MODEL', '@cf/meta/llama-3.1-8b-instruct'),
+                # MCP settings
+                'mcp_api_key_masked': mcp_key_masked,
+                'has_mcp_api_key': bool(mcp_key),
                 # App config
                 'app_name': env_vars.get('APP_NAME', 'TeamTasks'),
             },
@@ -2229,6 +2235,11 @@ def api_update_system_settings():
 
         if 'app_name' in data and data.get('app_name', '').strip():
             updates['APP_NAME'] = data.get('app_name', '').strip()
+
+        if 'mcp_api_key' in data:
+            val = data.get('mcp_api_key', '').strip()
+            if '••••' not in val:
+                updates['MCP_API_KEY'] = val
 
         # Update .env
         update_env_file(updates)
@@ -2373,6 +2384,259 @@ def api_check_db_integrity():
         return jsonify({'success': True, 'integrity': status})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============ MCP SERVER (MODEL CONTEXT PROTOCOL) ENDPOINTS ============
+
+def _check_mcp_auth():
+    """Validates optional MCP_API_KEY if configured in .env or environment."""
+    env_vars = read_env_file()
+    expected_key = (env_vars.get('MCP_API_KEY') or os.environ.get('MCP_API_KEY') or '').strip()
+    if not expected_key:
+        return True
+    auth_header = request.headers.get('Authorization', '').strip()
+    if auth_header.lower().startswith('bearer '):
+        token = auth_header[7:].strip()
+        if token == expected_key:
+            return True
+    api_key_header = request.headers.get('X-MCP-API-Key', '').strip()
+    if api_key_header == expected_key:
+        return True
+    return False
+
+
+def _add_mcp_cors_headers(resp):
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, DELETE, OPTIONS'
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-MCP-API-Key, Mcp-Session-Id, Accept'
+    resp.headers['Access-Control-Expose-Headers'] = 'Mcp-Session-Id'
+    return resp
+
+
+@app.route('/mcp', methods=['GET', 'POST', 'DELETE', 'OPTIONS'])
+def mcp_http_endpoint():
+    """
+    Standard MCP Streamable HTTP / JSON-RPC 2.0 Endpoint.
+    Allows AI Agents (Claude, Cursor, Antigravity, VS Code, custom clients)
+    to connect directly over HTTP: POST /mcp
+    """
+    from flask import Response
+    from mcp_server import (
+        handle_mcp_jsonrpc_message, MCP_SERVER_NAME, MCP_SERVER_VERSION,
+        MCP_TOOLS, MCP_RESOURCES, MCP_PROMPTS, SUPPORTED_PROTOCOL_VERSIONS
+    )
+
+    if request.method == 'OPTIONS':
+        return _add_mcp_cors_headers(Response('', status=204))
+
+    if not _check_mcp_auth():
+        resp = jsonify({
+            'jsonrpc': '2.0',
+            'id': None,
+            'error': {'code': -32001, 'message': 'Unauthorized: Invalid or missing MCP API Key'}
+        })
+        resp.status_code = 401
+        return _add_mcp_cors_headers(resp)
+
+    if request.method == 'DELETE':
+        return _add_mcp_cors_headers(Response('', status=204))
+
+    if request.method == 'GET':
+        accept = request.headers.get('Accept', '')
+        if 'text/event-stream' in accept:
+            return mcp_sse_endpoint()
+        return _add_mcp_cors_headers(jsonify({
+            'server': MCP_SERVER_NAME,
+            'version': MCP_SERVER_VERSION,
+            'protocolVersions': SUPPORTED_PROTOCOL_VERSIONS,
+            'transports': {
+                'streamable_http': '/mcp',
+                'sse': '/mcp/sse',
+                'messages': '/mcp/messages'
+            },
+            'capabilities': {
+                'tools_count': len(MCP_TOOLS),
+                'resources_count': len(MCP_RESOURCES),
+                'prompts_count': len(MCP_PROMPTS)
+            },
+            'status': 'active'
+        }))
+
+    # POST JSON-RPC 2.0 handling
+    payload = request.get_json(silent=True)
+    if payload is None:
+        resp = jsonify({
+            'jsonrpc': '2.0',
+            'id': None,
+            'error': {'code': -32700, 'message': 'Parse error: Invalid JSON body'}
+        })
+        resp.status_code = 400
+        return _add_mcp_cors_headers(resp)
+
+    session_id = request.headers.get('Mcp-Session-Id') or str(int(time.time() * 1000))
+
+    if isinstance(payload, list):
+        responses = []
+        for item in payload:
+            r = handle_mcp_jsonrpc_message(item)
+            if r is not None:
+                responses.append(r)
+        if not responses:
+            resp = Response('', status=202)
+            resp.headers['Mcp-Session-Id'] = session_id
+            return _add_mcp_cors_headers(resp)
+        resp = jsonify(responses)
+        resp.headers['Mcp-Session-Id'] = session_id
+        return _add_mcp_cors_headers(resp)
+    else:
+        response_obj = handle_mcp_jsonrpc_message(payload)
+        if response_obj is None:
+            resp = Response('', status=202)
+            resp.headers['Mcp-Session-Id'] = session_id
+            return _add_mcp_cors_headers(resp)
+        resp = jsonify(response_obj)
+        resp.headers['Mcp-Session-Id'] = session_id
+        return _add_mcp_cors_headers(resp)
+
+
+@app.route('/mcp/sse', methods=['GET', 'OPTIONS'])
+def mcp_sse_endpoint():
+    """MCP Server-Sent Events (SSE) endpoint for SSE-based MCP clients."""
+    from flask import Response, stream_with_context
+    import uuid
+    import queue
+    from mcp_server import _sse_sessions
+
+    if request.method == 'OPTIONS':
+        return _add_mcp_cors_headers(Response('', status=204))
+
+    if not _check_mcp_auth():
+        return _add_mcp_cors_headers(jsonify({'error': 'Unauthorized'})), 401
+
+    session_id = uuid.uuid4().hex
+    msg_queue = queue.Queue()
+    _sse_sessions[session_id] = msg_queue
+
+    @stream_with_context
+    def generate():
+        try:
+            yield f"event: endpoint\ndata: /mcp/messages?session_id={session_id}\n\n"
+            while True:
+                try:
+                    msg = msg_queue.get(timeout=15)
+                    yield f"event: message\ndata: {json.dumps(msg, ensure_ascii=False)}\n\n"
+                except queue.Empty:
+                    yield ": keepalive\n\n"
+        finally:
+            _sse_sessions.pop(session_id, None)
+
+    resp = Response(generate(), mimetype='text/event-stream')
+    resp.headers['Cache-Control'] = 'no-cache'
+    resp.headers['X-Accel-Buffering'] = 'no'
+    return _add_mcp_cors_headers(resp)
+
+
+@app.route('/mcp/messages', methods=['POST', 'OPTIONS'])
+def mcp_sse_messages():
+    """Receives JSON-RPC messages for an active SSE session or returns directly."""
+    from flask import Response
+    from mcp_server import handle_mcp_jsonrpc_message, _sse_sessions
+
+    if request.method == 'OPTIONS':
+        return _add_mcp_cors_headers(Response('', status=204))
+
+    if not _check_mcp_auth():
+        return _add_mcp_cors_headers(jsonify({'error': 'Unauthorized'})), 401
+
+    session_id = request.args.get('session_id', '')
+    payload = request.get_json(silent=True)
+    if payload is None:
+        return _add_mcp_cors_headers(jsonify({'error': 'Invalid JSON'})), 400
+
+    response_obj = handle_mcp_jsonrpc_message(payload)
+    if session_id and session_id in _sse_sessions and response_obj is not None:
+        _sse_sessions[session_id].put(response_obj)
+        return _add_mcp_cors_headers(Response('Accepted', status=202))
+
+    if response_obj is None:
+        return _add_mcp_cors_headers(Response('', status=202))
+    return _add_mcp_cors_headers(jsonify(response_obj))
+
+
+@app.route('/api/mcp/info', methods=['GET'])
+def api_get_mcp_info():
+    """Returns MCP server metadata, tool schemas, resources, prompts, and client config snippets for Admin UI."""
+    try:
+        from mcp_server import (
+            MCP_SERVER_NAME, MCP_SERVER_VERSION, SUPPORTED_PROTOCOL_VERSIONS,
+            MCP_TOOLS, MCP_RESOURCES, MCP_RESOURCE_TEMPLATES, MCP_PROMPTS
+        )
+        base_dir = os.path.abspath(os.path.dirname(__file__))
+        mcp_script_path = os.path.join(base_dir, 'mcp_server.py').replace('\\', '/')
+        host_url = request.host_url.rstrip('/')
+        env_vars = read_env_file()
+        mcp_key = env_vars.get('MCP_API_KEY', '') or os.environ.get('MCP_API_KEY', '')
+        has_key = bool(mcp_key)
+        masked_key = (mcp_key[:4] + '••••••••' + mcp_key[-3:]) if len(mcp_key) > 8 else ('••••••••' if mcp_key else '')
+
+        return jsonify({
+            'success': True,
+            'server': {
+                'name': MCP_SERVER_NAME,
+                'version': MCP_SERVER_VERSION,
+                'protocol_versions': SUPPORTED_PROTOCOL_VERSIONS,
+                'status': 'active',
+                'has_api_key': has_key,
+                'api_key_masked': masked_key,
+                'script_path': mcp_script_path,
+                'http_endpoint': f"{host_url}/mcp",
+                'sse_endpoint': f"{host_url}/mcp/sse"
+            },
+            'counts': {
+                'tools': len(MCP_TOOLS),
+                'resources': len(MCP_RESOURCES) + len(MCP_RESOURCE_TEMPLATES),
+                'prompts': len(MCP_PROMPTS)
+            },
+            'tools': MCP_TOOLS,
+            'resources': MCP_RESOURCES,
+            'resource_templates': MCP_RESOURCE_TEMPLATES,
+            'prompts': MCP_PROMPTS
+        })
+    except Exception as e:
+        logger.error(f"Error getting MCP info: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/mcp/execute', methods=['POST'])
+def api_execute_mcp_tool():
+    """Executes an MCP tool directly from the Admin UI Playground and returns the result + latency."""
+    t0 = time.time()
+    try:
+        from mcp_server import execute_mcp_tool
+        data = request.json or {}
+        tool_name = (data.get('name') or data.get('tool') or '').strip()
+        arguments = data.get('arguments') or {}
+        if isinstance(arguments, str) and arguments.strip():
+            try:
+                arguments = json.loads(arguments)
+            except Exception as je:
+                return jsonify({'success': False, 'error': f'JSON לא תקין בפרמטרים: {str(je)}'}), 400
+
+        if not tool_name:
+            return jsonify({'success': False, 'error': 'יש לבחור כלי MCP להרצה'}), 400
+
+        result = execute_mcp_tool(tool_name, arguments)
+        latency_ms = round((time.time() - t0) * 1000)
+        return jsonify({
+            'success': True,
+            'tool': tool_name,
+            'latency_ms': latency_ms,
+            'result': result
+        })
+    except Exception as e:
+        latency_ms = round((time.time() - t0) * 1000)
+        logger.error(f"Error executing MCP tool from playground: {e}", exc_info=True)
+        return jsonify({'success': False, 'latency_ms': latency_ms, 'error': str(e)}), 500
 
 
 @app.route('/')

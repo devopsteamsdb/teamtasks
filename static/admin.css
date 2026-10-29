@@ -1358,3 +1358,249 @@ html.dark-mode .test-result-box.error {
     border-color: rgba(239, 68, 68, 0.3);
     color: #fca5a5;
 }
+
+/* --- MCP Server Section Styles --- */
+.mcp-endpoint-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    direction: ltr;
+}
+
+.mcp-endpoint-box code {
+    font-family: monospace;
+    font-size: 0.875rem;
+    color: #0f172a;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mcp-config-tabs {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.mcp-tab-btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.mcp-tab-btn:hover {
+    border-color: #6366f1;
+    color: #4f46e5;
+}
+
+.mcp-tab-btn.active {
+    background: #4f46e5;
+    color: #ffffff;
+    border-color: #4f46e5;
+}
+
+.mcp-code-pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 1rem;
+    border-radius: 8px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 220px;
+    margin: 0;
+    border: 1px solid #1e293b;
+    text-align: left;
+}
+
+.mcp-json-textarea {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    background: #0f172a;
+    color: #38bdf8;
+    border-color: #334155;
+    text-align: left;
+}
+
+.mcp-category-filters {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.mcp-cat-pill {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.mcp-cat-pill:hover {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.mcp-cat-pill.active {
+    background: #4f46e5;
+    color: #ffffff;
+    border-color: #4f46e5;
+}
+
+.mcp-tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 1rem;
+}
+
+.mcp-tool-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.6rem;
+    transition: all 0.15s ease;
+}
+
+.mcp-tool-card:hover {
+    border-color: #818cf8;
+    box-shadow: 0 3px 8px rgba(79, 70, 229, 0.08);
+}
+
+.mcp-tool-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.mcp-tool-name {
+    display: inline-block;
+    background: #eef2ff;
+    color: #4338ca;
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 2px 7px;
+    border-radius: 5px;
+    border: 1px solid #c7d2fe;
+}
+
+.mcp-tool-title-he {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-top: 0.25rem;
+}
+
+.mcp-tool-desc {
+    font-size: 0.78rem;
+    color: #475569;
+    margin: 0;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.mcp-tool-params {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 0.25rem;
+}
+
+.mcp-param-badge {
+    font-family: monospace;
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.mcp-param-badge.required {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    font-weight: 700;
+}
+
+.mcp-param-none {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+html.dark-mode .mcp-endpoint-box {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+html.dark-mode .mcp-endpoint-box code {
+    color: #38bdf8;
+}
+
+html.dark-mode .mcp-tab-btn,
+html.dark-mode .mcp-cat-pill {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+html.dark-mode .mcp-tab-btn.active,
+html.dark-mode .mcp-cat-pill.active {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: #ffffff;
+}
+
+html.dark-mode .mcp-tool-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+html.dark-mode .mcp-tool-name {
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+html.dark-mode .mcp-tool-title-he {
+    color: #f1f5f9;
+}
+
+html.dark-mode .mcp-tool-desc {
+    color: #94a3b8;
+}
+
+html.dark-mode .mcp-param-badge {
+    background: #0f172a;
+    color: #cbd5e1;
+}
+
+html.dark-mode .mcp-param-badge.required {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fcd34d;
+    border-color: rgba(245, 158, 11, 0.4);
+}

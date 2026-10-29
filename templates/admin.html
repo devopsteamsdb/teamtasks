@@ -71,6 +71,11 @@
                             alt="System">
                         הגדרות כלליות
                     </button>
+                    <button class="nav-item" data-section="mcp">
+                        <img src="{{ url_for('static', filename='icons/star.svg') }}" width="20" height="20"
+                            alt="MCP" style="filter: brightness(0) invert(0.4);">
+                        שרת MCP (AI Agents)
+                    </button>
                 </nav>
             </aside>
 
@@ -374,6 +379,156 @@
                                     style="vertical-align:middle;">
                                 שחזר נתונים
                             </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MCP Server Section (Model Context Protocol for AI Agents) -->
+                <section id="section-mcp" class="settings-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>שרת MCP לניהול מלא ע"י סוכני AI (Model Context Protocol)</h2>
+                            <p class="section-subtitle">חיבור ישיר של סוכני AI חיצוניים (Antigravity, Claude Desktop, Cursor, Windsurf, VS Code) לניהול מלא של משימות, פרויקטים, צוותים ויומן</p>
+                        </div>
+                        <div class="section-header-actions">
+                            <button id="btnRefreshMcp" class="btn btn-secondary" title="רענן נתוני MCP">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M23 4v6h-6"></path>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                                רענן
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MCP Overview & Security Card -->
+                    <div class="settings-card ai-status-card">
+                        <div class="ai-status-header">
+                            <div class="ai-status-title-box">
+                                <div class="ai-status-icon-wrapper" style="background: linear-gradient(135deg, #10b981, #059669);">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                                        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                                        <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                                        <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">teamtasks-mcp (JSON-RPC 2.0 / Stdio / Streamable HTTP / SSE)</h3>
+                                    <div class="ai-status-badges">
+                                        <span class="status-pill status-pill-success" id="badgeMcpStatus">● שרת MCP פעיל ומוכן</span>
+                                        <span class="status-pill status-pill-airgap" id="badgeMcpToolsCount">37 כלים (Tools)</span>
+                                        <span class="status-pill status-pill-cloud" id="badgeMcpResourcesCount">9 משאבים (Resources)</span>
+                                        <span class="status-pill" id="badgeMcpPromptsCount">4 תבניות (Prompts)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2" style="margin-bottom: 1rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>נקודת קצה HTTP / Streamable-HTTP (חיבור מרחוק):</label>
+                                <div class="mcp-endpoint-box">
+                                    <code id="mcpHttpEndpointCode">http://localhost:5000/mcp</code>
+                                    <button type="button" class="btn btn-secondary btn-sm btn-copy-inline" data-copy-target="mcpHttpEndpointCode">העתק</button>
+                                </div>
+                                <small class="form-hint">נקודת קצה SSE: <code id="mcpSseEndpointCode">http://localhost:5000/mcp/sse</code></small>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="inputMcpApiKey">מפתח אבטחה ל-MCP מרחוק (MCP_API_KEY - אופציונלי):</label>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <div class="password-input-wrapper" style="flex: 1;">
+                                        <input type="password" id="inputMcpApiKey" class="form-control" placeholder="השאר ריק לגישה פתוחה ברשת המקומית">
+                                        <button type="button" class="btn-toggle-visibility" data-target="inputMcpApiKey" title="הצג/הסתר מפתח">👁️</button>
+                                    </div>
+                                    <button type="button" id="btnSaveMcpKey" class="btn btn-primary btn-sm">שמור מפתח</button>
+                                </div>
+                                <small class="form-hint" id="hintMcpKeyStatus">כאשר מוגדר, בקשות ל-<code>/mcp</code> דורשות <code>Authorization: Bearer &lt;KEY&gt;</code>.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Client Configuration Snippets & Interactive Playground Grid -->
+                    <div class="settings-grid-cards" style="margin-top: 1.5rem;">
+                        <!-- Client Config Snippets Card -->
+                        <div class="settings-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                                <h3 class="card-section-title" style="margin-bottom: 0;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="16 18 22 12 16 6"></polyline>
+                                        <polyline points="8 6 2 12 8 18"></polyline>
+                                    </svg>
+                                    הגדרת חיבור לסוכני AI (Client Config)
+                                </h3>
+                                <button type="button" id="btnCopyMcpConfig" class="btn btn-primary btn-sm">
+                                    העתק קוד JSON
+                                </button>
+                            </div>
+
+                            <div class="mcp-config-tabs">
+                                <button type="button" class="mcp-tab-btn active" data-config-tab="stdio">Antigravity / Cursor (Stdio)</button>
+                                <button type="button" class="mcp-tab-btn" data-config-tab="claude">Claude Desktop</button>
+                                <button type="button" class="mcp-tab-btn" data-config-tab="http">HTTP / Remote Agent</button>
+                                <button type="button" class="mcp-tab-btn" data-config-tab="docker">Docker (Stdio)</button>
+                            </div>
+
+                            <pre id="mcpConfigCodeBlock" class="mcp-code-pre" dir="ltr"></pre>
+                            <small class="form-hint" id="mcpConfigHint">הוסף לקובץ <code>mcp_config.json</code> או <code>.cursor/mcp.json</code> כדי להעניק לסוכן שליטה מלאה במערכת.</small>
+                        </div>
+
+                        <!-- Interactive MCP Tool Playground Card -->
+                        <div class="settings-card">
+                            <h3 class="card-section-title">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                                מעבדת בדיקות חיה לכלי MCP (Live Playground)
+                            </h3>
+
+                            <div class="form-group">
+                                <label for="mcpPlaygroundToolSelect">בחר כלי MCP להרצה:</label>
+                                <select id="mcpPlaygroundToolSelect" class="form-control" dir="ltr"></select>
+                                <small class="form-hint" id="mcpPlaygroundToolDesc">בחר כלי מהרשימה כדי לראות את תיאורו ולהריץ אותו מול מסד הנתונים.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="mcpPlaygroundArgs">פרמטרים לקריאה (JSON Arguments):</label>
+                                <textarea id="mcpPlaygroundArgs" class="form-control mcp-json-textarea" rows="4" dir="ltr" spellcheck="false">{}</textarea>
+                            </div>
+
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                                <button type="button" id="btnRunMcpTool" class="btn btn-primary">
+                                    ▶ הרץ כלי MCP כעת
+                                </button>
+                                <span id="mcpPlaygroundLatency" style="font-size: 0.825rem; font-weight: 600; color: #059669;"></span>
+                            </div>
+
+                            <div id="mcpPlaygroundResultContainer" style="display: none; margin-top: 1rem;">
+                                <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 0.35rem;">תשובת שרת ה-MCP (JSON-RPC Result):</label>
+                                <pre id="mcpPlaygroundResultPre" class="mcp-code-pre" dir="ltr" style="max-height: 240px;"></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- All MCP Tools Catalog -->
+                    <div class="settings-card" style="margin-top: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+                            <h3 class="card-section-title" style="margin-bottom: 0;">
+                                קטלוג כלי ה-MCP הזמינים לסוכני AI
+                            </h3>
+                            <div class="mcp-category-filters" id="mcpCategoryFilters">
+                                <button type="button" class="mcp-cat-pill active" data-cat="all">הכל (37)</button>
+                                <button type="button" class="mcp-cat-pill" data-cat="tasks">משימות (10)</button>
+                                <button type="button" class="mcp-cat-pill" data-cat="projects">פרויקטים (6)</button>
+                                <button type="button" class="mcp-cat-pill" data-cat="teams">צוותים (4)</button>
+                                <button type="button" class="mcp-cat-pill" data-cat="members">חברי צוות (5)</button>
+                                <button type="button" class="mcp-cat-pill" data-cat="calendar">יומן ועומסים (6)</button>
+                                <button type="button" class="mcp-cat-pill" data-cat="analytics">דוחות וגיבוי (6)</button>
+                            </div>
+                        </div>
+
+                        <div id="mcpToolsCatalogGrid" class="mcp-tools-grid">
+                            <!-- Populated dynamically via admin.js -->
                         </div>
                     </div>
                 </section>

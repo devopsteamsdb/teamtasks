@@ -108,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (item.dataset.section === 'system') {
                 loadSystemSettings();
+            } else if (item.dataset.section === 'mcp') {
+                loadMcpInfo();
             }
         });
     });
@@ -1059,6 +1061,367 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 window.location.href = `/?team=${encodeURIComponent(storedTeam)}`;
             }
+        });
+    }
+
+    // --- MCP Server Management & Playground ---
+    let mcpInfoData = null;
+    let activeMcpConfigTab = 'stdio';
+    let activeMcpCategory = 'all';
+
+    const defaultMcpToolExamples = {
+        list_tasks: { status: "not-done", limit: 10 },
+        get_task: { id: 1 },
+        create_task: { project: "שדרוג ליבה", task: "בדיקת אוטומציית MCP", priority: "high", status: "status-inprogress", members: ["elad"] },
+        update_task: { id: 1, status: "status-inprogress", priority: "high" },
+        update_task_schedule: { id: 1, shift_days: 2, estimated_hours: 4 },
+        archive_task: { id: 1 },
+        unarchive_task: { id: 1 },
+        delete_task: { id: 999 },
+        bulk_update_tasks: { task_ids: [1, 2], status: "status-inprogress" },
+        search_tasks: { query: "שדרוג", include_archived: false },
+        list_projects: { mode: "active" },
+        get_project: { name: "שדרוג ליבה" },
+        create_project: { name: "פרויקט AI חדש", teams: ["devops"] },
+        update_project: { name: "פרויקט AI חדש", add_teams: ["devops"] },
+        archive_project: { name: "פרויקט AI חדש", is_archived: true },
+        delete_project: { name: "פרויקט AI חדש" },
+        list_teams: {},
+        create_team: { name_en: "secops", name_he: "צוות SecOps" },
+        update_team: { name: "secops", new_name_he: "צוות אבטחה ו-SecOps" },
+        delete_team: { name: "secops" },
+        list_members: {},
+        create_member: { name_en: "daniel", name_he: "דניאל", teams: ["devops"], avatar_path: "avatar_5.png" },
+        update_member: { name: "daniel", avatar_path: "avatar_10.png" },
+        delete_member: { name: "daniel" },
+        list_avatars: {},
+        get_calendar_week: {},
+        get_calendar_month: {},
+        get_member_workload: {},
+        list_special_days: {},
+        create_special_day: { date: "2026-11-15", name: "יום גיבוש חברה", type: "company_event", color: "#8b5cf6" },
+        delete_special_day: { name: "יום גיבוש חברה" },
+        get_executive_summary: {},
+        get_deadlines_analysis: {},
+        get_stale_and_suggestions: {},
+        get_system_diagnostics: {},
+        export_system_backup: { table_name: "teams" },
+        restore_system_backup: { table_name: "teams", records: [] }
+    };
+
+    const categoryNamesHe = {
+        tasks: 'משימות',
+        projects: 'פרויקטים',
+        teams: 'צוותים',
+        members: 'חברי צוות',
+        calendar: 'יומן ועומסים',
+        analytics: 'דוחות וגיבוי'
+    };
+
+    async function loadMcpInfo() {
+        try {
+            const res = await fetch('/api/mcp/info?t=' + Date.now());
+            const data = await res.json();
+            if (!data.success) {
+                showToast(data.error || 'שגיאה בטעינת נתוני שרת MCP', 'error');
+                return;
+            }
+            mcpInfoData = data;
+
+            const { server, counts, tools } = data;
+            const badgeTools = document.getElementById('badgeMcpToolsCount');
+            const badgeRes = document.getElementById('badgeMcpResourcesCount');
+            const badgePrompts = document.getElementById('badgeMcpPromptsCount');
+            if (badgeTools) badgeTools.textContent = `${counts.tools} כלים (Tools)`;
+            if (badgeRes) badgeRes.textContent = `${counts.resources} משאבים (Resources)`;
+            if (badgePrompts) badgePrompts.textContent = `${counts.prompts} תבניות (Prompts)`;
+
+            const httpCode = document.getElementById('mcpHttpEndpointCode');
+            const sseCode = document.getElementById('mcpSseEndpointCode');
+            if (httpCode) httpCode.textContent = server.http_endpoint;
+            if (sseCode) sseCode.textContent = server.sse_endpoint;
+
+            const inputMcpKey = document.getElementById('inputMcpApiKey');
+            const hintMcpKey = document.getElementById('hintMcpKeyStatus');
+            if (inputMcpKey) {
+                inputMcpKey.value = server.has_api_key ? (server.api_key_masked || '••••••••') : '';
+            }
+            if (hintMcpKey) {
+                hintMcpKey.innerHTML = server.has_api_key
+                    ? '🔒 מפתח אבטחה פעיל. בקשות ל-<code>/mcp</code> מחייבות הזדהות.'
+                    : '🔓 גישה פתוחה ברשת המקומית (ללא מפתח). ניתן להגדיר מפתח לאבטחת חיבורים מרוחקים.';
+            }
+
+            renderMcpConfigSnippet(activeMcpConfigTab);
+            populateMcpPlaygroundSelect(tools);
+            renderMcpToolsCatalog(tools, activeMcpCategory);
+        } catch (e) {
+            console.error('Error loading MCP info:', e);
+            showToast('שגיאת תקשורת בטעינת נתוני MCP', 'error');
+        }
+    }
+
+    function renderMcpConfigSnippet(tab) {
+        activeMcpConfigTab = tab;
+        const pre = document.getElementById('mcpConfigCodeBlock');
+        const hint = document.getElementById('mcpConfigHint');
+        if (!pre || !mcpInfoData) return;
+
+        const scriptPath = mcpInfoData.server.script_path || '/app/mcp_server.py';
+        const httpUrl = mcpInfoData.server.http_endpoint || (window.location.origin + '/mcp');
+        let snippet = {};
+
+        if (tab === 'stdio') {
+            snippet = {
+                mcpServers: {
+                    teamtasks: {
+                        command: "python",
+                        args: [scriptPath]
+                    }
+                }
+            };
+            if (hint) hint.innerHTML = 'הוסף לקובץ <code>mcp_config.json</code> ב-Antigravity או <code>.cursor/mcp.json</code> ב-Cursor.';
+        } else if (tab === 'claude') {
+            snippet = {
+                mcpServers: {
+                    teamtasks: {
+                        command: "python",
+                        args: [scriptPath],
+                        env: {
+                            PYTHONIOENCODING: "utf-8"
+                        }
+                    }
+                }
+            };
+            if (hint) hint.innerHTML = 'הוסף לקובץ <code>claude_desktop_config.json</code> תחת הגדרות Developer ב-Claude Desktop.';
+        } else if (tab === 'http') {
+            snippet = {
+                mcpServers: {
+                    "teamtasks-remote": {
+                        url: httpUrl,
+                        transport: "streamable-http"
+                    }
+                }
+            };
+            if (hint) hint.innerHTML = 'חיבור ישיר ב-HTTP (ללא צורך ב-Python מקומי) אל שרת ה-TeamTasks הפעיל.';
+        } else if (tab === 'docker') {
+            snippet = {
+                mcpServers: {
+                    teamtasks: {
+                        command: "docker",
+                        args: ["exec", "-i", "teamtasks-app", "python", "/app/mcp_server.py"]
+                    }
+                }
+            };
+            if (hint) hint.innerHTML = 'הרצת שרת ה-MCP בתוך קונטיינר ה-Docker הפעיל של TeamTasks.';
+        }
+
+        pre.textContent = JSON.stringify(snippet, null, 2);
+    }
+
+    document.querySelectorAll('.mcp-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.mcp-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderMcpConfigSnippet(btn.dataset.configTab);
+        });
+    });
+
+    const btnCopyMcpConfig = document.getElementById('btnCopyMcpConfig');
+    if (btnCopyMcpConfig) {
+        btnCopyMcpConfig.addEventListener('click', () => {
+            const pre = document.getElementById('mcpConfigCodeBlock');
+            if (pre && pre.textContent) {
+                navigator.clipboard.writeText(pre.textContent);
+                showToast('הגדרות ה-MCP הועתקו ללוח!', 'success');
+            }
+        });
+    }
+
+    document.querySelectorAll('.btn-copy-inline').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = document.getElementById(btn.dataset.copyTarget);
+            if (target && target.textContent) {
+                navigator.clipboard.writeText(target.textContent);
+                showToast('הכתובת הועתקה ללוח!', 'success');
+            }
+        });
+    });
+
+    function populateMcpPlaygroundSelect(tools) {
+        const select = document.getElementById('mcpPlaygroundToolSelect');
+        if (!select || select.options.length > 0) return;
+
+        const grouped = {};
+        tools.forEach(t => {
+            const cat = t.category || 'other';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(t);
+        });
+
+        select.innerHTML = Object.entries(grouped).map(([cat, list]) => {
+            const label = categoryNamesHe[cat] || cat;
+            const opts = list.map(t => `<option value="${t.name}">${t.name} — ${t.title || ''}</option>`).join('');
+            return `<optgroup label="${label}">${opts}</optgroup>`;
+        }).join('');
+
+        updateMcpPlaygroundSelection('get_executive_summary');
+        select.value = 'get_executive_summary';
+
+        select.addEventListener('change', () => {
+            updateMcpPlaygroundSelection(select.value);
+        });
+    }
+
+    function updateMcpPlaygroundSelection(toolName) {
+        if (!mcpInfoData || !mcpInfoData.tools) return;
+        const tool = mcpInfoData.tools.find(t => t.name === toolName);
+        const descEl = document.getElementById('mcpPlaygroundToolDesc');
+        const argsEl = document.getElementById('mcpPlaygroundArgs');
+        if (tool && descEl) {
+            descEl.textContent = `${tool.title ? tool.title + ': ' : ''}${tool.description}`;
+        }
+        if (argsEl) {
+            const example = defaultMcpToolExamples[toolName] || {};
+            argsEl.value = JSON.stringify(example, null, 2);
+        }
+    }
+
+    const btnRunMcpTool = document.getElementById('btnRunMcpTool');
+    if (btnRunMcpTool) {
+        btnRunMcpTool.addEventListener('click', async () => {
+            const select = document.getElementById('mcpPlaygroundToolSelect');
+            const argsEl = document.getElementById('mcpPlaygroundArgs');
+            const resultBox = document.getElementById('mcpPlaygroundResultContainer');
+            const resultPre = document.getElementById('mcpPlaygroundResultPre');
+            const latencyEl = document.getElementById('mcpPlaygroundLatency');
+
+            const toolName = select ? select.value : '';
+            let parsedArgs = {};
+            try {
+                parsedArgs = argsEl && argsEl.value.trim() ? JSON.parse(argsEl.value.trim()) : {};
+            } catch (err) {
+                showToast('שגיאת תחביר ב-JSON של הפרמטרים', 'error');
+                return;
+            }
+
+            btnRunMcpTool.disabled = true;
+            btnRunMcpTool.textContent = 'מריץ כלי...';
+            if (latencyEl) latencyEl.textContent = '';
+
+            try {
+                const res = await fetch('/api/mcp/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: toolName, arguments: parsedArgs })
+                });
+                const data = await res.json();
+                if (resultBox && resultPre) {
+                    resultBox.style.display = 'block';
+                    resultPre.textContent = JSON.stringify(data.result || data, null, 2);
+                }
+                if (latencyEl && typeof data.latency_ms !== 'undefined') {
+                    latencyEl.textContent = `✓ בוצע תוך ${data.latency_ms}ms`;
+                }
+                if (data.success && data.result && data.result.success) {
+                    if (/^(create_|update_|delete_|archive_|unarchive_|bulk_|restore_)/.test(toolName)) {
+                        broadcastAdminChange();
+                        loadTeams();
+                    }
+                }
+            } catch (e) {
+                showToast('שגיאה בהרצת כלי MCP', 'error');
+            } finally {
+                btnRunMcpTool.disabled = false;
+                btnRunMcpTool.textContent = '▶ הרץ כלי MCP כעת';
+            }
+        });
+    }
+
+    function renderMcpToolsCatalog(tools, category = 'all') {
+        const grid = document.getElementById('mcpToolsCatalogGrid');
+        if (!grid || !tools) return;
+
+        const filtered = category === 'all' ? tools : tools.filter(t => t.category === category);
+        grid.innerHTML = filtered.map(t => {
+            const props = (t.inputSchema && t.inputSchema.properties) ? Object.keys(t.inputSchema.properties) : [];
+            const reqs = new Set((t.inputSchema && t.inputSchema.required) || []);
+            const paramsHtml = props.length > 0
+                ? props.map(p => `<span class="mcp-param-badge ${reqs.has(p) ? 'required' : ''}" title="${reqs.has(p) ? 'שדה חובה' : 'אופציונלי'}">${p}${reqs.has(p) ? '*' : ''}</span>`).join('')
+                : '<span class="mcp-param-none">ללא פרמטרים</span>';
+
+            return `
+                <div class="mcp-tool-card">
+                    <div class="mcp-tool-card-top">
+                        <div>
+                            <code class="mcp-tool-name" dir="ltr">${t.name}</code>
+                            <div class="mcp-tool-title-he">${t.title || ''}</div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm btn-try-mcp-tool" data-tool="${t.name}">
+                            בדוק כלי
+                        </button>
+                    </div>
+                    <p class="mcp-tool-desc" dir="ltr">${t.description}</p>
+                    <div class="mcp-tool-params" dir="ltr">${paramsHtml}</div>
+                </div>
+            `;
+        }).join('');
+
+        grid.querySelectorAll('.btn-try-mcp-tool').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tName = btn.dataset.tool;
+                const select = document.getElementById('mcpPlaygroundToolSelect');
+                if (select) {
+                    select.value = tName;
+                    updateMcpPlaygroundSelection(tName);
+                    select.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        });
+    }
+
+    document.querySelectorAll('#mcpCategoryFilters .mcp-cat-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('#mcpCategoryFilters .mcp-cat-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            activeMcpCategory = pill.dataset.cat;
+            if (mcpInfoData && mcpInfoData.tools) {
+                renderMcpToolsCatalog(mcpInfoData.tools, activeMcpCategory);
+            }
+        });
+    });
+
+    const btnSaveMcpKey = document.getElementById('btnSaveMcpKey');
+    if (btnSaveMcpKey) {
+        btnSaveMcpKey.addEventListener('click', async () => {
+            const keyVal = document.getElementById('inputMcpApiKey')?.value.trim() || '';
+            btnSaveMcpKey.disabled = true;
+            try {
+                const res = await fetch('/api/system/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mcp_api_key: keyVal })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('הגדרות האבטחה של שרת ה-MCP נשמרו!', 'success');
+                    await loadMcpInfo();
+                } else {
+                    showToast(data.error || 'שגיאה בשמירת המפתח', 'error');
+                }
+            } catch (e) {
+                showToast('שגיאת תקשורת עם השרת', 'error');
+            } finally {
+                btnSaveMcpKey.disabled = false;
+            }
+        });
+    }
+
+    const btnRefreshMcp = document.getElementById('btnRefreshMcp');
+    if (btnRefreshMcp) {
+        btnRefreshMcp.addEventListener('click', async () => {
+            await loadMcpInfo();
+            showToast('נתוני שרת ה-MCP רועננו', 'success');
         });
     }
 });
