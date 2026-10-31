@@ -660,3 +660,36 @@ html.dark-mode .ai-task-pill:hover {
         height: 52px;
     }
 }
+
+/* Standalone Modal Open in Dashboard Link */
+.btn-open-in-dashboard {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 12px;
+    font-size: 0.8rem;
+    color: var(--primary, #4f46e5);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm, 4px);
+    background: rgba(79, 70, 229, 0.08);
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-open-in-dashboard:hover {
+    background: rgba(79, 70, 229, 0.16);
+    color: var(--primary, #4338ca);
+}
+
+[data-theme="dark"] .btn-open-in-dashboard,
+html.dark-mode .btn-open-in-dashboard {
+    color: #a5b4fc;
+    background: rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .btn-open-in-dashboard:hover,
+html.dark-mode .btn-open-in-dashboard:hover {
+    background: rgba(99, 102, 241, 0.32);
+    color: #ffffff;
+}
+

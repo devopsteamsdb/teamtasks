@@ -301,10 +301,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span>${escapeHtml(item.type_label || item.type)}</span>
                             </span>
                         </td>
-                        <td dir="ltr" style="font-family: monospace; font-size: 0.825rem; color: #4b5563; text-align: left;">
+                        <td dir="ltr" class="backup-filename-cell">
                             ${escapeHtml(item.filename)}
                         </td>
-                        <td style="white-space: nowrap; color: #6b7280; font-weight: 500;">
+                        <td class="backup-size-cell">
                             ${escapeHtml(item.size_formatted || '')}
                         </td>
                         <td>
@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
                 <div class="predefined-avatar-item ${isSelected ? 'selected' : ''}" data-filename="${av.filename}" data-url="${av.url}" title="בחר אווטאר">
                     <img src="${av.url}" alt="${av.filename}">
-                    <span class="avatar-check-badge"><i class="fas fa-check"></i></span>
+                    <span class="avatar-check-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                 </div>
             `;
         }).join('');

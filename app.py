@@ -3226,10 +3226,8 @@ def admin():
 
 @app.route('/archive')
 def archive():
-    """Page to view and restore archived tasks"""
-    teams = [team.to_dict() for team in Team.query.all()]
-    members = [member.to_dict() for member in TeamMember.query.all()]
-    return render_template('archive.html', teams=teams, members=members)
+    """Redirect legacy archive URL to main board in archive mode"""
+    return redirect(url_for('index', mode='archive'))
 
 
 if __name__ == '__main__':

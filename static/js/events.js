@@ -73,6 +73,9 @@ export function attachEventListeners() {
     if (UI.elements.projectModalDeleteBtn) {
         UI.elements.projectModalDeleteBtn.onclick = handleDeleteProject;
     }
+    if (UI.elements.projectModalCancelBtn) {
+        UI.elements.projectModalCancelBtn.onclick = () => UI.closeModals();
+    }
 
     // Edit Project Buttons
     document.querySelectorAll('.edit-project-btn').forEach(btn => {
@@ -353,11 +356,11 @@ async function handleSaveProject() {
     const teamIds = UI.getSelectedProjectTeamIds();
 
     if (!name) {
-        alert('נא להזין שם פרויקט');
+        UI.showToast('נא להזין שם פרויקט', 'error');
         return;
     }
     if (teamIds.length === 0) {
-        alert('יש לבחור לפחות צוות אחד לשיוך הפרויקט');
+        UI.showToast('יש לבחור לפחות צוות אחד לשיוך הפרויקט', 'error');
         return;
     }
 
@@ -376,13 +379,14 @@ async function handleSaveProject() {
 
         if (data.success) {
             UI.closeModals();
+            UI.showToast(id ? 'הפרויקט עודכן בהצלחה' : 'הפרויקט נוצר בהצלחה', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה בשמירת הפרויקט: ' + (data.error || 'Unknown error'));
+            UI.showToast('שגיאה בשמירת הפרויקט: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
-        alert('שגיאה בשמירת הפרויקט');
+        UI.showToast('שגיאה בשמירת הפרויקט', 'error');
     }
 }
 
@@ -396,13 +400,14 @@ async function handleDeleteProject() {
         const data = await API.deleteProject(id);
         if (data.success) {
             UI.closeModals();
+            UI.showToast('הפרויקט נמחק בהצלחה', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה במחיקת הפרויקט: ' + (data.error || 'Unknown error'));
+            UI.showToast('שגיאה במחיקת הפרויקט: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
-        alert('שגיאה במחיקת הפרויקט');
+        UI.showToast('שגיאה במחיקת הפרויקט', 'error');
     }
 }
 
@@ -421,13 +426,14 @@ async function handleArchiveProjectToggle() {
         const res = isArchived ? await API.unarchiveProject(id) : await API.archiveProject(id);
         if (res.success) {
             UI.closeModals();
+            UI.showToast(isArchived ? 'הפרויקט שוחזר מהארכיון' : 'הפרויקט הועבר לארכיון', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה בעדכון ארכיון: ' + (res.error || 'Unknown error'));
+            UI.showToast('שגיאה בעדכון ארכיון: ' + (res.error || 'Unknown error'), 'error');
         }
     } catch (err) {
-        alert('שגיאה בעדכון ארכיון');
+        UI.showToast('שגיאה בעדכון ארכיון', 'error');
     }
 }
 
@@ -436,13 +442,14 @@ async function handleArchiveProjectCard(projectId, projectName) {
     try {
         const res = await API.archiveProject(projectId);
         if (res.success) {
+            UI.showToast('הפרויקט הועבר לארכיון', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה בארכוב פרויקט: ' + (res.error || 'Unknown error'));
+            UI.showToast('שגיאה בארכוב פרויקט: ' + (res.error || 'Unknown error'), 'error');
         }
     } catch (err) {
-        alert('שגיאה בארכוב פרויקט');
+        UI.showToast('שגיאה בארכוב פרויקט', 'error');
     }
 }
 
@@ -451,13 +458,14 @@ async function handleUnarchiveProjectCard(projectId, projectName) {
     try {
         const res = await API.unarchiveProject(projectId);
         if (res.success) {
+            UI.showToast('הפרויקט שוחזר מהארכיון', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה בשחזור פרויקט: ' + (res.error || 'Unknown error'));
+            UI.showToast('שגיאה בשחזור פרויקט: ' + (res.error || 'Unknown error'), 'error');
         }
     } catch (err) {
-        alert('שגיאה בשחזור פרויקט');
+        UI.showToast('שגיאה בשחזור פרויקט', 'error');
     }
 }
 
@@ -470,13 +478,14 @@ async function handleDeleteProjectCard(projectId, projectName, tasksCount) {
     try {
         const res = await API.deleteProject(projectId);
         if (res.success) {
+            UI.showToast('הפרויקט נמחק בהצלחה', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה במחיקת פרויקט: ' + (res.error || 'Unknown error'));
+            UI.showToast('שגיאה במחיקת פרויקט: ' + (res.error || 'Unknown error'), 'error');
         }
     } catch (err) {
-        alert('שגיאה במחיקת פרויקט');
+        UI.showToast('שגיאה במחיקת פרויקט', 'error');
     }
 }
 
@@ -489,13 +498,14 @@ async function handleArchiveTaskToggle() {
         const res = isArchived ? await API.unarchiveTask(taskId) : await API.archiveTask(taskId);
         if (res.success) {
             UI.closeModals();
+            UI.showToast(isArchived ? 'המשימה שוחזרה מהארכיון' : 'המשימה הועברה לארכיון', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה בעדכון מצב ארכיון: ' + (res.error || 'Unknown error'));
+            UI.showToast('שגיאה בעדכון מצב ארכיון: ' + (res.error || 'Unknown error'), 'error');
         }
     } catch (err) {
-        alert('שגיאה בעדכון מצב ארכיון');
+        UI.showToast('שגיאה בעדכון מצב ארכיון', 'error');
     }
 }
 
@@ -507,7 +517,7 @@ async function handleSaveTask() {
 
     const selectedProject = UI.elements.taskProject ? UI.elements.taskProject.value : '';
     if (!selectedProject) {
-        alert('נא לבחור פרויקט');
+        UI.showToast('נא לבחור פרויקט', 'error');
         return;
     }
 
@@ -519,7 +529,7 @@ async function handleSaveTask() {
         const start = flatpickr.parseDate(startStr, "d/m/Y");
         const end = flatpickr.parseDate(endStr, "d/m/Y");
         if (start > end) {
-            alert('תאריך ההתחלה לא יכול להיות מאוחר מתאריך הסיום');
+            UI.showToast('תאריך ההתחלה לא יכול להיות מאוחר מתאריך הסיום', 'error');
             return;
         }
     }
@@ -540,25 +550,26 @@ async function handleSaveTask() {
         const data = await API.updateTask(taskId, payload);
         if (data.success) {
             UI.closeModals();
+            UI.showToast('המשימה עודכנה בהצלחה', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה בשמירת המשימה: ' + (data.error || 'Unknown error'));
+            UI.showToast('שגיאה בשמירת המשימה: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
-        alert('שגיאה בשמירת המשימה');
+        UI.showToast('שגיאה בשמירת המשימה', 'error');
     }
 }
 
 async function handleCreateTask() {
     if (!UI.elements.createTaskNameInput.value.trim()) {
-        alert('נא להזין שם משימה');
+        UI.showToast('נא להזין שם משימה', 'error');
         return;
     }
 
     const selectedProject = UI.elements.createTaskProject ? UI.elements.createTaskProject.value : '';
     if (!selectedProject) {
-        alert('נא לבחור פרויקט');
+        UI.showToast('נא לבחור פרויקט', 'error');
         return;
     }
 
@@ -569,7 +580,7 @@ async function handleCreateTask() {
         const start = flatpickr.parseDate(startStr, "d/m/Y");
         const end = flatpickr.parseDate(endStr, "d/m/Y");
         if (start > end) {
-            alert('תאריך ההתחלה לא יכול להיות מאוחר מתאריך הסיום');
+            UI.showToast('תאריך ההתחלה לא יכול להיות מאוחר מתאריך הסיום', 'error');
             return;
         }
     }
@@ -593,13 +604,14 @@ async function handleCreateTask() {
         const data = await API.createTask(payload);
         if (data.success) {
             UI.closeModals();
+            UI.showToast('המשימה נוצרה בהצלחה', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה ביצירת המשימה: ' + (data.error || 'Unknown error'));
+            UI.showToast('שגיאה ביצירת המשימה: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
-        alert('שגיאה ביצירת המשימה');
+        UI.showToast('שגיאה ביצירת המשימה', 'error');
     }
 }
 
@@ -611,13 +623,14 @@ async function handleDeleteTask() {
         const data = await API.deleteTask(taskId);
         if (data.success) {
             UI.closeModals();
+            UI.showToast('המשימה נמחקה בהצלחה', 'success');
             await UI.refreshContent(attachEventListeners);
             notifyDataChanged();
         } else {
-            alert('שגיאה במחיקת המשימה');
+            UI.showToast('שגיאה במחיקת המשימה', 'error');
         }
     } catch (error) {
-        alert('שגיאה במחיקת המשימה');
+        UI.showToast('שגיאה במחיקת המשימה', 'error');
     }
 }
 

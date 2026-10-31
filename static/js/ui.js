@@ -52,6 +52,7 @@ export function updateDOMElements() {
     elements.projectModalSaveBtn = document.getElementById('projectModalSaveBtn');
     elements.projectModalArchiveBtn = document.getElementById('projectModalArchiveBtn');
     elements.projectModalDeleteBtn = document.getElementById('projectModalDeleteBtn');
+    elements.projectModalCancelBtn = document.getElementById('projectModalCancelBtn');
 
     elements.taskProject = document.getElementById('taskProject');
     elements.taskNameInput = document.getElementById('taskNameInput');
@@ -94,7 +95,22 @@ export function updateDOMElements() {
     elements.commentAuthorSelect = document.getElementById('commentAuthorSelect');
     elements.newCommentInput = document.getElementById('newCommentInput');
     elements.addCommentBtn = document.getElementById('addCommentBtn');
+    elements.toast = document.getElementById('toast');
 }
+
+let toastTimeout = null;
+export function showToast(message, type = 'success') {
+    const toast = elements.toast || document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = `toast show ${type}`;
+
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
 
 export function initializeFlatpickr() {
     const config = getFlatpickrConfig();
@@ -112,7 +128,7 @@ export function populateDropdowns() {
 
     const defaultOption = '<option value="">בחר צוות...</option>';
 
-    if (elements.createTaskTeam) elements.createTaskTeam.innerHTML = defaultOption + options;
+    if (elements.createTaskTeam) elements.createTaskTeam.innerHTML = options;
     if (elements.taskTeam) elements.taskTeam.innerHTML = defaultOption + options;
 }
 
@@ -500,7 +516,14 @@ export function openCreateModal(projectName = null, teamId = null, initialStatus
             defaultTeam = state.activeTeamFilter;
         }
     }
-    elements.createTaskTeam.value = defaultTeam;
+    if (elements.createTaskTeam) {
+        if (defaultTeam) {
+            elements.createTaskTeam.value = defaultTeam;
+        }
+        if (!elements.createTaskTeam.value && elements.createTaskTeam.options.length > 0) {
+            elements.createTaskTeam.selectedIndex = 0;
+        }
+    }
 
     elements.createTaskStartDate.value = '';
     elements.createTaskEndDate.value = '';

@@ -82,6 +82,12 @@
     --bg-body: #f1f5f9;
     --bg-card: #ffffff;
 
+    /* Priorities */
+    --prio-high: #ef4444;
+    --prio-medium: #f59e0b;
+    --prio-low: #eab308;
+    --prio-none: #cbd5e1;
+
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -723,7 +729,9 @@ html.dark-mode .task-meta-badges .note-icon {
 
 .close-modal,
 .close-modal-create,
-.close-modal-project {
+.close-modal-project,
+.close-member-modal,
+.close-special-modal {
     color: #94a3b8;
     float: left;
     /* RTL support - close on left */
@@ -738,7 +746,11 @@ html.dark-mode .task-meta-badges .note-icon {
 .close-modal-create:hover,
 .close-modal-create:focus,
 .close-modal-project:hover,
-.close-modal-project:focus {
+.close-modal-project:focus,
+.close-member-modal:hover,
+.close-member-modal:focus,
+.close-special-modal:hover,
+.close-special-modal:focus {
     color: #ef4444;
     text-decoration: none;
     cursor: pointer;
@@ -921,6 +933,14 @@ html.dark-mode .modal-actions {
 
 .btn-danger:hover {
     background-color: #dc2626;
+}
+
+.btn-sm,
+.btn-small {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    border-radius: var(--radius-sm, 4px);
 }
 
 
@@ -1400,7 +1420,8 @@ html.dark-mode .modal-actions {
     padding: 0;
 }
 
-.navbar-icon-link:hover {
+.navbar-icon-link:hover,
+.navbar-icon-link.active {
     background-color: rgba(0, 0, 0, 0.05);
     color: var(--primary);
 }
@@ -1666,7 +1687,8 @@ html.dark-mode .navbar-icon-link {
     color: #94a3b8;
 }
 
-html.dark-mode .navbar-icon-link:hover {
+html.dark-mode .navbar-icon-link:hover,
+html.dark-mode .navbar-icon-link.active {
     background-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -1942,12 +1964,23 @@ html.dark-mode .flatpickr-weekday {
 /* Modals */
 html.dark-mode .close-modal,
 html.dark-mode .close-modal-create,
-html.dark-mode .close-member-modal {
+html.dark-mode .close-modal-project,
+html.dark-mode .close-member-modal,
+html.dark-mode .close-special-modal {
     color: var(--secondary);
 }
 
-html.dark-mode .close-modal:hover {
-    color: var(--dark);
+html.dark-mode .close-modal:hover,
+html.dark-mode .close-modal:focus,
+html.dark-mode .close-modal-create:hover,
+html.dark-mode .close-modal-create:focus,
+html.dark-mode .close-modal-project:hover,
+html.dark-mode .close-modal-project:focus,
+html.dark-mode .close-member-modal:hover,
+html.dark-mode .close-member-modal:focus,
+html.dark-mode .close-special-modal:hover,
+html.dark-mode .close-special-modal:focus {
+    color: #ef4444;
 }
 
 /* Member Checkbox in Modals */
@@ -2165,16 +2198,30 @@ html.dark-mode .delete-project-btn:hover {
 .project-team-checkbox {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.45rem;
+    padding: 0.4rem 0.65rem;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md, 6px);
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--dark);
     user-select: none;
+    transition: all 0.15s ease;
+}
+
+.project-team-checkbox:hover {
+    border-color: var(--primary);
+    background: rgba(79, 70, 229, 0.04);
 }
 
 .project-team-checkbox input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
+    accent-color: var(--primary);
     cursor: pointer;
+    margin: 0;
 }
 
 /* Dark Mode Overrides for Project Management */
@@ -2199,6 +2246,17 @@ html.dark-mode .btn-empty-add-task:hover {
 html.dark-mode .project-teams-select {
     background-color: #1e293b;
     border-color: #334155;
+}
+
+html.dark-mode .project-team-checkbox {
+    background-color: #0f172a;
+    border-color: #334155;
+    color: var(--dark);
+}
+
+html.dark-mode .project-team-checkbox:hover {
+    background-color: rgba(99, 102, 241, 0.15);
+    border-color: var(--primary);
 }
 
 html.dark-mode .edit-project-btn:hover {
@@ -2994,19 +3052,19 @@ html.dark-mode .priority-tag {
 }
 
 .priority-tag.priority-high {
-    background-color: #ef4444;
+    background-color: var(--prio-high, #ef4444);
 }
 
 .priority-tag.priority-medium {
-    background-color: #f59e0b;
+    background-color: var(--prio-medium, #f59e0b);
 }
 
 .priority-tag.priority-low {
-    background-color: #facc15;
+    background-color: var(--prio-low, #eab308);
 }
 
 .priority-tag.priority-none {
-    background-color: #cbd5e1;
+    background-color: var(--prio-none, #cbd5e1);
 }
 
 .kanban-card-title {
@@ -3742,7 +3800,9 @@ html.dark-mode .gantt-no-date-btn {
 
 .modal-header-bar .close-modal,
 .modal-header-bar .close-modal-create,
-.modal-header-bar .close-modal-project {
+.modal-header-bar .close-modal-project,
+.modal-header-bar .close-member-modal,
+.modal-header-bar .close-special-modal {
     float: none;
     line-height: 1;
     font-size: 1.6rem;
@@ -4029,3 +4089,43 @@ html.dark-mode .side-members-select {
 .table-actions .btn-icon-small {
     flex-shrink: 0;
 }
+
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s ease;
+    z-index: 10000;
+    max-width: 500px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    pointer-events: none;
+    text-align: center;
+}
+
+.toast.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.toast.success {
+    background: var(--success, #10b981);
+}
+
+.toast.error {
+    background: var(--danger, #ef4444);
+}
+
+.toast.info {
+    background: var(--info, #3b82f6);
+}
+

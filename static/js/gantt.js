@@ -9,7 +9,7 @@ const HEBREW_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מ
 const PRIORITY_COLORS = {
     'high': '#ef4444',
     'medium': '#f59e0b',
-    'low': '#fde047',
+    'low': '#eab308',
     'none': '#cbd5e1'
 };
 

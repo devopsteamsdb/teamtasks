@@ -287,7 +287,7 @@ class AIAssistant {
                 if (taskId && !isError) {
                     editBtnHtml = `
                         <button type="button" class="ai-task-edit-btn" data-task-id="${taskId}" title="ערוך משימה #${taskId}">
-                            <i class="fas fa-edit"></i> ערוך משימה
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; vertical-align: middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>ערוך משימה
                         </button>
                     `;
                 }
@@ -314,7 +314,7 @@ class AIAssistant {
                     actionRow.className = 'ai-task-actions-row';
                     actionRow.innerHTML = `
                         <button type="button" class="ai-task-edit-btn prominent" data-task-id="${taskId}" title="ערוך משימה #${taskId}">
-                            <i class="fas fa-edit"></i> ערוך משימה #${taskId}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; vertical-align: middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>ערוך משימה #${taskId}
                         </button>
                     `;
                     bubble.appendChild(actionRow);
@@ -347,9 +347,10 @@ class AIAssistant {
         escaped = escaped.replace(/^## (.*$)/gim, '<h3 style="margin: 10px 0 6px; font-weight:700;">$1</h3>');
 
         // Interactive task pills: replace `#(\d+)` with clickable task pill
-        escaped = escaped.replace(/(^|[^\w&])#(\d+)\b/g, '$1<button type="button" class="ai-task-pill" data-task-id="$2" title="ערוך משימה #$2">#$2 <i class="fas fa-edit"></i></button>');
+        const pillSvg = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 3px; vertical-align: middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+        escaped = escaped.replace(/(^|[^\w&])#(\d+)\b/g, `$1<button type="button" class="ai-task-pill" data-task-id="$2" title="ערוך משימה #$2">#$2 ${pillSvg}</button>`);
         // Also match Hebrew task mentions like "משימה 12" or "משימה מס' 12"
-        escaped = escaped.replace(/(משימה\s+(?:מס'?\s+|מספר\s+)?)(?!<button)(\d+)\b/g, '$1<button type="button" class="ai-task-pill" data-task-id="$2" title="ערוך משימה #$2">#$2 <i class="fas fa-edit"></i></button>');
+        escaped = escaped.replace(/(משימה\s+(?:מס'?\s+|מספר\s+)?)(?!<button)(\d+)\b/g, `$1<button type="button" class="ai-task-pill" data-task-id="$2" title="ערוך משימה #$2">#$2 ${pillSvg}</button>`);
 
         // Line breaks & bullet/numbered lists
         const lines = escaped.split('\n');
@@ -551,9 +552,11 @@ async function loadStandaloneSubtasks(taskId) {
                 
                 const titleEscaped = (st.title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 item.innerHTML = `
-                    <input type="checkbox" class="subtask-checkbox" ${st.is_completed ? 'checked' : ''}>
+                    <input type="checkbox" class="subtask-checkbox" ${st.is_completed ? 'checked' : ''} title="סמן כהושלם">
                     <span class="subtask-title">${titleEscaped}</span>
-                    <button type="button" class="subtask-delete-btn" title="מחק פריט">&times;</button>
+                    <button type="button" class="subtask-delete-btn" title="מחק פריט">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
                 `;
 
                 item.querySelector('.subtask-checkbox').addEventListener('change', async (e) => {
@@ -636,14 +639,16 @@ async function loadStandaloneComments(taskId, members = []) {
     list.innerHTML = '<div style="color: var(--secondary); font-size: 0.8rem; padding: 4px;">טוען תגובות...</div>';
 
     if (authorSelect) {
-        authorSelect.innerHTML = '<option value="">אנונימי / משתמש כללי</option>';
-        members.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m.name;
-            opt.textContent = m.name;
-            opt.dataset.avatar = m.avatar || '';
-            authorSelect.appendChild(opt);
-        });
+        const savedAuthor = localStorage.getItem('teamtasks_last_author') || '';
+        let options = '<option value="">בחר/י מגיב/ה...</option>';
+        options += members.map(m => {
+            const mName = m.name_he || m.name_en || m.name || '';
+            const mAvatar = m.avatar_path || m.avatar || 'default.png';
+            const isMatch = (savedAuthor && (savedAuthor === String(m.id) || savedAuthor === mName));
+            return `<option value="${m.id}" data-name="${mName}" data-avatar="${mAvatar}" ${isMatch ? 'selected' : ''}>${mName}</option>`;
+        }).join('');
+        options += `<option value="guest" data-name="חבר צוות" data-avatar="default.png" ${savedAuthor === 'guest' ? 'selected' : ''}>חבר צוות (אורח)</option>`;
+        authorSelect.innerHTML = options;
     }
 
     try {
@@ -654,24 +659,36 @@ async function loadStandaloneComments(taskId, members = []) {
             list.innerHTML = '';
             if (counter) counter.textContent = comments.length;
             if (!comments || comments.length === 0) {
-                list.innerHTML = '<div class="empty-comments-text">אין עדיין תגובות על משימה זו.</div>';
+                list.innerHTML = '<div class="empty-comments-text">אין עדיין תגובות על משימה זו. כתוב את התגובה הראשונה למטה!</div>';
                 return;
             }
             comments.forEach(c => {
                 const item = document.createElement('div');
                 item.className = 'comment-item';
-                const authorEscaped = (c.author_name || 'אנונימי').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                item.dataset.id = c.id;
+                item.dataset.taskId = taskId;
+
+                const authorName = c.author_name || 'חבר צוות';
+                const authorAvatar = c.author_avatar || 'default.png';
+                const authorEscaped = authorName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const commentEscaped = (c.content || c.comment || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const timeStr = c.created_at ? formatCommentDate(c.created_at) : '';
+                const timeStr = c.created_at || '';
 
                 item.innerHTML = `
-                    <div class="comment-header">
-                        ${c.author_avatar ? `<img src="${c.author_avatar}" class="comment-avatar" alt="${authorEscaped}">` : '<div class="comment-avatar-placeholder">👤</div>'}
-                        <span class="comment-author-name">${authorEscaped}</span>
-                        <span class="comment-timestamp">${timeStr}</span>
-                        <button type="button" class="comment-delete-btn" title="מחק תגובה">&times;</button>
+                    <img src="/uploads/avatars/${authorAvatar}"
+                         class="comment-avatar"
+                         onerror="this.src='/static/images/default.png'"
+                         alt="${authorEscaped}">
+                    <div class="comment-content-wrap">
+                        <div class="comment-header">
+                            <span class="comment-author">${authorEscaped}</span>
+                            <span class="comment-date">${timeStr}</span>
+                            <button type="button" class="comment-delete-btn" data-id="${c.id}" title="מחק תגובה">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                        <div class="comment-text">${commentEscaped}</div>
                     </div>
-                    <div class="comment-text">${commentEscaped}</div>
                 `;
 
                 item.querySelector('.comment-delete-btn').addEventListener('click', async () => {
@@ -698,8 +715,19 @@ async function loadStandaloneComments(taskId, members = []) {
             addCommentBtn.onclick = async () => {
                 const commentText = newCommentInput.value.trim();
                 if (!commentText) return;
-                const authorName = authorSelect && authorSelect.value ? authorSelect.value : null;
-                const authorAvatar = authorSelect && authorSelect.selectedOptions[0] ? (authorSelect.selectedOptions[0].dataset.avatar || null) : null;
+
+                let authorName = 'חבר צוות';
+                let authorAvatar = 'default.png';
+
+                if (authorSelect && authorSelect.value) {
+                    const selectedOpt = authorSelect.selectedOptions[0];
+                    if (selectedOpt) {
+                        authorName = selectedOpt.dataset.name || selectedOpt.textContent;
+                        authorAvatar = selectedOpt.dataset.avatar || 'default.png';
+                    }
+                    localStorage.setItem('teamtasks_last_author', authorSelect.value);
+                }
+
                 newCommentInput.value = '';
 
                 try {
@@ -708,7 +736,6 @@ async function loadStandaloneComments(taskId, members = []) {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             content: commentText,
-                            comment: commentText,
                             author_name: authorName,
                             author_avatar: authorAvatar
                         })
@@ -800,7 +827,7 @@ window.openStandaloneTaskModal = async function(taskId) {
             teams.forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = t.id;
-                opt.textContent = t.name;
+                opt.textContent = t.name_he || t.name_en || t.name || '';
                 if (t.id == task.team_id) opt.selected = true;
                 teamSelect.appendChild(opt);
             });
@@ -842,14 +869,22 @@ window.openStandaloneTaskModal = async function(taskId) {
         const membersContainer = taskModal.querySelector('.members-select');
         if (membersContainer) {
             membersContainer.innerHTML = '';
+            const taskMembersList = Array.isArray(task.members)
+                ? task.members
+                : (typeof task.members === 'string' && task.members ? task.members.split(',').map(s => s.trim()) : []);
+
             members.forEach(m => {
                 const label = document.createElement('label');
                 label.className = 'member-checkbox';
-                const isChecked = Array.isArray(task.members) && task.members.includes(m.name);
+                const memberVal = m.name_en || m.name || '';
+                const memberDisplayName = m.name_he || m.name_en || m.name || '';
+                const avatarSrc = m.avatar_path ? `/uploads/avatars/${m.avatar_path}` : (m.avatar || '/static/images/default.png');
+                const isChecked = taskMembersList.includes(memberVal) || taskMembersList.includes(memberDisplayName);
+
                 label.innerHTML = `
-                    <input type="checkbox" value="${m.name}" data-img="${m.avatar || ''}" ${isChecked ? 'checked' : ''}>
-                    ${m.avatar ? `<img src="${m.avatar}" class="avatar-small" alt="${m.name}">` : ''}
-                    <span>${m.name}</span>
+                    <input type="checkbox" value="${memberVal}" data-img="${avatarSrc}" ${isChecked ? 'checked' : ''}>
+                    <img src="${avatarSrc}" class="avatar-sm" onerror="this.src='/static/images/default.png'" alt="${memberDisplayName}">
+                    <span>${memberDisplayName}</span>
                 `;
                 membersContainer.appendChild(label);
             });
@@ -870,7 +905,6 @@ window.openStandaloneTaskModal = async function(taskId) {
                         <line x1="10" y1="14" x2="21" y2="3"></line>
                     </svg>פתח בלוח משימות
                 `;
-                openInDashBtn.style.cssText = 'display: inline-flex; align-items: center; margin-right: 12px; font-size: 0.8rem; color: #4f46e5; text-decoration: none; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: rgba(79, 70, 229, 0.08);';
                 headerTitleGroup.appendChild(openInDashBtn);
             }
         }
@@ -949,7 +983,7 @@ window.openStandaloneTaskModal = async function(taskId) {
             archiveBtn.onclick = async () => {
                 if (!confirm(`האם להעביר את משימה #${task.id} לארכיון?`)) return;
                 try {
-                    await fetch(`/api/tasks/${task.id}/archive`, { method: 'PUT' });
+                    await fetch(`/api/tasks/${task.id}/archive`, { method: 'POST' });
                     taskModal.style.display = 'none';
                 } catch (err) {
                     console.error('Error archiving task:', err);

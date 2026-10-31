@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ניהול צוותים - DevOps</title>
+    <title>הגדרות מערכת - לוח משימות</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
     <link href="{{ url_for('static', filename='style.css') }}?v=5" rel="stylesheet">
     <link href="{{ url_for('static', filename='admin.css') }}?v=5" rel="stylesheet">
@@ -54,7 +54,7 @@
         </div>
 
         <div class="navbar-meta">
-            <a href="/admin" title="ממשק ניהול" class="navbar-icon-link">
+            <a href="/admin" title="ממשק ניהול" class="navbar-icon-link active">
                 <img src="{{ url_for('static', filename='icons/settings.svg') }}" width="20" height="20" alt="Settings"
                     class="icon-img">
             </a>
@@ -68,7 +68,7 @@
                     class="icon-img">
             </button>
 
-            <span style="padding-right: 1px;">{{ now.strftime('%d/%m/%Y') }}</span>
+            <span style="padding-right: 1px; font-weight: 500; font-size: 0.9rem;">{{ now.strftime('%d/%m/%Y') }}</span>
         </div>
     </nav>
 
@@ -85,17 +85,17 @@
                 <nav class="settings-nav">
                     <button class="nav-item active" data-section="teams">
                         <img src="{{ url_for('static', filename='icons/group.svg') }}" width="20" height="20"
-                            alt="Teams" style="filter: brightness(0) invert(0.4);">
+                            alt="Teams">
                         ניהול צוותים
                     </button>
                     <button class="nav-item" data-section="special-days">
                         <img src="{{ url_for('static', filename='icons/calendar.svg') }}" width="20" height="20"
-                            alt="Special Days" style="filter: brightness(0) invert(0.4);">
+                            alt="Special Days">
                         ימים מיוחדים וחגים
                     </button>
                     <button class="nav-item" data-section="backup">
                         <img src="{{ url_for('static', filename='icons/save.svg') }}" width="20" height="20"
-                            alt="Backup" style="filter: brightness(0) invert(0.4);">
+                            alt="Backup">
                         גיבוי ושחזור
                     </button>
                     <button class="nav-item" data-section="system">
@@ -105,7 +105,7 @@
                     </button>
                     <button class="nav-item" data-section="mcp">
                         <img src="{{ url_for('static', filename='icons/star.svg') }}" width="20" height="20"
-                            alt="MCP" style="filter: brightness(0) invert(0.4);">
+                            alt="MCP">
                         שרת MCP (AI Agents)
                     </button>
                 </nav>
@@ -123,11 +123,6 @@
                                 <img src="{{ url_for('static', filename='icons/plus-medium.svg') }}" width="18" height="18"
                                     alt="Add" style="vertical-align:middle;">
                                 הוסף צוות חדש
-                            </button>
-                            <button id="addMemberBtn" class="btn btn-primary">
-                                <img src="{{ url_for('static', filename='icons/plus-medium.svg') }}" width="18" height="18"
-                                    alt="Add" style="vertical-align:middle;">
-                                הוסף חבר צוות
                             </button>
                         </div>
                     </div>
@@ -411,7 +406,7 @@
                                     </svg>
                                     היסטוריית גרסאות מסד נתונים (נקודת עגינה מקומית)
                                 </h3>
-                                <p style="margin: 0.35rem 0 0 0; color: #6b7280; font-size: 0.875rem;">
+                                <p style="margin: 0.35rem 0 0 0; color: var(--secondary); font-size: 0.875rem;">
                                     הגיבויים נשמרים בתיקיית <code>instance/backups</code> באותה נקודת עגינה (Mountpoint) של קובץ מסד הנתונים. המערכת שומרת אוטומטית 14 גרסאות אחרונות.
                                 </p>
                             </div>
@@ -437,7 +432,7 @@
                                 </thead>
                                 <tbody id="dbBackupsTableBody">
                                     <tr>
-                                        <td colspan="6" style="text-align: center; color: #9ca3af; padding: 2rem;">
+                                        <td colspan="6" style="text-align: center; color: var(--secondary); padding: 2rem;">
                                             טוען היסטוריית גרסאות...
                                         </td>
                                     </tr>
@@ -447,13 +442,13 @@
                     </div>
 
                     <!-- External JSON Export & Import Cards -->
-                    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: #374151;">ייצוא וייבוא ידני (קבצי JSON חיצוניים)</h3>
+                    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--dark);">ייצוא וייבוא ידני (קבצי JSON חיצוניים)</h3>
 
                     <div class="backup-grid">
                         <!-- Export Card -->
                         <div class="settings-card">
                             <h3>ייצוא נתונים (Backup)</h3>
-                            <p style="margin-bottom: 1rem; color: #6b7280;">הורד קובץ JSON המכיל את נתוני הטבלה הנבחרת.
+                            <p style="margin-bottom: 1rem; color: var(--secondary);">הורד קובץ JSON המכיל את נתוני הטבלה הנבחרת.
                             </p>
 
                             <div class="form-group">
@@ -480,7 +475,7 @@
                         <!-- Import Card -->
                         <div class="settings-card">
                             <h3>ייבוא נתונים (Restore)</h3>
-                            <p style="margin-bottom: 1rem; color: #6b7280;">בחר טבלה וטען קובץ גיבוי. המערכת תאמת את
+                            <p style="margin-bottom: 1rem; color: var(--secondary);">בחר טבלה וטען קובץ גיבוי. המערכת תאמת את
                                 התוכן.</p>
 
                             <div class="form-group">
@@ -670,8 +665,12 @@
     <!-- Add/Edit Team Modal -->
     <div id="teamModal" class="modal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2 id="teamModalTitle">הוסף צוות חדש</h2>
+            <div class="modal-header-bar">
+                <div class="modal-header-title-group">
+                    <h2 id="teamModalTitle">הוסף צוות חדש</h2>
+                </div>
+                <span class="close-modal" title="סגור">&times;</span>
+            </div>
             <div class="form-group">
                 <label for="teamNameEn">שם באנגלית (קוד):</label>
                 <input type="text" id="teamNameEn" class="form-control" placeholder="devops">
@@ -692,8 +691,12 @@
     <!-- Add/Edit Member Modal -->
     <div id="memberModal" class="modal">
         <div class="modal-content">
-            <span class="close-member-modal">&times;</span>
-            <h2 id="memberModalTitle">הוסף חבר צוות</h2>
+            <div class="modal-header-bar">
+                <div class="modal-header-title-group">
+                    <h2 id="memberModalTitle">הוסף חבר צוות</h2>
+                </div>
+                <span class="close-modal close-member-modal" title="סגור">&times;</span>
+            </div>
             <div class="form-row" style="display: flex; gap: 1rem;">
                 <div class="form-group" style="flex: 1; margin-top: 0.4rem;">
                     <label for="memberNameEn">שם באנגלית (קוד):</label>
@@ -744,8 +747,12 @@
     <!-- Add/Edit Special Day Modal -->
     <div id="specialDayModal" class="modal">
         <div class="modal-content" style="max-width: 520px;">
-            <span class="close-modal close-special-modal">&times;</span>
-            <h2 id="specialDayModalTitle">הוסף יום מיוחד</h2>
+            <div class="modal-header-bar">
+                <div class="modal-header-title-group">
+                    <h2 id="specialDayModalTitle">הוסף יום מיוחד</h2>
+                </div>
+                <span class="close-modal close-special-modal" title="סגור">&times;</span>
+            </div>
             <input type="hidden" id="specialDayId" value="">
             
             <div class="form-group">

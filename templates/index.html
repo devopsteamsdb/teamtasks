@@ -229,7 +229,7 @@
             {% set priority_colors = {
             'high': '#ef4444',
             'medium': '#f59e0b',
-            'low': '#fde047',
+            'low': '#eab308',
             'none': '#cbd5e1',
             '': '#cbd5e1'
             } %}
@@ -812,8 +812,12 @@
     <!-- Create/Edit Project Modal -->
     <div id="projectModal" class="modal">
         <div class="modal-content">
-            <span class="close-modal-project">&times;</span>
-            <h2 id="projectModalTitle">הוסף פרויקט חדש</h2>
+            <div class="modal-header-bar">
+                <div class="modal-header-title-group">
+                    <h2 id="projectModalTitle">הוסף פרויקט חדש</h2>
+                </div>
+                <span class="close-modal-project" title="סגור">&times;</span>
+            </div>
             <input type="hidden" id="projectModalId" value="">
             <div class="form-group">
                 <label for="projectModalNameInput">שם הפרויקט:</label>
@@ -829,6 +833,7 @@
                 <button id="projectModalSaveBtn" class="btn btn-primary">שמור פרויקט</button>
                 <button id="projectModalArchiveBtn" class="btn btn-secondary" style="display: none;">העבר לארכיון</button>
                 <button id="projectModalDeleteBtn" class="btn btn-danger" style="display: none;">מחק פרויקט וכל משימותיו</button>
+                <button id="projectModalCancelBtn" class="btn btn-secondary">ביטול</button>
             </div>
         </div>
     </div>
@@ -843,7 +848,7 @@
                 <span class="close-modal-create" title="סגור">&times;</span>
             </div>
 
-            <div class="task-modal-layout-grid create-task-grid">
+            <div class="task-modal-layout-grid">
                 <!-- Primary Column (Right in RTL) -->
                 <div class="task-modal-col-primary">
                     <div class="form-group title-form-group">
@@ -854,32 +859,12 @@
                         <label for="createTaskNotes">תיאור והערות:</label>
                         <textarea id="createTaskNotes" rows="4" class="form-control" placeholder="הוסף הערות או פירוט למשימה החדשה..."></textarea>
                     </div>
-                    <div class="form-group members-form-group">
-                        <label>חברי צוות משויכים:</label>
-                        <div class="members-select side-members-select">
-                            <!-- Populated dynamically by JavaScript -->
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Secondary Column (Left in RTL) -->
                 <div class="task-modal-col-secondary">
                     <div class="task-modal-card-box">
-                        <h3 class="side-box-title">שיוך והגדרות</h3>
-                        <div class="form-row">
-                            <div class="form-group half">
-                                <label for="createTaskProject">פרויקט:</label>
-                                <select id="createTaskProject" class="form-control">
-                                    <!-- Populated dynamically by JavaScript -->
-                                </select>
-                            </div>
-                            <div class="form-group half">
-                                <label for="createTaskTeam">צוות:</label>
-                                <select id="createTaskTeam" class="form-control">
-                                    <!-- Populated dynamically by JavaScript -->
-                                </select>
-                            </div>
-                        </div>
+                        <h3 class="side-box-title">פרטי משימה</h3>
                         <div class="form-row">
                             <div class="form-group half">
                                 <label for="createTaskStatus">סטטוס:</label>
@@ -902,12 +887,32 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group half">
+                                <label for="createTaskProject">פרויקט:</label>
+                                <select id="createTaskProject" class="form-control">
+                                    <!-- Populated dynamically by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="form-group half">
+                                <label for="createTaskTeam">צוות:</label>
+                                <select id="createTaskTeam" class="form-control">
+                                    <!-- Populated dynamically by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half">
                                 <label for="createTaskStartDate">תאריך התחלה (אופציונלי):</label>
                                 <input type="text" id="createTaskStartDate" class="form-control" placeholder="dd/mm/yyyy">
                             </div>
                             <div class="form-group half">
                                 <label for="createTaskEndDate">תאריך סיום (אופציונלי):</label>
                                 <input type="text" id="createTaskEndDate" class="form-control" placeholder="dd/mm/yyyy">
+                            </div>
+                        </div>
+                        <div class="form-group members-form-group">
+                            <label>חברי צוות משויכים:</label>
+                            <div class="members-select side-members-select">
+                                <!-- Populated dynamically by JavaScript -->
                             </div>
                         </div>
                     </div>
@@ -920,6 +925,9 @@
     </div>
 
     {% include 'task_modal.html' %}
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
 
     <script src="{{ url_for('static', filename='flatpickr.min.js') }}"></script>
     <script src="{{ url_for('static', filename='flatpickr.he.js') }}"></script>

@@ -757,7 +757,7 @@ class TestTeamTasksUIAutomation(unittest.TestCase):
             self.assertIn('active', active_section.get_attribute('class'))
 
     def test_25_admin_add_team_and_member_modals(self):
-        """Test admin action buttons: #addTeamBtn opens #teamModal, #addMemberBtn opens #memberModal."""
+        """Test admin action buttons: #addTeamBtn opens #teamModal, .add-member opens #memberModal."""
         self.driver.get(f"{self.base_url}/admin")
         self.safe_click(self.wait_clickable(By.CSS_SELECTOR, '.settings-nav .nav-item[data-section="teams"]'))
 
@@ -773,7 +773,7 @@ class TestTeamTasksUIAutomation(unittest.TestCase):
         self.assertFalse(team_modal.is_displayed())
 
         # 2. Add Member Modal
-        add_member_btn = self.wait_clickable(By.ID, 'addMemberBtn')
+        add_member_btn = self.wait_clickable(By.CSS_SELECTOR, '.add-member')
         self.safe_click(add_member_btn)
         member_modal = self.wait_visible(By.ID, 'memberModal')
         self.assertTrue(member_modal.is_displayed())
