@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>גרסה להדפסה - לוח משימות</title>
+    <title>גרסה להדפסה - לוח משימות{% if view_mode == 'gantt' %} (תרשים גאנט){% endif %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
     <link href="{{ url_for('static', filename='printable.css') }}" rel="stylesheet" media="all">
     <style>
@@ -23,12 +23,31 @@
 
 <body>
     <div class="print-header">
-        <h1>לוח משימות - גרסה להדפסה</h1>
+        <h1>לוח משימות - גרסה להדפסה{% if view_mode == 'gantt' %} (תרשים גאנט){% endif %}</h1>
         <div class="print-meta">
-            <button onclick="window.location.href='/'" class="no-print"
-                style="margin-left: 10px; padding: 5px 10px; background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">
+            <button onclick="window.location.href='/'" class="no-print">
                 חזרה ללוח המשימות
             </button>
+
+            <!-- View Mode Switcher -->
+            <span class="print-view-toggle no-print">
+                <button type="button" onclick="updateFilter('view', 'table')">
+                    רשימת משימות
+                </button>
+                <button type="button" onclick="updateFilter('view', 'gantt')">
+                    תרשים גאנט
+                </button>
+            </span>
+
+            <!-- Gantt Navigation Controls (visible only in Gantt mode) -->
+            {% if view_mode == 'gantt' %}
+            <span class="print-gantt-nav no-print">
+                <button type="button" onclick="navigatePeriod('{{ prev_start_date }}')">שבועיים אחורה</button>
+                <span class="print-period-title">{{ period_title }}</span>
+                <button type="button" onclick="navigatePeriod('{{ next_start_date }}')">שבועיים קדימה</button>
+                <button type="button" onclick="navigatePeriod('')">היום</button>
+            </span>
+            {% endif %}
 
             <select id="teamFilter" class="no-print" onchange="updateFilter('team', this.value)"
                 style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 5px;">
@@ -71,16 +90,140 @@
                 <option value="none" {% if request.args.get('priority')=='none' %}selected{% endif %}>ללא</option>
             </select>
 
+            <button type="button" id="printBtn" onclick="window.print()" class="no-print">
+                הדפס
+            </button>
+
             <span style="margin-right: 10px;">הופק בתאריך: <span id="printDate"></span></span>
         </div>
     </div>
+
+    {% if view_mode == 'gantt' %}
+    <!-- ==================== GANTT PRINTABLE VIEW ==================== -->
+    <div class="print-gantt-view">
+        {% set ns = namespace(found_tasks=false) %}
+        {% for project in projects %}
+        {% set project_items = gantt_tasks|selectattr('project', 'equalto', project)|list %}
+        {% if project_items|length > 0 %}
+        {% set ns.found_tasks = true %}
+        {% set first_task = project_items|first %}
+        {% set team_name = first_task.obj.team.name_he if first_task.obj and first_task.obj.team else '' %}
+
+        <div class="print-gantt-project">
+            <div class="print-gantt-project-header">
+                <h2 class="print-gantt-project-title">
+                    <span class="proj-name">{{ project }}</span>
+                    {% if team_name %}
+                    <span class="print-project-team">{{ team_name }}</span>
+                    {% endif %}
+                </h2>
+                <span class="print-gantt-task-count">{{ project_items|length }} משימות</span>
+            </div>
+
+            <div class="print-gantt-table">
+                <!-- Days Header Row -->
+                <div class="print-gantt-header-row">
+                    <div class="print-gantt-info-col print-gantt-header-cell">
+                        <span>משימה ופרטים</span>
+                    </div>
+                    <div class="print-gantt-timeline-header">
+                        {% for d in gantt_dates %}
+                        <div class="print-gantt-day-cell {% if d.is_today %}is-today{% endif %} {% if d.is_weekend %}is-weekend{% endif %} {% if d.is_special_day %}is-special-day{% endif %}" title="{{ d.day_letter }} {{ d.disp }}{% if d.is_special_day %} - {{ d.special_name }}{% endif %}">
+                            <span class="day-letter">{{ d.day_letter }}</span>
+                            <span class="day-num">{{ d.day_num }}</span>
+                            {% if d.is_special_day %}
+                            <span class="print-gantt-special-badge" {% if d.special_color %}style="background-color: {{ d.special_color }};"{% endif %}>★ {{ d.special_name }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Task Rows -->
+                {% for item in project_items %}
+                {% set task = item.obj %}
+                <div class="print-gantt-task-row">
+                    <!-- Left Task Info -->
+                    <div class="print-gantt-info-col">
+                        <div class="print-gantt-task-main">
+                            <span class="print-prio-dot prio-{{ task.priority or 'none' }}" title="עדיפות: {{ task.priority or 'none' }}"></span>
+                            <strong class="print-gantt-task-name" title="{{ task.task }}">{{ task.task }}</strong>
+                        </div>
+                        <div class="print-gantt-task-sub">
+                            <span class="print-status-pill {{ task.status }}">
+                                {{ task.status|replace('status-inprogress', 'בתהליך')|replace('status-done', 'הושלם')|replace('status-notstarted', 'טרם החל')|replace('status-delayed', 'מעוכב') }}
+                            </span>
+                            {% if item.subtasks_text %}
+                            <span class="print-subtask-badge" title="צ'ק-ליסט">☑ {{ item.subtasks_text }}</span>
+                            {% endif %}
+                            {% if task.members %}
+                            {% set member_list = task.members.split(',') %}
+                            <span class="print-task-members" title="משויכים: {{ task.members }}">
+                                {% for m_key in member_list %}
+                                {% set m_obj = members|selectattr('name_en', 'equalto', m_key|trim)|first %}
+                                {{ m_obj.name_he if m_obj else m_key }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </span>
+                            {% endif %}
+                            {% if item.date_disp %}
+                            <span class="print-date-range" dir="ltr" title="תאריכים">{{ item.date_disp }}</span>
+                            {% else %}
+                            <span class="print-no-dates">ללא תאריך</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Timeline Track -->
+                    <div class="print-gantt-timeline-track">
+                        <!-- 28 background day cells -->
+                        <div class="print-gantt-grid-cells">
+                            {% for d in gantt_dates %}
+                            <div class="print-gantt-grid-cell {% if d.is_today %}is-today{% endif %} {% if d.is_weekend %}is-weekend{% endif %} {% if d.is_special_day %}is-special-day{% endif %}" {% if d.is_special_day %}title="יום מיוחד: {{ d.special_name }}"{% endif %}></div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Bar or status hint -->
+                        {% if item.has_overlap %}
+                        <div class="print-gantt-bar {{ task.status }}" style="right: {{ item.right_percent }}%; width: {{ item.width_percent }}%;" title="{{ task.task }} ({{ item.date_disp }})">
+                            {% if item.subtasks_percent > 0 %}
+                            <div class="print-gantt-progress-fill" style="width: {{ item.subtasks_percent }}%;"></div>
+                            {% endif %}
+                            <span class="print-bar-title">{{ item.truncated_title }}</span>
+                            {% if item.span_cols >= 3 and item.subtasks_text %}
+                            <span class="print-bar-subtasks">{{ item.subtasks_text }}</span>
+                            {% endif %}
+                        </div>
+                        {% elif not item.has_dates %}
+                        <span class="print-track-no-dates">ללא תאריכים מוגדרים</span>
+                        {% else %}
+                        <span class="print-track-outside-range">מחוץ לטווח התצוגה ({{ item.date_disp }})</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        {% if not ns.found_tasks %}
+        <div class="print-empty-state">
+            אין משימות להצגה בסינון הנוכחי
+        </div>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- ==================== TABLE PRINTABLE VIEW ==================== -->
     <div class="print-projects">
+        {% set ns_table = namespace(found_tasks=false) %}
         {% for project in projects %}
         {% set project_tasks = tasks|selectattr('project', 'equalto', project)|list %}
         {% set first_task = project_tasks|first %}
         {% set team_name = first_task.team.name_he if first_task and first_task.team else '' %}
 
         {% if project_tasks|length > 0 %}
+        {% set ns_table.found_tasks = true %}
         <div class="print-project">
             <h2 class="print-project-title">
                 {{ project }}
@@ -100,7 +243,16 @@
                 <tbody>
                     {% for task in project_tasks %}
                     <tr>
-                        <td>{{ task.task }}</td>
+                        <td>
+                            <div><strong>{{ task.task }}</strong></div>
+                            {% if task.subtasks %}
+                            <div style="font-size: 0.85em; color: #555; margin-top: 4px;">
+                                {% for st in task.subtasks %}
+                                <div>{{ '☑' if st.is_completed else '☐' }} {{ st.title }}</div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </td>
                         <td>
                             {% set member_list = task.members.split(',') if task.members else [] %}
                             {% for member_key in member_list %}
@@ -127,13 +279,24 @@
         </div>
         {% endif %}
         {% endfor %}
+
+        {% if not ns_table.found_tasks %}
+        <div class="print-empty-state">
+            אין משימות להצגה בסינון הנוכחי
+        </div>
+        {% endif %}
     </div>
+    {% endif %}
+
     <script>
         // Print date
         document.addEventListener('DOMContentLoaded', function () {
             var d = new Date();
             var dateStr = d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL');
-            document.getElementById('printDate').textContent = dateStr;
+            var dateEl = document.getElementById('printDate');
+            if (dateEl) {
+                dateEl.textContent = dateStr;
+            }
         });
 
         function updateFilter(key, value) {
@@ -142,6 +305,16 @@
                 url.searchParams.set(key, value);
             } else {
                 url.searchParams.delete(key);
+            }
+            window.location.href = url.toString();
+        }
+
+        function navigatePeriod(newStartDate) {
+            const url = new URL(window.location);
+            if (newStartDate) {
+                url.searchParams.set('start_date', newStartDate);
+            } else {
+                url.searchParams.delete('start_date');
             }
             window.location.href = url.toString();
         }

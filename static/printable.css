@@ -72,17 +72,419 @@ body {
     font-weight: 700;
 }
 
+/* ========================================================
+   GANTT PRINTABLE VERSION STYLES
+   ======================================================== */
+
+/* Gantt Project and Chart Containers */
+.print-gantt-view {
+    width: 100%;
+    margin-top: 0.8rem;
+}
+
+.print-gantt-project {
+    margin: 0.8rem auto 1.4rem auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.print-gantt-project-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.9rem;
+    background-color: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.print-gantt-project-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.print-gantt-project-title .proj-name {
+    color: #0f172a;
+}
+
+.print-gantt-task-count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    background: #e2e8f0;
+    padding: 2px 8px;
+    border-radius: 9999px;
+}
+
+.print-gantt-table {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-x: auto;
+}
+
+.print-gantt-header-row {
+    display: flex;
+    background-color: #f1f5f9;
+    border-bottom: 2px solid #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+.print-gantt-info-col {
+    width: 290px;
+    min-width: 290px;
+    max-width: 290px;
+    flex-shrink: 0;
+    padding: 0.45rem 0.7rem;
+    box-sizing: border-box;
+    border-left: 2px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.print-gantt-header-cell {
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+}
+
+.print-gantt-timeline-header {
+    flex-grow: 1;
+    display: flex;
+    direction: rtl;
+}
+
+.print-gantt-day-cell {
+    width: calc(100% / 28);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 0;
+    border-left: 1px solid #e2e8f0;
+    box-sizing: border-box;
+    font-size: 0.7rem;
+    line-height: 1.15;
+}
+
+.print-gantt-day-cell .day-letter {
+    font-size: 0.65rem;
+    color: #64748b;
+}
+
+.print-gantt-day-cell .day-num {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.print-gantt-day-cell.is-weekend {
+    background-color: #f8fafc;
+}
+
+.print-gantt-day-cell.is-weekend .day-letter,
+.print-gantt-day-cell.is-weekend .day-num {
+    color: #94a3b8;
+}
+
+.print-gantt-day-cell.is-today {
+    background-color: #eef2ff;
+    border-bottom: 2px solid #4f46e5;
+}
+
+.print-gantt-day-cell.is-today .day-num {
+    color: #4f46e5;
+}
+
+.print-gantt-day-cell.is-special-day {
+    background-color: #fef3c7 !important;
+    border-bottom: 2px solid #f59e0b;
+}
+
+.print-gantt-special-badge {
+    display: inline-block;
+    font-size: 0.5rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 1px 2px;
+    border-radius: 2px;
+    background-color: #f59e0b;
+    color: #ffffff;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 1px;
+}
+
+.print-gantt-task-row {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+    min-height: 42px;
+    align-items: stretch;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.print-gantt-task-row:nth-child(even) {
+    background-color: #fafbfc;
+}
+
+.print-gantt-task-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.print-prio-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+.print-prio-dot.prio-high { background-color: #ef4444; }
+.print-prio-dot.prio-medium { background-color: #f59e0b; }
+.print-prio-dot.prio-low { background-color: #eab308; }
+.print-prio-dot.prio-none { background-color: #cbd5e1; }
+
+.print-gantt-task-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.print-gantt-task-sub {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: #64748b;
+    flex-wrap: wrap;
+}
+
+.print-status-pill {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    white-space: nowrap;
+}
+
+.print-status-pill.status-notstarted { background: #f1f5f9; color: #475569; }
+.print-status-pill.status-inprogress { background: #e0e7ff; color: #3730a3; }
+.print-status-pill.status-delayed { background: #ffedd5; color: #c2410c; }
+.print-status-pill.status-done { background: #d1fae5; color: #065f46; }
+
+.print-subtask-badge {
+    font-weight: 600;
+    color: #3b82f6;
+}
+
+.print-task-members {
+    color: #475569;
+    font-size: 0.72rem;
+}
+
+.print-date-range {
+    font-size: 0.72rem;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+.print-no-dates {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.print-gantt-timeline-track {
+    flex-grow: 1;
+    position: relative;
+    display: flex;
+    direction: rtl;
+    min-height: 42px;
+    box-sizing: border-box;
+}
+
+.print-gantt-grid-cells {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    display: flex;
+    direction: rtl;
+}
+
+.print-gantt-grid-cell {
+    width: calc(100% / 28);
+    height: 100%;
+    border-left: 1px solid #f1f5f9;
+    box-sizing: border-box;
+}
+
+.print-gantt-grid-cell.is-weekend {
+    background-color: rgba(241, 245, 249, 0.45);
+}
+
+.print-gantt-grid-cell.is-today {
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+.print-gantt-grid-cell.is-special-day {
+    background-color: rgba(245, 158, 11, 0.08);
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(245, 158, 11, 0.04) 6px, rgba(245, 158, 11, 0.04) 12px);
+    border-left: 1px dashed rgba(245, 158, 11, 0.3);
+}
+
+.print-gantt-bar {
+    position: absolute;
+    top: 7px;
+    bottom: 7px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    gap: 4px;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-sizing: border-box;
+    overflow: hidden;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    z-index: 2;
+}
+
+.print-gantt-bar.status-notstarted { background-color: #64748b; }
+.print-gantt-bar.status-inprogress { background-color: #4f46e5; }
+.print-gantt-bar.status-delayed { background-color: #ea580c; }
+.print-gantt-bar.status-done { background-color: #10b981; }
+
+.print-gantt-progress-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    background-color: rgba(255, 255, 255, 0.25);
+    border-radius: 4px 0 0 4px;
+    pointer-events: none;
+}
+
+.print-bar-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+.print-bar-subtasks {
+    margin-right: auto;
+    background: rgba(0, 0, 0, 0.22);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    z-index: 1;
+}
+
+.print-track-no-dates,
+.print-track-outside-range {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    font-size: 0.72rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.print-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #64748b;
+    font-size: 1.1rem;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    margin: 1.5rem auto;
+}
+
 @media print {
     @page {
-        margin: 1cm;
+        size: landscape;
+        margin: 0.7cm;
     }
 
     body {
         background: #fff !important;
         color: #000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .no-print {
+        display: none !important;
     }
 
     .print-project {
         border-bottom: 1px solid #000;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .print-gantt-project {
+        border: 1px solid #475569 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        margin-bottom: 1.2cm !important;
+        box-shadow: none !important;
+    }
+
+    .print-gantt-task-row {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .print-gantt-bar {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        border: 1px solid rgba(0, 0, 0, 0.25) !important;
+        box-shadow: none !important;
+    }
+
+    .print-status-pill {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+
+    .print-prio-dot {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .print-gantt-day-cell.is-today {
+        background-color: #f1f5f9 !important;
+        border-bottom: 2px solid #000 !important;
     }
 }

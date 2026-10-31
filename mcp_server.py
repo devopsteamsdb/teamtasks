@@ -58,16 +58,23 @@ DEFAULT_PROTOCOL_VERSION = "2024-11-05"
 _sse_sessions = {}
 
 
+_flask_ctx = None
+
+
 def _get_flask_context():
     """Safely imports Flask app and database models without polluting stdout."""
+    global _flask_ctx
+    if _flask_ctx is not None:
+        return _flask_ctx
     orig_stdout = sys.stdout
     try:
         sys.stdout = sys.stderr
         from app import app, _bump_data_version
-        from models import db, Team, TeamMember, Project, Task, SpecialDay, project_teams, member_teams
+        from models import db, Team, TeamMember, Project, Task, SpecialDay, project_teams, member_teams, TaskComment, Subtask
         import ai_tools
         import ai_context
-        return app, db, Team, TeamMember, Project, Task, SpecialDay, project_teams, member_teams, ai_tools, ai_context, _bump_data_version
+        _flask_ctx = (app, db, Team, TeamMember, Project, Task, SpecialDay, project_teams, member_teams, ai_tools, ai_context, _bump_data_version)
+        return _flask_ctx
     finally:
         sys.stdout = orig_stdout
 
@@ -129,6 +136,23 @@ def _resolve_member(TeamMember, db, member_val):
     for candidate in TeamMember.query.all():
         if clean.lower() in candidate.name_he.lower() or clean.lower() in candidate.name_en.lower():
             return candidate
+    return None
+
+
+def _resolve_target_task(arguments, Task, db, ai_tools):
+    """Directly resolves target task without pollution from subtask title or comment content."""
+    raw_id = arguments.get("task_id") or arguments.get("id")
+    if raw_id is not None:
+        try:
+            tid = int(raw_id)
+            t = db.session.get(Task, tid)
+            if t:
+                return t
+        except (ValueError, TypeError):
+            pass
+    task_param = arguments.get("task") or arguments.get("task_name")
+    if task_param:
+        return ai_tools.resolve_task({"task": task_param})
     return None
 
 
@@ -228,6 +252,11 @@ MCP_TOOLS = [
                     "description": "Task priority: 'high', 'medium', 'low', or 'none' (default)"
                 },
                 "notes": {"type": "string", "description": "Task notes or detailed instructions"},
+                "subtasks": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of initial checklist/subtask titles to create with the task"
+                },
                 "team": {"type": "string", "description": "Optional team ID or name (defaults to project's primary team)"},
                 "start_date": {"type": "string", "description": "Scheduled start date (YYYY-MM-DD, DD/MM/YYYY, 'today', 'tomorrow')"},
                 "end_date": {"type": "string", "description": "Scheduled target/due date (YYYY-MM-DD, DD/MM/YYYY, 'today', 'tomorrow', 'next week')"},
@@ -275,6 +304,11 @@ MCP_TOOLS = [
                 },
                 "notes": {"type": "string", "description": "Replace task notes"},
                 "append_notes": {"type": "string", "description": "Append text to existing task notes"},
+                "add_subtasks": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Add new checklist/subtask items to this task"
+                },
                 "team": {"type": "string", "description": "New team ID or name"},
                 "start_date": {"type": "string", "description": "New start date (YYYY-MM-DD, or '' to clear)"},
                 "end_date": {"type": "string", "description": "New end/due date (YYYY-MM-DD, or '' to clear)"},
@@ -367,7 +401,7 @@ MCP_TOOLS = [
         "name": "search_tasks",
         "category": "tasks",
         "title": "חיפוש טקסט חופשי במשימות",
-        "description": "Full-text search across tasks (matches task title, project name, notes, and assigned members).",
+        "description": "Full-text search across tasks (matches task title, project name, notes, comments, subtasks, and assigned members).",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -375,6 +409,112 @@ MCP_TOOLS = [
                 "include_archived": {"type": "boolean", "description": "Include archived tasks in search results (default: false)"}
             },
             "required": ["query"]
+        }
+    },
+
+    # --- SUBTASKS / CHECKLIST ---
+    {
+        "name": "list_subtasks",
+        "category": "tasks",
+        "title": "רשימת תתי-משימות",
+        "description": "List all checklist / subtask items for a specific task.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "integer", "description": "Task ID"},
+                "task": {"type": "string", "description": "Task title if ID is not known"}
+            }
+        }
+    },
+    {
+        "name": "create_subtask",
+        "category": "tasks",
+        "title": "הוספת תת-משימה",
+        "description": "Add a checklist / subtask item to a task.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "integer", "description": "Task ID to add subtask to"},
+                "task": {"type": "string", "description": "Task title if ID is not known"},
+                "title": {"type": "string", "description": "Checklist / subtask item title (required)"},
+                "is_completed": {"type": "boolean", "description": "Initial completion status (default: false)"}
+            },
+            "required": ["title"]
+        }
+    },
+    {
+        "name": "update_subtask",
+        "category": "tasks",
+        "title": "עדכון ועריכת תת-משימה",
+        "description": "Update a subtask title, toggle its completion status, or change display order.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "description": "Subtask ID (required)"},
+                "title": {"type": "string", "description": "New title for the subtask"},
+                "is_completed": {"type": "boolean", "description": "Completion state (true for completed, false for pending)"},
+                "order": {"type": "integer", "description": "Display order / position"}
+            },
+            "required": ["id"]
+        }
+    },
+    {
+        "name": "delete_subtask",
+        "category": "tasks",
+        "title": "מחיקת תת-משימה",
+        "description": "Permanently delete a subtask / checklist item by its ID.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "description": "Subtask ID to delete (required)"}
+            },
+            "required": ["id"]
+        }
+    },
+
+    # --- TASK COMMENTS & NOTES ---
+    {
+        "name": "list_task_comments",
+        "category": "tasks",
+        "title": "רשימת הערות ותגובות למשימה",
+        "description": "List all comments and notes for a specific task.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "integer", "description": "Task ID"},
+                "task": {"type": "string", "description": "Task title if ID is not known"}
+            }
+        }
+    },
+    {
+        "name": "create_task_comment",
+        "category": "tasks",
+        "title": "הוספת הערה/תגובה למשימה",
+        "description": "Add a new comment or note to a task. Can associate with a team member or specify custom author name.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "integer", "description": "Task ID"},
+                "task": {"type": "string", "description": "Task title if ID is not known"},
+                "content": {"type": "string", "description": "Comment or note content text"},
+                "comment": {"type": "string", "description": "Alternative parameter for comment content"},
+                "author_name": {"type": "string", "description": "Author name (defaults to resolved member or 'חבר צוות')"},
+                "author_avatar": {"type": "string", "description": "Author avatar path or filename (default: default.png)"},
+                "member": {"type": "string", "description": "Team member name (Hebrew or English) or member ID to link as author"}
+            }
+        }
+    },
+    {
+        "name": "delete_task_comment",
+        "category": "tasks",
+        "title": "מחיקת הערה/תגובה ממשימה",
+        "description": "Permanently delete a task comment by its ID.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "description": "Comment ID to delete (required)"}
+            },
+            "required": ["id"]
         }
     },
 
@@ -798,6 +938,48 @@ MCP_TOOLS = [
             },
             "required": ["table_name", "records"]
         }
+    },
+    {
+        "name": "list_database_backups",
+        "category": "analytics",
+        "title": "רשימת גיבויי מסד נתונים והיסטוריית גרסאות",
+        "description": "List all physical SQLite database backup snapshots on the instance mountpoint with dates, sizes, and types (daily automatic 23:00 / manual).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {}
+        }
+    },
+    {
+        "name": "create_database_backup",
+        "category": "analytics",
+        "title": "גיבוי מסד נתונים כעת (Backup Now)",
+        "description": "Immediately create a transactionally safe, verified SQLite snapshot of tasks.db to the server backups folder and prune to latest 14 versions.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "backup_type": {
+                    "type": "string",
+                    "enum": ["manual", "daily"],
+                    "description": "Type tag for the backup (default 'manual')"
+                }
+            }
+        }
+    },
+    {
+        "name": "restore_database_backup",
+        "category": "analytics",
+        "title": "שחזור מהיר של מסד הנתונים מגיבוי",
+        "description": "Fast restore the database from an existing server-side backup snapshot filename (replaces active tasks.db with verified snapshot).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": "Filename of the backup snapshot to restore (e.g. tasks_daily_2026-10-31_230000.db)"
+                }
+            },
+            "required": ["filename"]
+        }
     }
 ]
 
@@ -951,6 +1133,8 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
 
     with app.app_context():
         try:
+            from models import TaskComment, Subtask
+            db.create_all()
             # Build lookup maps for enriching responses
             all_members = TeamMember.query.all()
             members_map = {m.name_en.strip().lower(): m.name_he.strip() for m in all_members if m.name_en and m.name_he}
@@ -1046,22 +1230,45 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                 }
 
             elif tool_name == "create_task":
-                proj_val = arguments.get("project")
-                if not proj_val:
-                    return {"success": False, "error": "'project' is required to create a task."}
-                project_obj = ai_tools.resolve_project(proj_val)
-                auto_create = arguments.get("auto_create_project", True)
+                proj_val = arguments.get("project") or arguments.get("project_id") or arguments.get("project_name")
+                project_obj = None
+                if proj_val:
+                    project_obj = ai_tools.resolve_project(proj_val)
+                    if not project_obj:
+                        p_name = str(proj_val).strip()
+                        project_obj = Project.query.filter(db.func.lower(Project.name) == p_name.lower()).first()
 
+                # If no project was found or specified, pick an intelligent fallback
                 if not project_obj:
-                    if not auto_create:
-                        return {"success": False, "error": f"Project '{proj_val}' not found."}
-                    p_name = str(proj_val).strip()
-                    team_obj = _resolve_team(Team, db, arguments.get("team")) or Team.query.first()
-                    project_obj = Project(name=p_name, teams=[team_obj] if team_obj else [])
-                    db.session.add(project_obj)
-                    db.session.flush()
+                    # 1. By specified team
+                    team_obj = _resolve_team(Team, db, arguments.get("team") or arguments.get("team_id"))
+                    if team_obj and team_obj.projects:
+                        project_obj = [p for p in team_obj.projects if not p.is_archived][0] if any(not p.is_archived for p in team_obj.projects) else team_obj.projects[0]
+                    # 2. By specified member
+                    elif arguments.get("members"):
+                        resolved_m = ai_tools.resolve_member_names(arguments.get("members"))
+                        if resolved_m:
+                            mem_obj = TeamMember.query.filter(TeamMember.name_en.in_(resolved_m)).first()
+                            if mem_obj and mem_obj.teams:
+                                for mt in mem_obj.teams:
+                                    if mt.projects:
+                                        project_obj = [p for p in mt.projects if not p.is_archived][0] if any(not p.is_archived for p in mt.projects) else mt.projects[0]
+                                        break
+                    # 3. First active project in DB
+                    if not project_obj:
+                        project_obj = Project.query.filter_by(is_archived=False).first()
 
-                title = (arguments.get("task") or arguments.get("title") or "").strip()
+                # If still no project exists, create or get 'כללי'
+                if not project_obj:
+                    p_name = str(proj_val).strip() if proj_val else 'כללי'
+                    project_obj = Project.query.filter(db.func.lower(Project.name) == p_name.lower()).first()
+                    if not project_obj:
+                        team_obj = Team.query.first()
+                        project_obj = Project(name=p_name, teams=[team_obj] if team_obj else [])
+                        db.session.add(project_obj)
+                        db.session.flush()
+
+                title = (arguments.get("task") or arguments.get("title") or arguments.get("task_name") or "").strip()
                 if not title:
                     return {"success": False, "error": "'task' title is required."}
 
@@ -1076,8 +1283,8 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                 if priority not in ("high", "medium", "low", "none"):
                     priority = "none"
 
-                start_date = ai_tools.parse_date_value(arguments.get("start_date"))
-                end_date = ai_tools.parse_date_value(arguments.get("end_date"))
+                start_date = ai_tools.parse_date_value(arguments.get("start_date") or arguments.get("new_start_date"))
+                end_date = ai_tools.parse_date_value(arguments.get("end_date") or arguments.get("new_end_date") or arguments.get("due_date") or arguments.get("target_date"))
                 est_hours = arguments.get("estimated_hours")
                 if est_hours is not None:
                     try:
@@ -1086,8 +1293,9 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                         est_hours = None
 
                 team_id = None
-                if arguments.get("team"):
-                    t_obj = _resolve_team(Team, db, arguments.get("team"))
+                team_arg = arguments.get("team") or arguments.get("team_id")
+                if team_arg:
+                    t_obj = _resolve_team(Team, db, team_arg)
                     if t_obj:
                         team_id = t_obj.id
                 if not team_id and project_obj.teams:
@@ -1107,6 +1315,22 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                     estimated_hours=est_hours
                 )
                 db.session.add(new_task)
+                db.session.flush()
+
+                # Add initial subtasks / checklist items if provided
+                subtasks_input = arguments.get("subtasks")
+                if subtasks_input and isinstance(subtasks_input, list):
+                    for idx, st_title in enumerate(subtasks_input):
+                        st_clean = str(st_title).strip()
+                        if st_clean:
+                            st_item = Subtask(
+                                task_id=new_task.id,
+                                title=st_clean,
+                                is_completed=False,
+                                order=idx + 1
+                            )
+                            db.session.add(st_item)
+
                 db.session.commit()
                 _notify_db_change(app, _bump_data_version)
 
@@ -1123,11 +1347,14 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
 
                 if arguments.get("new_title"):
                     task_obj.task = str(arguments["new_title"]).strip()
+                elif arguments.get("new_task"):
+                    task_obj.task = str(arguments["new_task"]).strip()
                 elif arguments.get("task") and arguments.get("id"):
                     task_obj.task = str(arguments["task"]).strip()
 
-                if arguments.get("project"):
-                    p_obj = ai_tools.resolve_project(arguments["project"])
+                proj_val = arguments.get("project") or arguments.get("project_id")
+                if proj_val:
+                    p_obj = ai_tools.resolve_project(proj_val)
                     if p_obj:
                         task_obj.project_id = p_obj.id
                         task_obj.project = p_obj.name
@@ -1149,14 +1376,16 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                     task_obj.members = ",".join(resolved)
                 else:
                     current_m = [m.strip() for m in (task_obj.members or "").split(",") if m.strip()]
-                    if arguments.get("add_members"):
-                        for m in ai_tools.resolve_member_names(arguments["add_members"]):
+                    add_m_input = arguments.get("add_members") or arguments.get("add_member")
+                    if add_m_input:
+                        for m in ai_tools.resolve_member_names(add_m_input):
                             if m not in current_m:
                                 current_m.append(m)
-                    if arguments.get("remove_members"):
-                        to_rem = set(ai_tools.resolve_member_names(arguments["remove_members"]))
+                    rem_m_input = arguments.get("remove_members") or arguments.get("remove_member")
+                    if rem_m_input:
+                        to_rem = set(ai_tools.resolve_member_names(rem_m_input))
                         current_m = [m for m in current_m if m not in to_rem]
-                    if arguments.get("add_members") or arguments.get("remove_members"):
+                    if add_m_input or rem_m_input:
                         task_obj.members = ",".join(current_m)
 
                 if "notes" in arguments and arguments["notes"] is not None:
@@ -1166,18 +1395,35 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                     addition = str(arguments["append_notes"]).strip()
                     task_obj.notes = f"{existing_notes}\n{addition}".strip() if existing_notes else addition
 
-                if arguments.get("team"):
-                    t_obj = _resolve_team(Team, db, arguments["team"])
+                if arguments.get("add_subtasks") and isinstance(arguments["add_subtasks"], list):
+                    max_order = db.session.query(db.func.max(Subtask.order)).filter(Subtask.task_id == task_obj.id).scalar() or 0
+                    for st_title in arguments["add_subtasks"]:
+                        st_clean = str(st_title).strip()
+                        if st_clean:
+                            max_order += 1
+                            st_item = Subtask(
+                                task_id=task_obj.id,
+                                title=st_clean,
+                                is_completed=False,
+                                order=max_order
+                            )
+                            db.session.add(st_item)
+
+                team_arg = arguments.get("team") or arguments.get("team_id")
+                if team_arg:
+                    t_obj = _resolve_team(Team, db, team_arg)
                     if t_obj:
                         task_obj.team_id = t_obj.id
 
-                if "start_date" in arguments:
-                    val = arguments["start_date"]
-                    task_obj.start_date = ai_tools.parse_date_value(val) if val else None
+                start_arg = arguments.get("start_date") or arguments.get("new_start_date")
+                if start_arg is not None:
+                    task_obj.start_date = ai_tools.parse_date_value(start_arg) if start_arg else None
 
-                if "end_date" in arguments:
-                    val = arguments["end_date"]
-                    task_obj.end_date = ai_tools.parse_date_value(val) if val else None
+                end_arg = arguments.get("end_date") or arguments.get("new_end_date") or arguments.get("due_date") or arguments.get("target_date")
+                if end_arg is not None:
+                    task_obj.end_date = ai_tools.parse_date_value(end_arg) if end_arg else None
+                elif start_arg is not None and arguments.get('status') == 'status-delayed':
+                    task_obj.end_date = ai_tools.parse_date_value(start_arg)
 
                 if "estimated_hours" in arguments:
                     val = arguments["estimated_hours"]
@@ -1230,26 +1476,42 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                 }
 
             elif tool_name in ("archive_task", "unarchive_task"):
-                is_arch = (tool_name == "archive_task")
-                res = ai_tools._action_archive_task(arguments, is_archived=is_arch)
-                if res.get("status") == "error":
-                    return {"success": False, "error": res.get("error")}
+                task_obj = _resolve_target_task(arguments, Task, db, ai_tools)
+                if not task_obj:
+                    return {"success": False, "error": "Task not found."}
+                is_arch = arguments["is_archived"] if "is_archived" in arguments else (tool_name == "archive_task")
+                task_obj.is_archived = bool(is_arch)
+                if not is_arch:
+                    if task_obj.project_id:
+                        proj = db.session.get(Project, task_obj.project_id)
+                        if proj and proj.is_archived:
+                            proj.is_archived = False
+                    elif task_obj.project:
+                        proj = Project.query.filter_by(name=task_obj.project).first()
+                        if proj and proj.is_archived:
+                            proj.is_archived = False
+                db.session.commit()
                 _notify_db_change(app, _bump_data_version)
-                task_obj = db.session.get(Task, res.get("task_id"))
+                action_text = 'הועברה לארכיון' if is_arch else 'שוחזרה מהארכיון'
                 return {
                     "success": True,
-                    "message": res.get("description"),
-                    "task": _enrich_task_dict(task_obj, members_map, teams_map) if task_obj else None
+                    "message": f'משימה #{task_obj.id} "{task_obj.task}" {action_text}',
+                    "task": _enrich_task_dict(task_obj, members_map, teams_map)
                 }
 
             elif tool_name == "delete_task":
-                res = ai_tools._action_delete_task(arguments)
-                if res.get("status") == "error":
-                    return {"success": False, "error": res.get("error")}
+                task_obj = _resolve_target_task(arguments, Task, db, ai_tools)
+                if not task_obj:
+                    return {"success": False, "error": "Task not found."}
+                task_id = task_obj.id
+                title = task_obj.task
+                db.session.delete(task_obj)
+                db.session.commit()
                 _notify_db_change(app, _bump_data_version)
                 return {
                     "success": True,
-                    "message": res.get("description")
+                    "message": f'נמחקה משימה #{task_id}: "{title}"',
+                    "task_id": task_id
                 }
 
             elif tool_name == "bulk_update_tasks":
@@ -1305,13 +1567,17 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                 q = str(arguments.get("query") or "").strip()
                 if not q:
                     return {"success": False, "error": "'query' string is required."}
-                from sqlalchemy import or_
+                from sqlalchemy import or_, select
                 pat = f"%{q}%"
+                sub_query = select(Subtask.task_id).filter(Subtask.title.ilike(pat))
+                comm_query = select(TaskComment.task_id).filter(TaskComment.content.ilike(pat))
                 query = Task.query.filter(or_(
                     Task.task.ilike(pat),
                     Task.project.ilike(pat),
                     Task.notes.ilike(pat),
-                    Task.members.ilike(pat)
+                    Task.members.ilike(pat),
+                    Task.id.in_(sub_query),
+                    Task.id.in_(comm_query)
                 ))
                 if not arguments.get("include_archived"):
                     query = query.filter(Task.is_archived == False)
@@ -1321,6 +1587,168 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                     "query": q,
                     "count": len(tasks),
                     "tasks": [_enrich_task_dict(t, members_map, teams_map) for t in tasks]
+                }
+
+            # ----------------------------------------------------------------
+            # SUBTASKS & CHECKLIST TOOLS
+            # ----------------------------------------------------------------
+            elif tool_name == "list_subtasks":
+                task_obj = _resolve_target_task(arguments, Task, db, ai_tools)
+                if not task_obj:
+                    return {"success": False, "error": "Task not found. Provide a valid task ID or title."}
+                subtasks = Subtask.query.filter_by(task_id=task_obj.id).order_by(Subtask.order.asc(), Subtask.id.asc()).all()
+                return {
+                    "success": True,
+                    "task_id": task_obj.id,
+                    "task_title": task_obj.task,
+                    "count": len(subtasks),
+                    "completed_count": sum(1 for s in subtasks if s.is_completed),
+                    "subtasks": [s.to_dict() for s in subtasks]
+                }
+
+            elif tool_name == "create_subtask":
+                task_obj = _resolve_target_task(arguments, Task, db, ai_tools)
+                if not task_obj:
+                    return {"success": False, "error": "Task not found. Provide a valid task ID or title."}
+                title = str(arguments.get("title") or "").strip()
+                if not title:
+                    return {"success": False, "error": "'title' is required for subtask."}
+                max_order = db.session.query(db.func.max(Subtask.order)).filter(Subtask.task_id == task_obj.id).scalar() or 0
+                new_st = Subtask(
+                    task_id=task_obj.id,
+                    title=title,
+                    is_completed=bool(arguments.get("is_completed", False)),
+                    order=max_order + 1
+                )
+                db.session.add(new_st)
+                db.session.commit()
+                _notify_db_change(app, _bump_data_version)
+                return {
+                    "success": True,
+                    "message": f'נוספה תת-משימה "{new_st.title}" למשימה #{task_obj.id}',
+                    "subtask": new_st.to_dict(),
+                    "task": _enrich_task_dict(task_obj, members_map, teams_map)
+                }
+
+            elif tool_name == "update_subtask":
+                st_id = arguments.get("id")
+                if not st_id:
+                    return {"success": False, "error": "'id' is required to update subtask."}
+                subtask = db.session.get(Subtask, int(st_id))
+                if not subtask:
+                    return {"success": False, "error": f"Subtask #{st_id} not found."}
+                if "title" in arguments and str(arguments["title"]).strip():
+                    subtask.title = str(arguments["title"]).strip()
+                if "is_completed" in arguments and arguments["is_completed"] is not None:
+                    subtask.is_completed = bool(arguments["is_completed"])
+                if "order" in arguments and arguments["order"] is not None:
+                    try:
+                        subtask.order = int(arguments["order"])
+                    except (ValueError, TypeError):
+                        pass
+                db.session.commit()
+                _notify_db_change(app, _bump_data_version)
+                task_obj = db.session.get(Task, subtask.task_id)
+                return {
+                    "success": True,
+                    "message": f'עודכנה תת-משימה #{subtask.id}: "{subtask.title}" (הושלם: {subtask.is_completed})',
+                    "subtask": subtask.to_dict(),
+                    "task": _enrich_task_dict(task_obj, members_map, teams_map) if task_obj else None
+                }
+
+            elif tool_name == "delete_subtask":
+                st_id = arguments.get("id")
+                if not st_id:
+                    return {"success": False, "error": "'id' is required to delete subtask."}
+                subtask = db.session.get(Subtask, int(st_id))
+                if not subtask:
+                    return {"success": False, "error": f"Subtask #{st_id} not found."}
+                t_id = subtask.task_id
+                title = subtask.title
+                db.session.delete(subtask)
+                db.session.commit()
+                _notify_db_change(app, _bump_data_version)
+                task_obj = db.session.get(Task, t_id)
+                return {
+                    "success": True,
+                    "message": f'נמחקה תת-משימה #{st_id}: "{title}"',
+                    "task": _enrich_task_dict(task_obj, members_map, teams_map) if task_obj else None
+                }
+
+            # ----------------------------------------------------------------
+            # TASK COMMENTS & NOTES TOOLS
+            # ----------------------------------------------------------------
+            elif tool_name == "list_task_comments":
+                task_obj = _resolve_target_task(arguments, Task, db, ai_tools)
+                if not task_obj:
+                    return {"success": False, "error": "Task not found. Provide a valid task ID or title."}
+                comments = TaskComment.query.filter_by(task_id=task_obj.id).order_by(TaskComment.created_at.asc()).all()
+                return {
+                    "success": True,
+                    "task_id": task_obj.id,
+                    "task_title": task_obj.task,
+                    "count": len(comments),
+                    "comments": [c.to_dict() for c in comments]
+                }
+
+            elif tool_name == "create_task_comment":
+                task_obj = _resolve_target_task(arguments, Task, db, ai_tools)
+                if not task_obj:
+                    return {"success": False, "error": "Task not found. Provide a valid task ID or title."}
+                content = str(arguments.get("content") or arguments.get("comment") or "").strip()
+                if not content:
+                    return {"success": False, "error": "'content' (or 'comment') is required for comment."}
+
+                author_name = str(arguments.get("author_name") or "").strip()
+                author_avatar = str(arguments.get("author_avatar") or "").strip()
+                member_val = arguments.get("member") or arguments.get("member_id")
+                m_obj = None
+                if member_val:
+                    m_obj = _resolve_member(TeamMember, db, member_val)
+                if m_obj:
+                    if not author_name:
+                        author_name = m_obj.name_he
+                    if not author_avatar or author_avatar == "default.png":
+                        author_avatar = m_obj.avatar_path or "default.png"
+
+                if not author_name:
+                    author_name = "חבר צוות"
+                if not author_avatar:
+                    author_avatar = "default.png"
+
+                new_comment = TaskComment(
+                    task_id=task_obj.id,
+                    author_name=author_name,
+                    author_avatar=author_avatar,
+                    member_id=m_obj.id if m_obj else None,
+                    content=content
+                )
+                db.session.add(new_comment)
+                db.session.commit()
+                _notify_db_change(app, _bump_data_version)
+                return {
+                    "success": True,
+                    "message": f'נוספה הערה למשימה #{task_obj.id} מאת {author_name}',
+                    "comment": new_comment.to_dict(),
+                    "task": _enrich_task_dict(task_obj, members_map, teams_map)
+                }
+
+            elif tool_name == "delete_task_comment":
+                c_id = arguments.get("id")
+                if not c_id:
+                    return {"success": False, "error": "'id' is required to delete comment."}
+                comment = db.session.get(TaskComment, int(c_id))
+                if not comment:
+                    return {"success": False, "error": f"Comment #{c_id} not found."}
+                t_id = comment.task_id
+                db.session.delete(comment)
+                db.session.commit()
+                _notify_db_change(app, _bump_data_version)
+                task_obj = db.session.get(Task, t_id)
+                return {
+                    "success": True,
+                    "message": f"נמחקה תגובה #{c_id} ממשימה #{t_id}",
+                    "task": _enrich_task_dict(task_obj, members_map, teams_map) if task_obj else None
                 }
 
             # ----------------------------------------------------------------
@@ -1382,24 +1810,50 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                 }
 
             elif tool_name == "create_project":
-                res = ai_tools._action_create_project(arguments)
-                if res.get("status") == "error":
-                    return {"success": False, "error": res.get("error")}
+                name = (arguments.get('name') or arguments.get('name_he') or arguments.get('project_name') or arguments.get('title') or '').strip()
+                if not name:
+                    return {"success": False, "error": "שם פרויקט הוא שדה חובה"}
+
+                existing = Project.query.filter_by(name=name).first()
+                if existing:
+                    return {"success": False, "error": f'פרויקט בשם "{name}" כבר קיים'}
+
+                teams_to_add = []
+                teams_input = arguments.get('teams') or arguments.get('team') or arguments.get('team_name') or arguments.get('team_ids')
+                if teams_input:
+                    raw_list = teams_input if isinstance(teams_input, list) else [teams_input]
+                    for tv in raw_list:
+                        t_obj = _resolve_team(Team, db, tv)
+                        if t_obj and t_obj not in teams_to_add:
+                            teams_to_add.append(t_obj)
+
+                if not teams_to_add:
+                    first_team = Team.query.first()
+                    if first_team:
+                        teams_to_add.append(first_team)
+
+                project = Project(name=name, teams=teams_to_add)
+                db.session.add(project)
+                db.session.commit()
                 _notify_db_change(app, _bump_data_version)
-                p_obj = db.session.get(Project, res.get("project_id"))
+                teams_str = ', '.join([t.name_he for t in project.teams])
                 return {
                     "success": True,
-                    "message": res.get("description"),
-                    "project": p_obj.to_dict() if p_obj else None
+                    "message": f'נוצר פרויקט חדש: "{project.name}" (צוותים: {teams_str})',
+                    "project": project.to_dict(),
+                    "project_id": project.id
                 }
 
             elif tool_name == "update_project":
-                proj_val = arguments.get("id") or arguments.get("name")
+                proj_val = arguments.get("id") or arguments.get("name") or arguments.get("project_id") or arguments.get("project") or arguments.get("old_name")
                 p_obj = ai_tools.resolve_project(proj_val)
                 if not p_obj:
                     return {"success": False, "error": "Project not found."}
 
                 new_name = (arguments.get("new_name") or "").strip()
+                if not new_name and "name" in arguments and proj_val and str(arguments.get("name")).strip() != p_obj.name:
+                    new_name = str(arguments.get("name")).strip()
+
                 if new_name and new_name != p_obj.name:
                     existing = Project.query.filter_by(name=new_name).first()
                     if existing and existing.id != p_obj.id:
@@ -1410,53 +1864,76 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                         t.project = new_name
                         t.project_id = p_obj.id
 
-                if "teams" in arguments and arguments["teams"] is not None:
+                teams_input = arguments.get("teams") or arguments.get("team") or arguments.get("team_name") or arguments.get("team_ids")
+                if teams_input is not None:
+                    raw_list = teams_input if isinstance(teams_input, list) else [teams_input]
                     new_teams = []
-                    for tv in arguments["teams"]:
+                    for tv in raw_list:
                         t_obj = _resolve_team(Team, db, tv)
                         if t_obj and t_obj not in new_teams:
                             new_teams.append(t_obj)
-                    if new_teams:
+                    is_add = arguments.get("add_team", True) or ("teams" not in arguments and "team_ids" not in arguments)
+                    if is_add:
+                        for t in new_teams:
+                            if t not in p_obj.teams:
+                                p_obj.teams.append(t)
+                    else:
                         p_obj.teams = new_teams
                 else:
-                    if arguments.get("add_teams"):
-                        for tv in arguments["add_teams"]:
+                    if arguments.get("add_teams") or arguments.get("add_team"):
+                        add_items = arguments.get("add_teams") or arguments.get("add_team")
+                        raw_list = add_items if isinstance(add_items, list) else [add_items]
+                        for tv in raw_list:
                             t_obj = _resolve_team(Team, db, tv)
                             if t_obj and t_obj not in p_obj.teams:
                                 p_obj.teams.append(t_obj)
-                    if arguments.get("remove_teams"):
-                        for tv in arguments["remove_teams"]:
+                    if arguments.get("remove_teams") or arguments.get("remove_team"):
+                        rem_items = arguments.get("remove_teams") or arguments.get("remove_team")
+                        raw_list = rem_items if isinstance(rem_items, list) else [rem_items]
+                        for tv in raw_list:
                             t_obj = _resolve_team(Team, db, tv)
                             if t_obj and t_obj in p_obj.teams and len(p_obj.teams) > 1:
                                 p_obj.teams.remove(t_obj)
 
                 db.session.commit()
                 _notify_db_change(app, _bump_data_version)
+                teams_str = ', '.join([t.name_he for t in p_obj.teams])
                 return {
                     "success": True,
-                    "message": f'עודכן פרויקט "{p_obj.name}"',
+                    "message": f'עודכן פרויקט "{p_obj.name}" (צוותים: {teams_str})',
                     "project": p_obj.to_dict()
                 }
 
-            elif tool_name == "archive_project":
-                is_arch = arguments.get("is_archived", True)
-                res = ai_tools._action_archive_project(arguments, is_archived=bool(is_arch))
-                if res.get("status") == "error":
-                    return {"success": False, "error": res.get("error")}
+            elif tool_name in ("archive_project", "unarchive_project"):
+                proj_val = arguments.get("id") or arguments.get("name") or arguments.get("project_id") or arguments.get("project")
+                project = ai_tools.resolve_project(proj_val)
+                if not project:
+                    return {"success": False, "error": "פרויקט לא נמצא"}
+                is_arch = arguments.get("is_archived", True) if tool_name == "archive_project" else False
+                if "is_archived" in arguments:
+                    is_arch = bool(arguments["is_archived"])
+                project.is_archived = is_arch
+                db.session.commit()
                 _notify_db_change(app, _bump_data_version)
+                action_text = 'הועבר לארכיון' if is_arch else 'שוחזר מהארכיון'
                 return {
                     "success": True,
-                    "message": res.get("description")
+                    "message": f'פרויקט "{project.name}" {action_text}',
+                    "project": project.to_dict()
                 }
 
             elif tool_name == "delete_project":
-                res = ai_tools._action_delete_project(arguments)
-                if res.get("status") == "error":
-                    return {"success": False, "error": res.get("error")}
+                proj_val = arguments.get("id") or arguments.get("name") or arguments.get("project_id") or arguments.get("project")
+                project = ai_tools.resolve_project(proj_val)
+                if not project:
+                    return {"success": False, "error": "פרויקט למחיקה לא נמצא"}
+                p_name = project.name
+                db.session.delete(project)
+                db.session.commit()
                 _notify_db_change(app, _bump_data_version)
                 return {
                     "success": True,
-                    "message": res.get("description")
+                    "message": f'נמחק פרויקט: "{p_name}"'
                 }
 
             # ----------------------------------------------------------------
@@ -1477,15 +1954,24 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                 }
 
             elif tool_name == "create_team":
-                res = ai_tools._action_create_team(arguments)
-                if res.get("status") == "error":
-                    return {"success": False, "error": res.get("error")}
+                name_en = (arguments.get('name_en') or arguments.get('name') or '').strip().lower()
+                name_he = (arguments.get('name_he') or arguments.get('name') or '').strip()
+                if not name_en or not name_he:
+                    return {"success": False, "error": "שם צוות באנגלית ובעברית הם שדות חובה"}
+
+                existing = Team.query.filter((Team.name_en == name_en) | (Team.name_he == name_he)).first()
+                if existing:
+                    return {"success": False, "error": f'צוות עם שם זה כבר קיים ({name_he} / {name_en})'}
+
+                team = Team(name_en=name_en, name_he=name_he)
+                db.session.add(team)
+                db.session.commit()
                 _notify_db_change(app, _bump_data_version)
-                t_obj = db.session.get(Team, res.get("team_id"))
                 return {
                     "success": True,
-                    "message": res.get("description"),
-                    "team": t_obj.to_dict() if t_obj else None
+                    "message": f'נוצר צוות חדש: "{team.name_he}" ({team.name_en})',
+                    "team": team.to_dict(),
+                    "team_id": team.id
                 }
 
             elif tool_name == "update_team":
@@ -1810,15 +2296,41 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                 }
 
             elif tool_name == "create_special_day":
-                res = ai_tools._action_create_special_day(arguments)
-                if res.get("status") == "error":
-                    return {"success": False, "error": res.get("error")}
+                date_val = ai_tools.parse_date_value(arguments.get('date'))
+                if not date_val:
+                    return {"success": False, "error": "תאריך לא תקין או חסר"}
+
+                name = (arguments.get('name') or arguments.get('title') or arguments.get('description') or 'יום מיוחד').strip()
+                day_type = (arguments.get('type') or 'holiday').strip().lower()
+
+                existing = SpecialDay.query.filter_by(date=date_val).first()
+                if existing:
+                    existing.name = name
+                    existing.type = day_type
+                    existing.description = arguments.get('description', '')
+                    db.session.commit()
+                    _notify_db_change(app, _bump_data_version)
+                    return {
+                        "success": True,
+                        "message": f'עודכן יום מיוחד: {name} בתאריך {date_val.strftime("%d/%m/%Y")}',
+                        "special_day": existing.to_dict(),
+                        "special_day_id": existing.id
+                    }
+
+                sd = SpecialDay(
+                    date=date_val,
+                    name=name,
+                    type=day_type,
+                    description=arguments.get('description', '')
+                )
+                db.session.add(sd)
+                db.session.commit()
                 _notify_db_change(app, _bump_data_version)
-                sd = db.session.get(SpecialDay, res.get("special_day_id"))
                 return {
                     "success": True,
-                    "message": res.get("description"),
-                    "special_day": sd.to_dict() if sd else None
+                    "message": f'נוסף יום מיוחד: {name} בתאריך {date_val.strftime("%d/%m/%Y")}',
+                    "special_day": sd.to_dict(),
+                    "special_day_id": sd.id
                 }
 
             elif tool_name == "delete_special_day":
@@ -1902,7 +2414,9 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                     "projects": Project,
                     "members": TeamMember,
                     "tasks": Task,
-                    "special_days": SpecialDay
+                    "special_days": SpecialDay,
+                    "subtasks": Subtask,
+                    "task_comments": TaskComment
                 }
                 if table_name == "all":
                     full_data = {name: [r.to_dict() for r in model.query.all()] for name, model in models_map.items()}
@@ -1976,6 +2490,37 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                         )
                         db.session.merge(t) if item.get("id") else db.session.add(t)
                         count += 1
+                elif table_name == "subtasks":
+                    for item in records:
+                        title = str(item.get("title", "")).strip()
+                        t_id = item.get("task_id")
+                        if not title or not t_id:
+                            continue
+                        s = Subtask(
+                            id=item.get("id"),
+                            task_id=t_id,
+                            title=title,
+                            is_completed=bool(item.get("is_completed", False)),
+                            order=int(item.get("order", 0))
+                        )
+                        db.session.merge(s) if item.get("id") else db.session.add(s)
+                        count += 1
+                elif table_name == "task_comments":
+                    for item in records:
+                        content = str(item.get("content", "")).strip()
+                        t_id = item.get("task_id")
+                        if not content or not t_id:
+                            continue
+                        c = TaskComment(
+                            id=item.get("id"),
+                            task_id=t_id,
+                            author_name=str(item.get("author_name", "חבר צוות")).strip() or "חבר צוות",
+                            author_avatar=str(item.get("author_avatar", "default.png")).strip() or "default.png",
+                            member_id=item.get("member_id"),
+                            content=content
+                        )
+                        db.session.merge(c) if item.get("id") else db.session.add(c)
+                        count += 1
                 else:
                     return {"success": False, "error": f"Unsupported restore table: {table_name}"}
 
@@ -1986,6 +2531,36 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                     "table": table_name,
                     "restored_count": count
                 }
+
+            elif tool_name == "list_database_backups":
+                import backup_service
+                backups = backup_service.list_backups(app.instance_path)
+                return {
+                    "success": True,
+                    "backups": backups,
+                    "count": len(backups),
+                    "retention_limit": 14,
+                    "auto_backup_time": "23:00"
+                }
+
+            elif tool_name == "create_database_backup":
+                import backup_service
+                b_type = arguments.get("backup_type", "manual")
+                new_backup = backup_service.create_backup(backup_type=b_type, keep_count=14, app_instance_path=app.instance_path)
+                _notify_db_change(app, _bump_data_version)
+                return {
+                    "success": True,
+                    "message": "Database backup created successfully",
+                    "backup": new_backup
+                }
+
+            elif tool_name == "restore_database_backup":
+                import backup_service
+                filename = arguments.get("filename")
+                if not filename:
+                    return {"success": False, "error": "'filename' parameter is required"}
+                res = backup_service.restore_backup(filename, app=app, db=db, on_version_bump=lambda: _notify_db_change(app, _bump_data_version))
+                return res
 
             else:
                 return {"success": False, "error": f"Unknown tool: {tool_name}"}

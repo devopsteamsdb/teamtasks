@@ -4,6 +4,7 @@ export const state = {
     teams: [],
     members: [],
     projects: [],
+    specialDays: [],
     currentTaskItem: null,
     currentProjectId: null,
     activeTeamFilter: null,
@@ -11,8 +12,13 @@ export const state = {
     statusFilter: 'all',
     priorityFilter: 'all',
     searchTimeout: null,
-    lastUpdateTimestamp: 0
+    lastUpdateTimestamp: 0,
+    viewMode: 'grid'
 };
+
+export function setViewMode(mode) {
+    state.viewMode = mode;
+}
 
 export function setTeams(newTeams) {
     state.teams = newTeams;
@@ -24,6 +30,10 @@ export function setMembers(newMembers) {
 
 export function setProjects(newProjects) {
     state.projects = newProjects;
+}
+
+export function setSpecialDays(newSpecialDays) {
+    state.specialDays = newSpecialDays;
 }
 
 export function setCurrentProjectId(id) {

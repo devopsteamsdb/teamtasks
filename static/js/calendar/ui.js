@@ -2,6 +2,15 @@
 import { state, setCurrentTaskId } from './state.js';
 import { hebrewDays, hebrewMonths, priorityColors } from './constants.js';
 import { getWeekStart, formatDateToISO, formatDateDisplay, parseDateFromISO } from './utils.js';
+import {
+    fetchTaskSubtasks,
+    createSubtask,
+    updateSubtask,
+    deleteSubtask,
+    fetchTaskComments,
+    createTaskComment,
+    deleteTaskComment
+} from '../api.js';
 import * as Events from './events.js'; // Circular dependency risk? Events uses UI, UI might need Events for attaching listener logic?
 // Better to pass callbacks or function references.
 
@@ -48,6 +57,19 @@ export function updateDOMElements() {
     elements.filterStatus = document.getElementById('filterStatus');
     elements.filterPriority = document.getElementById('filterPriority');
     elements.clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+    // Subtasks & Comments
+    elements.subtasksList = document.getElementById('subtasksList');
+    elements.subtaskProgressText = document.getElementById('subtaskProgressText');
+    elements.subtaskProgressBar = document.getElementById('subtaskProgressBar');
+    elements.newSubtaskInput = document.getElementById('newSubtaskInput');
+    elements.addSubtaskBtn = document.getElementById('addSubtaskBtn');
+
+    elements.commentsList = document.getElementById('commentsList');
+    elements.commentCounter = document.getElementById('commentCounter');
+    elements.commentAuthorSelect = document.getElementById('commentAuthorSelect');
+    elements.newCommentInput = document.getElementById('newCommentInput');
+    elements.addCommentBtn = document.getElementById('addCommentBtn');
 }
 
 export function initializeFlatpickr() {
@@ -349,7 +371,125 @@ export function openTaskModal(task) {
     // Populate Teams and Members
     populateTaskModalDropdowns(task);
 
+    if (elements.newSubtaskInput) elements.newSubtaskInput.value = '';
+    if (elements.newCommentInput) elements.newCommentInput.value = '';
+
+    loadAndRenderTaskSubtasks(task.id);
+    loadAndRenderTaskComments(task.id);
+
     if (elements.taskModal) elements.taskModal.style.display = 'block';
+}
+
+export function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+export async function loadAndRenderTaskSubtasks(taskId) {
+    if (!elements.subtasksList) return;
+    elements.subtasksList.innerHTML = '<div class="empty-subtasks-text">טוען צ\'ק-ליסט...</div>';
+    try {
+        const subtasks = await fetchTaskSubtasks(taskId);
+        renderSubtasks(subtasks, taskId);
+    } catch (err) {
+        console.error('Failed to load subtasks:', err);
+        elements.subtasksList.innerHTML = '<div class="empty-subtasks-text">שגיאה בטעינת צ\'ק-ליסט</div>';
+    }
+}
+
+export function renderSubtasks(subtasks, taskId) {
+    if (!elements.subtasksList) return;
+    const list = Array.isArray(subtasks) ? subtasks : [];
+    const total = list.length;
+    const completed = list.filter(s => s.is_completed).length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    if (elements.subtaskProgressText) {
+        elements.subtaskProgressText.textContent = `${completed}/${total} (${percent}%)`;
+    }
+    if (elements.subtaskProgressBar) {
+        elements.subtaskProgressBar.style.width = `${percent}%`;
+    }
+
+    if (total === 0) {
+        elements.subtasksList.innerHTML = '<div class="empty-subtasks-text">אין עדיין פריטים בצ\'ק-ליסט. הוסף פריט ראשון למטה.</div>';
+        return;
+    }
+
+    elements.subtasksList.innerHTML = list.map(item => `
+        <div class="subtask-item ${item.is_completed ? 'completed' : ''}" data-id="${item.id}" data-task-id="${taskId}">
+            <input type="checkbox" class="subtask-checkbox" ${item.is_completed ? 'checked' : ''} data-id="${item.id}" title="סמן כהושלם">
+            <span class="subtask-title">${escapeHtml(item.title)}</span>
+            <button type="button" class="subtask-delete-btn" data-id="${item.id}" title="מחק פריט">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+export async function loadAndRenderTaskComments(taskId) {
+    if (!elements.commentsList) return;
+    elements.commentsList.innerHTML = '<div class="empty-comments-text">טוען תגובות...</div>';
+    populateCommentAuthors();
+    try {
+        const comments = await fetchTaskComments(taskId);
+        renderComments(comments, taskId);
+    } catch (err) {
+        console.error('Failed to load comments:', err);
+        elements.commentsList.innerHTML = '<div class="empty-comments-text">שגיאה בטעינת תגובות</div>';
+    }
+}
+
+export function populateCommentAuthors() {
+    if (!elements.commentAuthorSelect) return;
+    const members = state.members || [];
+    const savedAuthor = localStorage.getItem('teamtasks_last_author') || '';
+
+    let options = '<option value="">בחר/י מגיב/ה...</option>';
+    options += members.map(m => {
+        const isMatch = (savedAuthor && (savedAuthor === String(m.id) || savedAuthor === m.name_he || savedAuthor === m.name_en));
+        return `<option value="${m.id}" data-name="${m.name_he}" data-avatar="${m.avatar_path || 'default.png'}" ${isMatch ? 'selected' : ''}>${m.name_he}</option>`;
+    }).join('');
+    options += `<option value="guest" data-name="חבר צוות" data-avatar="default.png" ${savedAuthor === 'guest' ? 'selected' : ''}>חבר צוות (אורח)</option>`;
+    elements.commentAuthorSelect.innerHTML = options;
+}
+
+export function renderComments(comments, taskId) {
+    if (!elements.commentsList) return;
+    const list = Array.isArray(comments) ? comments : [];
+    const count = list.length;
+    if (elements.commentCounter) {
+        elements.commentCounter.textContent = count;
+    }
+
+    if (count === 0) {
+        elements.commentsList.innerHTML = '<div class="empty-comments-text">אין עדיין תגובות למשימה זו. כתוב את התגובה הראשונה למטה!</div>';
+        return;
+    }
+
+    elements.commentsList.innerHTML = list.map(c => `
+        <div class="comment-item" data-id="${c.id}" data-task-id="${taskId}">
+            <img src="/uploads/avatars/${c.author_avatar || 'default.png'}"
+                 class="comment-avatar"
+                 onerror="this.src='/static/images/default.png'"
+                 alt="${escapeHtml(c.author_name)}">
+            <div class="comment-content-wrap">
+                <div class="comment-header">
+                    <span class="comment-author">${escapeHtml(c.author_name)}</span>
+                    <span class="comment-date">${c.created_at || ''}</span>
+                    <button type="button" class="comment-delete-btn" data-id="${c.id}" title="מחק תגובה">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="comment-text">${escapeHtml(c.content)}</div>
+            </div>
+        </div>
+    `).join('');
 }
 
 function populateTaskModalDropdowns(task) {

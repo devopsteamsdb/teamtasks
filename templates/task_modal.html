@@ -1,0 +1,142 @@
+<!-- Edit Task Modal -->
+<div id="taskModal" class="modal">
+    <div class="modal-content modal-content-wide">
+        <div class="modal-header-bar">
+            <div class="modal-header-title-group">
+                <h2 id="modalTitle">עריכת משימה</h2>
+            </div>
+            <span class="close-modal" title="סגור">&times;</span>
+        </div>
+
+        <div class="task-modal-layout-grid">
+            <!-- Primary Column (Right in RTL): Title, Notes, Checklist, Comments -->
+            <div class="task-modal-col-primary">
+                <div class="form-group title-form-group">
+                    <label for="taskNameInput">שם המשימה:</label>
+                    <input type="text" id="taskNameInput" class="form-control task-name-large-input" placeholder="שם המשימה...">
+                </div>
+                
+                <div class="form-group notes-form-group">
+                    <label for="taskNotes">תיאור והערות:</label>
+                    <textarea id="taskNotes" rows="4" class="form-control" placeholder="הוסף הערות או פירוט כאן..."></textarea>
+                </div>
+
+                <!-- Subtasks (Checklist) Section -->
+                <div class="task-modal-section" id="taskSubtasksSection">
+                    <div class="section-header">
+                        <div class="section-title-wrap">
+                            <svg class="section-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                            <span class="section-title">צ'ק-ליסט ותתי-משימות</span>
+                            <span class="section-counter" id="subtaskProgressText">0/0</span>
+                        </div>
+                        <div class="subtask-progress-bar-wrap">
+                            <div class="subtask-progress-bar-fill" id="subtaskProgressBar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="subtasks-list" id="subtasksList">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <div class="add-subtask-form">
+                        <input type="text" id="newSubtaskInput" class="form-control" placeholder="הוסף פריט צ'ק-ליסט חדש (Enter לשמירה)...">
+                        <button type="button" id="addSubtaskBtn" class="btn btn-secondary btn-sm">הוסף</button>
+                    </div>
+                </div>
+
+                <!-- Task Comments Section -->
+                <div class="task-modal-section" id="taskCommentsSection">
+                    <div class="section-header">
+                        <div class="section-title-wrap">
+                            <svg class="section-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            <span class="section-title">תגובות ועדכוני צוות</span>
+                            <span class="section-counter" id="commentCounter">0</span>
+                        </div>
+                    </div>
+                    <div class="comments-list" id="commentsList">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <div class="add-comment-box">
+                        <div class="comment-author-select-row">
+                            <label for="commentAuthorSelect">מגיב/ה:</label>
+                            <select id="commentAuthorSelect" class="form-control author-select">
+                                <!-- Populated dynamically from team members -->
+                            </select>
+                        </div>
+                        <div class="comment-input-row">
+                            <textarea id="newCommentInput" class="form-control" rows="2" placeholder="כתוב תגובה או עדכון על המשימה..."></textarea>
+                            <button type="button" id="addCommentBtn" class="btn btn-primary btn-sm">פרסם תגובה</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Secondary Column (Left in RTL): Properties & Actions Sidebar -->
+            <div class="task-modal-col-secondary">
+                <div class="task-modal-card-box">
+                    <h3 class="side-box-title">פרטי משימה</h3>
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="taskStatus">סטטוס:</label>
+                            <select id="taskStatus" class="form-control">
+                                <option value="status-notstarted">טרם החל</option>
+                                <option value="status-inprogress">בתהליך</option>
+                                <option value="status-done">הושלם</option>
+                                <option value="status-delayed">מעוכב</option>
+                            </select>
+                        </div>
+                        <div class="form-group half">
+                            <label for="taskPriority">עדיפות:</label>
+                            <select id="taskPriority" class="form-control">
+                                <option value="none">ללא</option>
+                                <option value="low">נמוכה</option>
+                                <option value="medium">בינונית</option>
+                                <option value="high">גבוהה</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="taskProject">פרויקט:</label>
+                            <select id="taskProject" class="form-control">
+                                <!-- Populated dynamically by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group half">
+                            <label for="taskTeam">צוות:</label>
+                            <select id="taskTeam" class="form-control">
+                                <!-- Populated dynamically by JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="taskStartDate">תאריך התחלה:</label>
+                            <input type="text" id="taskStartDate" class="form-control" placeholder="dd/mm/yyyy">
+                        </div>
+                        <div class="form-group half">
+                            <label for="taskEndDate">תאריך סיום:</label>
+                            <input type="text" id="taskEndDate" class="form-control" placeholder="dd/mm/yyyy">
+                        </div>
+                    </div>
+
+                    <div class="form-group members-form-group">
+                        <label>חברי צוות משויכים:</label>
+                        <div class="members-select side-members-select">
+                            <!-- Populated dynamically by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions in sidebar -->
+                <div class="modal-actions-sidebar">
+                    <button id="saveBtn" class="btn btn-primary btn-block">שמור שינויים</button>
+                    <div class="modal-actions-secondary-row">
+                        <button id="archiveBtn" class="btn btn-secondary">העבר לארכיון</button>
+                        <button id="deleteBtn" class="btn btn-danger">מחק משימה</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -4,6 +4,8 @@ import * as UI from './ui.js';
 import * as API from './api.js';
 import * as Utils from './utils.js';
 import { notifyDataChanged } from './live_sync.js';
+import { initKanbanDragAndDrop } from './kanban.js';
+import { prevPeriod, nextPeriod, resetToToday } from './gantt.js';
 
 let searchTimeout;
 
@@ -22,34 +24,21 @@ export function attachGlobalListeners() {
 
     window.addEventListener('mouseup', (e) => {
         // Only close if both mousedown and mouseup happened on the modal backdrop (not the content)
-        if (UI.elements.modal && mouseDownTarget === UI.elements.modal && e.target === UI.elements.modal) {
-            UI.elements.modal.style.display = 'none';
-        }
-        if (UI.elements.createModal && mouseDownTarget === UI.elements.createModal && e.target === UI.elements.createModal) {
-            UI.elements.createModal.style.display = 'none';
-        }
-        if (UI.elements.projectModal && mouseDownTarget === UI.elements.projectModal && e.target === UI.elements.projectModal) {
-            UI.elements.projectModal.style.display = 'none';
+        if (
+            (UI.elements.modal && mouseDownTarget === UI.elements.modal && e.target === UI.elements.modal) ||
+            (UI.elements.createModal && mouseDownTarget === UI.elements.createModal && e.target === UI.elements.createModal) ||
+            (UI.elements.projectModal && mouseDownTarget === UI.elements.projectModal && e.target === UI.elements.projectModal)
+        ) {
+            UI.closeModals();
         }
         mouseDownTarget = null;
     });
 
-    // Navbar calendar link logic
-    const navCalendar = document.getElementById('navCalendarLink');
-    if (navCalendar) {
-        navCalendar.addEventListener('click', () => {
-            if (state.activeTeamFilter === 'archive') {
-                localStorage.setItem('activeTeamFilter', 'archive');
-            } else {
-                if (localStorage.getItem('activeTeamFilter') === 'archive') {
-                    localStorage.removeItem('activeTeamFilter');
-                }
-                if (state.activeTeamFilter) {
-                    localStorage.setItem('activeTeamFilter', state.activeTeamFilter);
-                }
-            }
-        });
-    }
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && UI.isAnyModalOpen()) {
+            UI.closeModals();
+        }
+    });
 }
 
 export function attachEventListeners() {
@@ -177,6 +166,30 @@ export function attachEventListeners() {
         UI.elements.deleteBtn.onclick = handleDeleteTask;
     }
 
+    // Subtasks event listeners
+    if (UI.elements.addSubtaskBtn) {
+        UI.elements.addSubtaskBtn.onclick = handleAddSubtask;
+    }
+    if (UI.elements.newSubtaskInput) {
+        UI.elements.newSubtaskInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddSubtask();
+            }
+        };
+    }
+    if (UI.elements.subtasksList) {
+        UI.elements.subtasksList.onclick = handleSubtaskListClick;
+    }
+
+    // Comments event listeners
+    if (UI.elements.addCommentBtn) {
+        UI.elements.addCommentBtn.onclick = handleAddComment;
+    }
+    if (UI.elements.commentsList) {
+        UI.elements.commentsList.onclick = handleCommentListClick;
+    }
+
     // Search
     if (UI.elements.searchBox) {
         UI.elements.searchBox.oninput = (e) => {
@@ -297,16 +310,41 @@ export function attachEventListeners() {
         };
     }
 
-    // Nav Tasks Link - Keep filters intact across site
-    const navTasksLink = document.getElementById('navTasksLink');
-    if (navTasksLink) {
-        navTasksLink.onclick = (e) => {
-            if (window.location.pathname === '/') {
-                // Already on task board - keep all filters intact without full page reload
+    // Navbar View Mode Tabs (Grid / Kanban / Gantt)
+    document.querySelectorAll('.navbar-nav-tabs .navbar-brand-link').forEach(btn => {
+        btn.onclick = (e) => {
+            const mode = btn.dataset.view;
+            if (mode && window.location.pathname === '/') {
                 e.preventDefault();
+                UI.switchViewMode(mode);
+                const url = new URL(window.location);
+                url.searchParams.set('view', mode);
+                window.history.replaceState({}, '', url);
             }
         };
-    }
+    });
+
+    // Kanban Column Add Task Buttons
+    document.querySelectorAll('.kanban-col-add-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const status = btn.dataset.status;
+            UI.openCreateModal(null, null, status);
+        };
+    });
+
+    // Initialize Kanban HTML5 Drag & Drop
+    initKanbanDragAndDrop();
+
+    // Gantt Navigation Controls
+    const ganttPrev = document.getElementById('ganttPrevBtn');
+    if (ganttPrev) ganttPrev.onclick = () => prevPeriod();
+
+    const ganttNext = document.getElementById('ganttNextBtn');
+    if (ganttNext) ganttNext.onclick = () => nextPeriod();
+
+    const ganttToday = document.getElementById('ganttTodayBtn');
+    if (ganttToday) ganttToday.onclick = () => resetToToday();
 }
 
 async function handleSaveProject() {
@@ -665,4 +703,158 @@ async function handleTeamFilterClick(btn) {
     setActiveMemberFilter(null);
     localStorage.removeItem('activeMemberFilter');
     UI.applyFilters();
+}
+
+// Subtasks & Comments Event Handlers
+function getCurrentTaskId() {
+    if (state.currentTaskItem && state.currentTaskItem.dataset.id) {
+        return state.currentTaskItem.dataset.id;
+    }
+    if (UI.elements.modal && UI.elements.modal.dataset.currentTaskId) {
+        return UI.elements.modal.dataset.currentTaskId;
+    }
+    return null;
+}
+
+async function handleAddSubtask() {
+    const taskId = getCurrentTaskId();
+    if (!taskId) return;
+    const input = UI.elements.newSubtaskInput;
+    if (!input) return;
+    const title = input.value.trim();
+    if (!title) return;
+
+    try {
+        const res = await API.createSubtask(taskId, title);
+        if (res.success) {
+            input.value = '';
+            await UI.loadAndRenderTaskSubtasks(taskId);
+            notifyDataChanged();
+        } else {
+            alert('שגיאה בהוספת פריט: ' + (res.error || 'Unknown error'));
+        }
+    } catch (err) {
+        console.error('Failed to create subtask:', err);
+        alert('שגיאה ביצירת פריט צ\'ק-ליסט');
+    }
+}
+
+async function handleSubtaskListClick(e) {
+    const taskId = getCurrentTaskId();
+    if (!taskId) return;
+
+    // Toggle checkbox
+    const checkbox = e.target.closest('.subtask-checkbox');
+    if (checkbox) {
+        const subtaskId = checkbox.dataset.id;
+        const itemElem = checkbox.closest('.subtask-item');
+        const isCompleted = checkbox.checked;
+
+        if (itemElem) {
+            itemElem.classList.toggle('completed', isCompleted);
+        }
+
+        try {
+            await API.updateSubtask(subtaskId, { is_completed: isCompleted });
+            await UI.loadAndRenderTaskSubtasks(taskId);
+            notifyDataChanged();
+        } catch (err) {
+            console.error('Failed to toggle subtask:', err);
+            checkbox.checked = !isCompleted;
+            if (itemElem) itemElem.classList.toggle('completed', !isCompleted);
+        }
+        return;
+    }
+
+    // Delete subtask
+    const deleteBtn = e.target.closest('.subtask-delete-btn');
+    if (deleteBtn) {
+        e.stopPropagation();
+        const subtaskId = deleteBtn.dataset.id;
+        try {
+            const res = await API.deleteSubtask(subtaskId);
+            if (res.success) {
+                await UI.loadAndRenderTaskSubtasks(taskId);
+                notifyDataChanged();
+            }
+        } catch (err) {
+            console.error('Failed to delete subtask:', err);
+            alert('שגיאה במחיקת פריט');
+        }
+    }
+}
+
+async function handleAddComment() {
+    const taskId = getCurrentTaskId();
+    if (!taskId) return;
+    const textarea = UI.elements.newCommentInput;
+    if (!textarea) return;
+    const content = textarea.value.trim();
+    if (!content) {
+        textarea.focus();
+        return;
+    }
+
+    const select = UI.elements.commentAuthorSelect;
+    let authorName = 'חבר צוות';
+    let authorAvatar = 'default.png';
+    let memberId = null;
+
+    if (select && select.value) {
+        if (select.value === 'guest') {
+            authorName = 'חבר צוות';
+            authorAvatar = 'default.png';
+            localStorage.setItem('teamtasks_last_author', 'guest');
+        } else {
+            const selectedOpt = select.selectedOptions[0];
+            if (selectedOpt) {
+                authorName = selectedOpt.dataset.name || selectedOpt.textContent.trim();
+                authorAvatar = selectedOpt.dataset.avatar || 'default.png';
+                memberId = parseInt(select.value);
+                localStorage.setItem('teamtasks_last_author', String(memberId));
+            }
+        }
+    }
+
+    try {
+        const payload = {
+            content: content,
+            author_name: authorName,
+            author_avatar: authorAvatar,
+            member_id: memberId
+        };
+        const res = await API.createTaskComment(taskId, payload);
+        if (res.success) {
+            textarea.value = '';
+            await UI.loadAndRenderTaskComments(taskId);
+            notifyDataChanged();
+        } else {
+            alert('שגיאה בשמירת תגובה: ' + (res.error || 'Unknown error'));
+        }
+    } catch (err) {
+        console.error('Failed to create comment:', err);
+        alert('שגיאה בהוספת תגובה');
+    }
+}
+
+async function handleCommentListClick(e) {
+    const taskId = getCurrentTaskId();
+    if (!taskId) return;
+
+    const deleteBtn = e.target.closest('.comment-delete-btn');
+    if (deleteBtn) {
+        e.stopPropagation();
+        if (!confirm('האם למחוק תגובה זו?')) return;
+        const commentId = deleteBtn.dataset.id;
+        try {
+            const res = await API.deleteTaskComment(commentId);
+            if (res.success) {
+                await UI.loadAndRenderTaskComments(taskId);
+                notifyDataChanged();
+            }
+        } catch (err) {
+            console.error('Failed to delete comment:', err);
+            alert('שגיאה במחיקת תגובה');
+        }
+    }
 }

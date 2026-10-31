@@ -16,11 +16,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads/avatars'
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
 # Import models and initialize db
-from models import db, Team, TeamMember, Task, SpecialDay, Project, project_teams, member_teams
+from models import db, Team, TeamMember, Task, SpecialDay, Project, project_teams, member_teams, Subtask, TaskComment
+from datetime import datetime, date, timedelta
 db.init_app(app)
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Start automatic daily database backup scheduler (daily at 23:00, keep 14 versions)
+import backup_service
+backup_service.start_daily_backup_scheduler(app=app, target_hour=23, target_minute=0, keep_count=14)
 
 # Route to serve uploaded files
 @app.route('/uploads/<path:filename>')
@@ -82,6 +87,15 @@ def inject_now():
     return {'now': datetime.now()}
 
 
+@app.after_request
+def add_cache_headers(response):
+    if request.path in ['/', '/api/version'] or request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
 @app.route('/api/version')
 def api_version():
     global _last_data_version
@@ -99,6 +113,39 @@ def api_version():
         return response
     except Exception:
         return jsonify({'timestamp': _last_data_version})
+
+# API endpoint to get tasks
+@app.route('/api/tasks', methods=['GET'])
+def api_get_tasks():
+    status = request.args.get('status')
+    priority = request.args.get('priority')
+    search = request.args.get('search')
+    project_id = request.args.get('project_id')
+    team_id = request.args.get('team_id')
+    mode = request.args.get('mode', 'active')
+    include_archived = request.args.get('include_archived', '').lower() in ('true', '1')
+    
+    query = Task.query
+    if not include_archived:
+        if mode == 'active':
+            query = query.filter_by(is_archived=False)
+        elif mode == 'archive':
+            query = query.filter_by(is_archived=True)
+        
+    if status and status != 'all':
+        query = query.filter_by(status=status)
+    if priority and priority != 'all':
+        query = query.filter_by(priority=priority)
+    if project_id:
+        query = query.filter_by(project_id=project_id)
+    if team_id:
+        query = query.filter_by(team_id=team_id)
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(Task.task.ilike(search_term) | Task.notes.ilike(search_term))
+        
+    tasks = query.all()
+    return jsonify([t.to_dict() for t in tasks])
 
 # API endpoint to add a task (AJAX)
 @app.route('/api/tasks', methods=['POST'])
@@ -169,7 +216,7 @@ def api_add_task():
     db.session.add(new_task)
     db.session.commit()
     
-    return jsonify({'success': True, 'id': new_task.id})
+    return jsonify({'success': True, 'id': new_task.id, 'task': new_task.to_dict()}), 200
 
 # API endpoint to get or edit a task (AJAX)
 @app.route('/api/tasks/<int:id>', methods=['GET', 'PUT'])
@@ -239,9 +286,100 @@ def api_edit_task(id):
     
     db.session.commit()
     
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'task': task.to_dict()})
 
 # API endpoint to get archived tasks
+
+# =========================================================================
+# Subtasks (Checklist) & Comments API Endpoints
+# =========================================================================
+
+@app.route('/api/tasks/<int:id>/subtasks', methods=['GET', 'POST'])
+def api_task_subtasks(id):
+    task = db.get_or_404(Task, id)
+    if request.method == 'POST':
+        data = request.json or {}
+        title = data.get('title', '').strip()
+        if not title:
+            return jsonify({'success': False, 'error': 'כותרת תת-המשימה היא שדה חובה'}), 400
+        
+        max_order = db.session.query(db.func.max(Subtask.order)).filter(Subtask.task_id == id).scalar() or 0
+        subtask = Subtask(
+            task_id=id,
+            title=title,
+            is_completed=False,
+            order=max_order + 1
+        )
+        db.session.add(subtask)
+        db.session.commit()
+        return jsonify({'success': True, 'subtask': subtask.to_dict(), 'id': subtask.id}), 201
+    
+    subtasks = Subtask.query.filter_by(task_id=id).order_by(Subtask.order.asc(), Subtask.id.asc()).all()
+    return jsonify([s.to_dict() for s in subtasks]), 200
+
+
+@app.route('/api/subtasks/<int:id>', methods=['GET', 'PUT', 'DELETE'])
+def api_subtask_item(id):
+    subtask = db.get_or_404(Subtask, id)
+    if request.method == 'GET':
+        return jsonify(subtask.to_dict()), 200
+    
+    if request.method == 'DELETE':
+        db.session.delete(subtask)
+        db.session.commit()
+        return jsonify({'success': True, 'id': id}), 200
+        
+    data = request.json or {}
+    if 'is_completed' in data:
+        subtask.is_completed = bool(data['is_completed'])
+    if 'title' in data:
+        title = data['title'].strip()
+        if title:
+            subtask.title = title
+    if 'order' in data:
+        try:
+            subtask.order = int(data['order'])
+        except (ValueError, TypeError):
+            pass
+            
+    db.session.commit()
+    return jsonify({'success': True, 'subtask': subtask.to_dict()}), 200
+
+
+@app.route('/api/tasks/<int:id>/comments', methods=['GET', 'POST'])
+def api_task_comments(id):
+    task = db.get_or_404(Task, id)
+    if request.method == 'POST':
+        data = request.json or {}
+        content = data.get('content', '').strip()
+        if not content:
+            return jsonify({'success': False, 'error': 'תוכן התגובה הוא שדה חובה'}), 400
+            
+        author_name = data.get('author_name', 'מערכת').strip()
+        author_avatar = data.get('author_avatar', '')
+        
+        comment = TaskComment(
+            task_id=id,
+            content=content,
+            author_name=author_name,
+            author_avatar=author_avatar
+        )
+        db.session.add(comment)
+        db.session.commit()
+        return jsonify({'success': True, 'comment': comment.to_dict(), 'id': comment.id}), 200
+        
+    comments = TaskComment.query.filter_by(task_id=id).order_by(TaskComment.created_at.asc(), TaskComment.id.asc()).all()
+    return jsonify([c.to_dict() for c in comments]), 200
+
+
+@app.route('/api/comments/<int:id>', methods=['DELETE'])
+def api_comment_item(id):
+    comment = db.get_or_404(TaskComment, id)
+    db.session.delete(comment)
+    db.session.commit()
+    return jsonify({'success': True, 'id': id}), 200
+
+
 @app.route('/api/archive')
 def api_get_archive():
     tasks = Task.query.filter_by(is_archived=True).order_by(Task.task).all()
@@ -312,6 +450,12 @@ def api_create_project():
     db.session.commit()
     
     return jsonify({'success': True, 'project': project.to_dict()})
+
+# Get a single project
+@app.route('/api/projects/<int:id>', methods=['GET'])
+def api_get_project(id):
+    project = db.get_or_404(Project, id)
+    return jsonify(project.to_dict())
 
 # Update a project
 @app.route('/api/projects/<int:id>', methods=['PUT'])
@@ -917,21 +1061,21 @@ def api_get_special_days():
 
 @app.route('/api/special-days', methods=['POST'])
 def api_create_special_day():
-    data = request.json
+    data = request.json or {}
     from datetime import datetime
     
     try:
         date_obj = datetime.fromisoformat(data['date']).date()
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, TypeError):
         return jsonify({'success': False, 'error': 'Invalid date'}), 400
         
     name = data.get('name')
-    if not name:
+    if not name or not str(name).strip():
         return jsonify({'success': False, 'error': 'Name is required'}), 400
         
     special_day = SpecialDay(
         date=date_obj,
-        name=name,
+        name=str(name).strip(),
         type=data.get('type', 'holiday'),
         color=data.get('color')
     )
@@ -939,7 +1083,41 @@ def api_create_special_day():
     db.session.add(special_day)
     db.session.commit()
     
-    return jsonify({'success': True, 'special_day': special_day.to_dict()})
+    sd_dict = special_day.to_dict()
+    res = {'success': True, 'id': special_day.id, 'special_day': sd_dict}
+    res.update(sd_dict)
+    return jsonify(res), 201
+
+@app.route('/api/special-days/<int:id>', methods=['PUT'])
+def api_update_special_day(id):
+    day = db.get_or_404(SpecialDay, id)
+    data = request.json or {}
+    from datetime import datetime
+    
+    if 'date' in data:
+        try:
+            day.date = datetime.fromisoformat(data['date']).date()
+        except (ValueError, KeyError, TypeError):
+            return jsonify({'success': False, 'error': 'Invalid date'}), 400
+            
+    if 'name' in data:
+        name = str(data['name']).strip()
+        if not name:
+            return jsonify({'success': False, 'error': 'Name is required'}), 400
+        day.name = name
+        
+    if 'type' in data:
+        day.type = data['type']
+        
+    if 'color' in data:
+        day.color = data['color']
+        
+    db.session.commit()
+    
+    sd_dict = day.to_dict()
+    res = {'success': True, 'id': day.id, 'special_day': sd_dict}
+    res.update(sd_dict)
+    return jsonify(res), 200
 
 @app.route('/api/special-days/<int:id>', methods=['DELETE'])
 def api_delete_special_day(id):
@@ -1018,7 +1196,8 @@ from ai_tools import (
     sanitize_ai_reply, find_target_task_in_context,
     is_user_requesting_mutation, is_user_requesting_creation,
     get_team_tasks_query_info, format_team_tasks_summary,
-    get_member_tasks_query_info, format_member_tasks_summary
+    get_member_tasks_query_info, format_member_tasks_summary,
+    get_fallback_read_reply
 )
 
 def _generate_ai_system_prompt():
@@ -1294,7 +1473,12 @@ def api_ai_chat():
         messages.append({'role': 'user', 'content': user_msg})
 
         # Call AI
-        ai_reply = ai_service.chat(messages, system_prompt=system_prompt)
+        ai_reply = ""
+        try:
+            ai_reply = ai_service.chat(messages, system_prompt=system_prompt)
+        except Exception as e:
+            logger.warning(f"[AI Chat] External AI provider error: {e}. Falling back to resilient local AI engine.")
+            ai_reply = ""
         ai_reply_str = json.dumps(ai_reply, ensure_ascii=False) if isinstance(ai_reply, (dict, list)) else str(ai_reply)
         logger.info(f"[AI Chat] AI reply: {ai_reply_str[:300]}")
 
@@ -1440,6 +1624,11 @@ def api_ai_chat():
                     clean_reply = f"שגיאה בביצוע הפעולה: {', '.join(errors)}"
                 else:
                     clean_reply = "לא ניתן היה לבצע את הפעולה במערכת (לא זוהתה משימה מתאימה או שפרטי הפעולה לא היו ברורים). אנא ציין את מספר המשימה במפורש (למשל: #56) כדי שאוכל לבצע זאת."
+
+        if (not clean_reply or clean_reply in ['.', ':', '!', '-']) and not mutating_successes:
+            fb_read = get_fallback_read_reply(user_msg, ctx)
+            if fb_read:
+                clean_reply = fb_read
 
         return jsonify({
             'success': True,
@@ -2036,6 +2225,111 @@ def api_restore_table(table_name):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ============ DATABASE VERSION HISTORY & FAST RESTORE API ============
+
+@app.route('/api/backups', methods=['GET'])
+def api_list_db_backups():
+    """List all database backups stored on the instance mountpoint."""
+    try:
+        backups = backup_service.list_backups(app.instance_path)
+        backups_dir = backup_service.get_backups_dir(app.instance_path)
+        rel_mountpoint = os.path.relpath(backups_dir, os.path.dirname(os.path.abspath(__file__)))
+        return jsonify({
+            'success': True,
+            'backups': backups,
+            'count': len(backups),
+            'retention_limit': 14,
+            'auto_backup_time': '23:00',
+            'auto_backup_enabled': True,
+            'mountpoint': rel_mountpoint
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/backups/now', methods=['POST'])
+@app.route('/api/backups/create', methods=['POST'])
+def api_create_db_backup_now():
+    """Immediately backup the database to the server instance folder and prune older versions."""
+    try:
+        backup_type = 'manual'
+        if request.is_json and request.json and 'type' in request.json:
+            backup_type = str(request.json['type']).strip() or 'manual'
+
+        new_backup = backup_service.create_backup(backup_type=backup_type, keep_count=14, app_instance_path=app.instance_path)
+        _bump_data_version()
+        backups = backup_service.list_backups(app.instance_path)
+        return jsonify({
+            'success': True,
+            'message': 'גיבוי מסד הנתונים נוצר בהצלחה ונשמר בשרת',
+            'backup': new_backup,
+            'backups': backups,
+            'count': len(backups)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/backups/<string:filename>/restore', methods=['POST'])
+def api_fast_restore_db_backup(filename):
+    """Fast restore the database from a server-side backup snapshot."""
+    try:
+        result = backup_service.restore_backup(
+            filename,
+            app=app,
+            db=db,
+            on_version_bump=_bump_data_version
+        )
+        return jsonify({
+            'success': True,
+            'message': result.get('message', f"מסד הנתונים שוחזר בהצלחה מגרסת {filename}"),
+            'filename': filename,
+            'restored_at': result.get('restored_at')
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/backups/<string:filename>/download', methods=['GET'])
+def api_download_db_backup(filename):
+    """Download a database backup file."""
+    try:
+        safe_name = os.path.basename(filename)
+        if not safe_name.endswith('.db') or '..' in filename or '/' in filename or '\\' in filename:
+            return jsonify({'success': False, 'error': 'Invalid backup filename'}), 400
+
+        backups_dir = backup_service.get_backups_dir(app.instance_path)
+        file_path = os.path.join(backups_dir, safe_name)
+        if not os.path.exists(file_path):
+            return jsonify({'success': False, 'error': 'Backup file not found'}), 404
+
+        return send_from_directory(
+            backups_dir,
+            safe_name,
+            as_attachment=True,
+            download_name=safe_name,
+            mimetype='application/x-sqlite3'
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/backups/<string:filename>', methods=['DELETE'])
+def api_delete_db_backup(filename):
+    """Delete a specific database backup snapshot."""
+    try:
+        backup_service.delete_backup(filename, app.instance_path)
+        backups = backup_service.list_backups(app.instance_path)
+        return jsonify({
+            'success': True,
+            'message': 'הגיבוי נמחק בהצלחה',
+            'backups': backups,
+            'count': len(backups)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # --- General System & Environment Settings ---
 
 def get_env_file_path():
@@ -2188,6 +2482,12 @@ def api_get_system_settings():
                     'count': upload_count,
                     'size': upload_size_formatted,
                     'folder': upload_folder
+                },
+                'backups': {
+                    'count': len(backup_service.list_backups(app.instance_path)),
+                    'retention_limit': 14,
+                    'auto_backup_hour': 23,
+                    'auto_backup_enabled': True
                 },
                 'runtime': {
                     'python_version': platform.python_version(),
@@ -2724,7 +3024,9 @@ def index():
 
 
 @app.route('/print')
+@app.route('/printable')
 def print_view():
+    view_mode = request.args.get('view', 'table')
     project_filter = request.args.get('project')
     member_filter = request.args.get('member')
     team_filter = request.args.get('team')
@@ -2782,15 +3084,137 @@ def print_view():
     teams = Team.query.all()
     members = TeamMember.query.all()
     
-    return render_template('printable.html', tasks=tasks, projects=display_projects, all_projects=available_projects, members=members, teams=teams)
+        # Defaults for Gantt calculations if view_mode == 'gantt'
+    gantt_dates = []
+    gantt_tasks = []
+    prev_start_date = ''
+    next_start_date = ''
+    period_title = ''
+    
+    if view_mode == 'gantt':
+        DAYS_COUNT = 28
+        start_date_param = request.args.get('start_date')
+        today = date.today()
+        if start_date_param:
+            try:
+                gantt_start_date = date.fromisoformat(start_date_param)
+            except Exception:
+                gantt_start_date = today - timedelta(days=(today.weekday() + 1) % 7 + 7)
+        else:
+            sunday_offset = (today.weekday() + 1) % 7
+            gantt_start_date = today - timedelta(days=sunday_offset + 7)
+            
+        prev_start_date = (gantt_start_date - timedelta(days=14)).isoformat()
+        next_start_date = (gantt_start_date + timedelta(days=14)).isoformat()
+        
+        gantt_end_date = gantt_start_date + timedelta(days=DAYS_COUNT - 1)
+        
+        HEBREW_DAYS = ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\'']
+        HEBREW_MONTHS = ['', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
+        
+        m1 = HEBREW_MONTHS[gantt_start_date.month]
+        m2 = HEBREW_MONTHS[gantt_end_date.month]
+        y1 = gantt_start_date.year
+        y2 = gantt_end_date.year
+        if m1 == m2 and y1 == y2:
+            period_title = f"{m1} {y1}"
+        elif y1 == y2:
+            period_title = f"{m1} - {m2} {y1}"
+        else:
+            period_title = f"{m1} {y1} - {m2} {y2}"
+            
+        special_days_in_window = SpecialDay.query.filter(SpecialDay.date.between(gantt_start_date, gantt_end_date)).all()
+        special_days_by_date = {sd.date: sd for sd in special_days_in_window}
+
+        for d_idx in range(DAYS_COUNT):
+            cur_d = gantt_start_date + timedelta(days=d_idx)
+            w_idx = (cur_d.weekday() + 1) % 7
+            is_wknd = (w_idx == 5 or w_idx == 6)
+            is_tdy = (cur_d == today)
+            sd = special_days_by_date.get(cur_d)
+            gantt_dates.append({
+                'date': cur_d,
+                'day_letter': HEBREW_DAYS[w_idx],
+                'day_num': cur_d.day,
+                'disp': f"{cur_d.day:02d}/{cur_d.month:02d}",
+                'is_today': is_tdy,
+                'is_weekend': is_wknd,
+                'is_special_day': sd is not None,
+                'special_name': sd.name if sd else '',
+                'special_type': sd.type if sd else '',
+                'special_color': sd.color if (sd and sd.color) else ''
+            })
+            
+        def truncate_bar_title(title, span_days):
+            if not title:
+                return ''
+            clean = title.strip()
+            if span_days <= 1:
+                return clean[:3] + '..' if len(clean) > 4 else clean
+            elif span_days == 2:
+                return clean[:7] + '..' if len(clean) > 8 else clean
+            elif span_days == 3:
+                return clean[:12] + '..' if len(clean) > 14 else clean
+            elif span_days <= 5:
+                return clean[:22] + '..' if len(clean) > 24 else clean
+            return clean
+
+        for t in tasks:
+            date_disp = ''
+            has_dates = bool(t.start_date or t.end_date)
+            has_overlap = False
+            right_percent = 0
+            width_percent = 0
+            span_cols = 0
+            truncated_title = t.task
+            subtasks_text = ''
+            subtasks_percent = 0
+            
+            if t.subtasks:
+                comp = sum(1 for s in t.subtasks if s.is_completed)
+                tot = len(t.subtasks)
+                subtasks_text = f"{comp}/{tot}"
+                if tot > 0:
+                    subtasks_percent = min(100, int(round((comp / tot) * 100)))
+            
+            if has_dates:
+                t_start = t.start_date or t.end_date
+                t_end = t.end_date or t.start_date
+                date_disp = f"{t_start.strftime('%d/%m')} - {t_end.strftime('%d/%m')}" if t_start != t_end else t_start.strftime('%d/%m')
+                
+                day_start = (t_start - gantt_start_date).days
+                day_end = (t_end - gantt_start_date).days
+                
+                if day_end >= 0 and day_start < DAYS_COUNT:
+                    has_overlap = True
+                    col_start = max(0, day_start)
+                    col_end = min(DAYS_COUNT - 1, day_end)
+                    span_cols = max(1, col_end - col_start + 1)
+                    right_percent = (col_start / DAYS_COUNT) * 100
+                    width_percent = (span_cols / DAYS_COUNT) * 100
+                    truncated_title = truncate_bar_title(t.task, span_cols)
+                    
+            gantt_tasks.append({
+                'project': t.project,
+                'obj': t,
+                'date_disp': date_disp,
+                'has_dates': has_dates,
+                'has_overlap': has_overlap,
+                'right_percent': right_percent,
+                'width_percent': width_percent,
+                'span_cols': span_cols,
+                'truncated_title': truncated_title,
+                'subtasks_text': subtasks_text,
+                'subtasks_percent': subtasks_percent
+            })
+
+    return render_template('printable.html', tasks=tasks, projects=display_projects, all_projects=available_projects, members=members, teams=teams, view_mode=view_mode, prev_start_date=prev_start_date, next_start_date=next_start_date, period_title=period_title, gantt_dates=gantt_dates, gantt_tasks=gantt_tasks)
 
 
 @app.route('/calendar')
 def calendar():
-    """Calendar page for week/month planning"""
-    teams = Team.query.all()
-    members = TeamMember.query.all()
-    return render_template('calendar.html', teams=teams, members=members)
+    """Calendar page deprecated - redirects to Gantt view on dashboard"""
+    return redirect('/?view=gantt', code=302)
 
 
 @app.route('/admin')

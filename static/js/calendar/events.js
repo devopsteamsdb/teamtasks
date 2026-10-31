@@ -5,6 +5,7 @@ import * as API from './api.js';
 import { formatDateToISO, parseDateFromISO } from './utils.js';
 import { renderCurrentView } from './main.js'; // We need access to re-render
 import { notifyDataChanged } from '../live_sync.js';
+import { createSubtask, updateSubtask, deleteSubtask, createTaskComment, deleteTaskComment } from '../api.js';
 
 export function attachEventListeners() {
     // View Toggle
@@ -111,6 +112,29 @@ export function attachEventListeners() {
     if (UI.elements.closeTaskModalBtn) UI.elements.closeTaskModalBtn.addEventListener('click', UI.closeTaskModal);
     if (UI.elements.taskSaveBtn) UI.elements.taskSaveBtn.addEventListener('click', saveTask);
     if (UI.elements.taskDeleteBtn) UI.elements.taskDeleteBtn.addEventListener('click', deleteTaskHandler);
+
+    // Subtasks & Comments in Calendar Modal
+    if (UI.elements.addSubtaskBtn) {
+        UI.elements.addSubtaskBtn.onclick = handleAddSubtask;
+    }
+    if (UI.elements.newSubtaskInput) {
+        UI.elements.newSubtaskInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddSubtask();
+            }
+        };
+    }
+    if (UI.elements.subtasksList) {
+        UI.elements.subtasksList.onclick = handleSubtaskListClick;
+    }
+
+    if (UI.elements.addCommentBtn) {
+        UI.elements.addCommentBtn.onclick = handleAddComment;
+    }
+    if (UI.elements.commentsList) {
+        UI.elements.commentsList.onclick = handleCommentListClick;
+    }
 
     // Schedule Modal (Legacy Support if elements still exist)
     if (UI.elements.closeModalBtn) UI.elements.closeModalBtn.addEventListener('click', UI.closeScheduleModal);
@@ -338,4 +362,148 @@ export async function handleDrop(e) {
     }
 
     document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+}
+
+// Subtasks & Comments Event Handlers for Calendar
+async function handleAddSubtask() {
+    const taskId = state.currentTaskId;
+    if (!taskId) return;
+    const input = UI.elements.newSubtaskInput;
+    if (!input) return;
+    const title = input.value.trim();
+    if (!title) return;
+
+    try {
+        const res = await createSubtask(taskId, title);
+        if (res.success) {
+            input.value = '';
+            await UI.loadAndRenderTaskSubtasks(taskId);
+            notifyDataChanged();
+        } else {
+            alert('שגיאה בהוספת פריט: ' + (res.error || 'Unknown error'));
+        }
+    } catch (err) {
+        console.error('Failed to create subtask:', err);
+        alert('שגיאה ביצירת פריט צ\'ק-ליסט');
+    }
+}
+
+async function handleSubtaskListClick(e) {
+    const taskId = state.currentTaskId;
+    if (!taskId) return;
+
+    // Toggle checkbox
+    const checkbox = e.target.closest('.subtask-checkbox');
+    if (checkbox) {
+        const subtaskId = checkbox.dataset.id;
+        const itemElem = checkbox.closest('.subtask-item');
+        const isCompleted = checkbox.checked;
+
+        if (itemElem) {
+            itemElem.classList.toggle('completed', isCompleted);
+        }
+
+        try {
+            await updateSubtask(subtaskId, { is_completed: isCompleted });
+            await UI.loadAndRenderTaskSubtasks(taskId);
+            notifyDataChanged();
+        } catch (err) {
+            console.error('Failed to toggle subtask:', err);
+            checkbox.checked = !isCompleted;
+            if (itemElem) itemElem.classList.toggle('completed', !isCompleted);
+        }
+        return;
+    }
+
+    // Delete subtask
+    const deleteBtn = e.target.closest('.subtask-delete-btn');
+    if (deleteBtn) {
+        e.stopPropagation();
+        const subtaskId = deleteBtn.dataset.id;
+        try {
+            const res = await deleteSubtask(subtaskId);
+            if (res.success) {
+                await UI.loadAndRenderTaskSubtasks(taskId);
+                notifyDataChanged();
+            }
+        } catch (err) {
+            console.error('Failed to delete subtask:', err);
+            alert('שגיאה במחיקת פריט');
+        }
+    }
+}
+
+async function handleAddComment() {
+    const taskId = state.currentTaskId;
+    if (!taskId) return;
+    const textarea = UI.elements.newCommentInput;
+    if (!textarea) return;
+    const content = textarea.value.trim();
+    if (!content) {
+        textarea.focus();
+        return;
+    }
+
+    const select = UI.elements.commentAuthorSelect;
+    let authorName = 'חבר צוות';
+    let authorAvatar = 'default.png';
+    let memberId = null;
+
+    if (select && select.value) {
+        if (select.value === 'guest') {
+            authorName = 'חבר צוות';
+            authorAvatar = 'default.png';
+            localStorage.setItem('teamtasks_last_author', 'guest');
+        } else {
+            const selectedOpt = select.selectedOptions[0];
+            if (selectedOpt) {
+                authorName = selectedOpt.dataset.name || selectedOpt.textContent.trim();
+                authorAvatar = selectedOpt.dataset.avatar || 'default.png';
+                memberId = parseInt(select.value);
+                localStorage.setItem('teamtasks_last_author', String(memberId));
+            }
+        }
+    }
+
+    try {
+        const payload = {
+            content: content,
+            author_name: authorName,
+            author_avatar: authorAvatar,
+            member_id: memberId
+        };
+        const res = await createTaskComment(taskId, payload);
+        if (res.success) {
+            textarea.value = '';
+            await UI.loadAndRenderTaskComments(taskId);
+            notifyDataChanged();
+        } else {
+            alert('שגיאה בשמירת תגובה: ' + (res.error || 'Unknown error'));
+        }
+    } catch (err) {
+        console.error('Failed to create comment:', err);
+        alert('שגיאה בהוספת תגובה');
+    }
+}
+
+async function handleCommentListClick(e) {
+    const taskId = state.currentTaskId;
+    if (!taskId) return;
+
+    const deleteBtn = e.target.closest('.comment-delete-btn');
+    if (deleteBtn) {
+        e.stopPropagation();
+        if (!confirm('האם למחוק תגובה זו?')) return;
+        const commentId = deleteBtn.dataset.id;
+        try {
+            const res = await deleteTaskComment(commentId);
+            if (res.success) {
+                await UI.loadAndRenderTaskComments(taskId);
+                notifyDataChanged();
+            }
+        } catch (err) {
+            console.error('Failed to delete comment:', err);
+            alert('שגיאה במחיקת תגובה');
+        }
+    }
 }

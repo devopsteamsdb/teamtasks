@@ -85,6 +85,25 @@ def resolve_project(project_val):
             return p
     return None
 
+def resolve_team(team_val):
+    """Resolves a team by ID, name_he, or name_en."""
+    if not team_val:
+        return None
+    try:
+        t_id = int(team_val)
+        t = db.session.get(Team, t_id)
+        if t:
+            return t
+    except (ValueError, TypeError):
+        pass
+    team_clean = str(team_val).strip().lower()
+    for t in Team.query.all():
+        if (t.name_he and t.name_he.lower() == team_clean) or (t.name_en and t.name_en.lower() == team_clean):
+            return t
+        if (t.name_he and t.name_he.lower() in team_clean) or (t.name_en and t.name_en.lower() in team_clean):
+            return t
+    return None
+
 def normalize_status(val):
     """Normalizes any status variant into standard teamtasks status."""
     if not val:
@@ -142,26 +161,6 @@ def resolve_task(params):
                 task_id = int(digits[0])
                 t = db.session.get(Task, task_id)
                 if t:
-                    # If title candidates were also given, check against both project and task!
-                    if title_candidates:
-                        cand_text = " ".join(title_candidates).lower()
-                        t_combined = f"{t.project or ''} {t.task or ''}".strip().lower()
-                        cand_words = set(re.findall(r'[\w\-]+', cand_text))
-                        stop_words = {
-                            'של', 'את', 'עם', 'על', 'בסטטוס', 'סטטוס', 'משימה', 'משימת',
-                            'לסטטוס', 'למצב', 'מצב', 'חדש', 'חדשה', 'הושלם', 'הושלמה',
-                            'בתהליך', 'done', 'update', 'status', 'סמן', 'תסמן', 'לסמן',
-                            'אותה', 'אותו', 'זה', 'את זה'
-                        }
-                        cand_words = {w for w in cand_words if len(w) > 1 and w not in stop_words}
-                        t_words = set(re.findall(r'[\w\-]+', t_combined))
-                        # If cand_words exist and match either task title or project name, it is a verified match!
-                        if cand_words and not cand_words.intersection(t_words):
-                            # Only switch if cand_words matches another task in the DB
-                            for ot in Task.query.all():
-                                if ot.id != t.id and any(w in ot.task.lower() for w in cand_words if len(w) >= 3):
-                                    t = ot
-                                    break
                     return t
             except (ValueError, TypeError):
                 pass
@@ -182,8 +181,8 @@ def resolve_task(params):
                 return t
 
         clean_query = query.strip().lower()
-        clean_query = re.sub(r'^(?:תסמן|תסמני|סמן|סמני|תשנה|תשני|שנה|שני|תעדכן|תעדכני|עדכן|עדכני|תעביר|תעבירי|העבר|העבירי|תסגור|תסגרי|סגור|סגרי|תסיים|תסיימי|סיים|סיימי|תשלים|תשלימי|השלם|השלימי|בצע|בצעי|תבצע|תבצעי|הפוך|הפכי|תהפוך|תהפכי)\s+(?:את\s+)?(?:המשימה\s+|משימת\s+|משימה\s+)?', '', clean_query).strip()
-        clean_query = re.sub(r'^(?:את\s+)?(?:משימת|משימה|task)\s+', '', clean_query).strip()
+        clean_query = re.sub(r'^(?:תסמן|תסמני|סמן|סמני|תשנה|תשני|שנה|שני|תעדכן|תעדכני|עדכן|עדכני|תעביר|תעבירי|העבר|העבירי|תסגור|תסגרי|סגור|סגרי|תסיים|תסיימי|סיים|סיימי|תשלים|תשלימי|השלם|השלימי|בצע|בצעי|תבצע|תבצעי|הפוך|הפכי|תהפוך|תהפכי)(?:\s+(?:לי|לו|לה|לנו))?(?:\s+בבקשה)?\s+(?:את\s+)?(?:המשימה\s+|משימת\s+|משימה\s+)?(?:של\s+)?', '', clean_query).strip()
+        clean_query = re.sub(r'^(?:את\s+)?(?:משימת|משימה|task)\s+(?:של\s+)?', '', clean_query).strip()
         # Strip trailing clauses
         clean_query = re.split(r'\s+(?:ש?הערות|ש?תאריך|לסטטוס|בסטטוס|לבתהליך|להושלם|הושלמה|הושלם|בוצע|בוצעה|כבוצע|כהושלם|כהושלמה|למעוכב|לארכיון)\b', clean_query)[0].strip()
 
@@ -217,7 +216,7 @@ def resolve_task(params):
 
         # Token overlap matching (e.g. "vmware" + "שדרוג", "נתב" + "ראשי")
         query_words = set(re.findall(r'[\w\-]+', clean_query))
-        stop_words = {'של', 'את', 'עם', 'על', 'בסטטוס', 'סטטוס', 'משימה', 'משימת', 'לסטטוס', 'למצב', 'מצב'}
+        stop_words = {'של', 'את', 'עם', 'על', 'בסטטוס', 'סטטוס', 'משימה', 'משימת', 'לסטטוס', 'למצב', 'מצב', 'לי', 'לו', 'לה', 'לנו', 'בבקשה', 'אנא', 'יאללה'}
         query_words = {w for w in query_words if len(w) > 1 and w not in stop_words}
         if query_words:
             scored = []
@@ -319,20 +318,21 @@ def is_user_requesting_mutation(user_msg):
     is_action_request_wrapper = bool(re.search(r'(?:תוכל|תוכלי|יכול|יכולה|אפשר|בבקשה|נא|רוצה שת|אשמח שת|מבקש שת)\s+(?:ל|ת)?', msg))
 
     # Action verbs (imperative / infinitive / 1st person action - both masculine & feminine forms):
-    complete_verbs = r'(?:תסמן|תסמני|סמן|סמני|לסמן|תסגור|תסגרי|סגור|סגרי|לסגור|תשלים|תשלימי|השלם|השלימי|להשלים|תסיים|תסיימי|סיים|סיימי|לסיים|סיימתי)'
-    edit_verbs = r'(?:תשנה|תשני|שנה|שני|לשנות|תעדכן|תעדכני|עדכן|עדכני|לעדכן|תקבע|תקבעי|קבע|קבעי|לקבוע|תגדיר|תגדירי|הגדר|הגדירי|להגדיר|תשייך|תשייכי|שייך|שייכי|לשייך|תקצה|תקצי|הקצה|הקצי|להקצות)'
+    complete_verbs = r'(?:תסמן|תסמני|סמן|סמני|לסמן|תסגור|תסגרי|סגור|סגרי|לסגור|תשלים|תשלימי|השלם|השלימי|להשלים|תסיים|תסיימי|סיים|סיימי|לסיים|סיימתי|סיימנו|הסתיים|הסתיימה|הסתיימו|הושלם|הושלמה|הושלמו|בוצע|בוצעה|בוצעו|גמור|גמורה)'
+    edit_verbs = r'(?:תשנה|תשני|שנה|שני|לשנות|תעדכן|תעדכני|עדכן|עדכני|לעדכן|תקבע|תקבעי|קבע|קבעי|לקבוע|תגדיר|תגדירי|הגדר|הגדירי|להגדיר|תשייך|תשייכי|שייך|שייכי|לשייך|תקצה|תקצי|הקצה|הקצי|להקצות|תוריד|תורידי|הורד|הורידי|להוריד|תסיר|תסירי|הסר|הסירי|להסיר|שים|שימי|תשים|תשימי|לשים|תחזיר|תחזירי|החזר|החזירי|להחזיר)'
     delete_verbs = r'(?:תמחק|תמחקי|מחק|מחקי|למחוק|תסיר|תסירי|הסר|הסירי|להסיר|תבטל|תבטלי|בטל|בטלי|לבטל)'
     archive_verbs = r'(?:תארכב|תארכבי|ארכב|ארכבי|לארכב|תשחזר|תשחזרי|שחזר|שחזרי|לשחזר|העבר\s+לארכיון|העבירי\s+לארכיון|תעביר\s+לארכיון|תעבירי\s+לארכיון|להעביר\s+לארכיון|שים\s+בארכיון|שימי\s+בארכיון|תשים\s+בארכיון|תשימי\s+בארכיון|לשים\s+בארכיון|שלח\s+לארכיון|שלחי\s+לארכיון|תשלח\s+לארכיון|תשלחי\s+לארכיון|שחזר\s+מהארכיון|שחזרי\s+מהארכיון|תשחזר\s+מהארכיון|תשחזרי\s+מהארכיון)'
-    move_verbs = r'(?:תעביר|תעבירי|העבר|העבירי|להעביר)'
+    move_verbs = r'(?:תעביר|תעבירי|העבר|העבירי|להעביר|תחזיר|תחזירי|החזר|החזירי|להחזיר)'
     date_verbs = r'(?:תדחה|תדחי|דחה|דחי|לדחות|תזיז|תזיזי|הזז|הזיזי|להזיז|תקדים|תקדימי|הקדם|הקדימי|להקדים|תאריך|תאריכי|הארך|האריכי|להאריך)'
     add_to_entity_pattern = r'(?:הוסף|הוסיפי|תוסיף|תוסיפי|להוסיף|צרף|צרפי|תצרף|תצרפי|לצרף)\b.*?\b(?:למשימ|לפרויקט)'
-    status_direct_pattern = r'(?:^|\b)(?:משימה\s+)?#?\d+\s+(?:ל|ב|למצב\s+)?(?:תהליך|בתהליך|ביצוע|בביצוע|הושלם|הושלמה|בוצע|בוצעה|מעוכב|מעוכבת|עיכוב|טרם\s+החל)(?:\b|$)'
+    status_direct_pattern = r'(?:^|\b)(?:משימה\s+)?#?\d+\s+(?:ל|ב|למצב\s+)?(?:תהליך|בתהליך|ביצוע|בביצוע|הושלם|הושלמה|בוצע|בוצעה|מעוכב|מעוכבת|עיכוב|תקוע|תקועה|טרם\s+החל)(?:\b|$)'
+    attribute_mutation_pattern = r'(?:בעיכוב|תקועה|תקוע|לטרם\s+החל|בעדיפות|תת\s*משימה|תת-משימה|הערה\s+למשימ|תאריך\s+(?:ה)?יעד|השם\s+של\s+משימה|למחוק\s+את|לשחזר\s+את|התחלנו\s+לעבוד)'
 
     any_action_verb = rf'(?:{complete_verbs}|{edit_verbs}|{delete_verbs}|{archive_verbs}|{move_verbs}|{date_verbs})'
-    passive_status_actions = r'(?:^|\b)(?:היא\s+הושלמה|זה\s+הושלם|זה\s+בוצע|המשימה\s+הושלמה|סמן\s+כ?הושלם|סמן\s+כ?בוצע)(?:\b|$)'
+    passive_status_actions = r'(?:^|\b)(?:היא\s+הושלמה|זה\s+הושלם|זה\s+בוצע|המשימה\s+הושלמה|סמן\s+כ?הושלם|סמן\s+כ?בוצע|משימה\s+#?\d+\s+(?:הושלמה|הסתיימה|בוצעה|תקועה))(?:\b|$)'
 
     if is_inquiry_starter:
-        if is_action_request_wrapper and (re.search(any_action_verb, msg) or re.search(add_to_entity_pattern, msg)):
+        if is_action_request_wrapper and (re.search(any_action_verb, msg) or re.search(add_to_entity_pattern, msg) or re.search(attribute_mutation_pattern, msg)):
             if not re.search(r'^(?:למה|מדוע|מי)\s+(?:מחקת|שינית|עדכנת|העברת)', msg):
                 return True
         return False
@@ -344,6 +344,9 @@ def is_user_requesting_mutation(user_msg):
         return True
 
     if re.search(status_direct_pattern, msg):
+        return True
+
+    if re.search(attribute_mutation_pattern, msg) and (any(k in msg for k in ['משימ', 'פרויקט', '#']) or bool(re.search(r'\b\d+\b', msg))):
         return True
 
     if re.search(any_action_verb, msg):
@@ -361,20 +364,28 @@ def is_user_requesting_creation(user_msg):
     if not user_msg:
         return False
     msg = str(user_msg).strip().lower()
+
+    # If the user is specifically modifying an existing entity (e.g. adding note to a task, adding subtask to a task), it's NOT a new entity creation!
+    if re.search(r'\b(?:הערה\s+למשימ|תת\s*משימה\s+.*?למשימ|תוסיף\s+את\s+.*?למשימ|צרף\s+את\s+.*?למשימ)', msg):
+        return False
     
     is_inquiry_starter = bool(re.search(r'^(?:מה|מהם|מהן|מי\s+(?!תוכל|יכול)|איזה|איזו|אילו|כמה|למה|מדוע|איפה|היכן|מתי|האם|האם\s+יש|יש\s+משימות|רשימת|רשימה)\b', msg))
     is_view_starter = bool(re.search(r'^(?:תראה|הראה|להראות|הצג|תציג|להציג|פרט|תפרט|לפרט|ספר|תספר|בדוק|תבדוק|לבדוק|תסכם|סכם|לסכם)\b', msg))
     is_action_request_wrapper = bool(re.search(r'(?:תוכל|תוכלי|יכול|יכולה|אפשר|בבקשה|נא|רוצה שת|אשמח שת|מבקש שת)\s+(?:ל|ת)?', msg))
 
-    create_verbs = r'(?:הוסף|הוסיפי|תוסיף|תוסיפי|להוסיף|צור|צרי|תייצר|תייצרי|ליצור|פתח\s+משימ|פתחי\s+משימ|תפתח\s+משימ|תפתחי\s+משימ|לפתוח\s+משימ|הקם|הקימי|תקים|תקימי|להקים)'
+    create_verbs = r'(?:הוסף|הוסיפי|תוסיף|תוסיפי|להוסיף|צור|צרי|תייצר|תייצרי|ליצור|פתח|פתחי|תפתח|תפתחי|לפתוח|הקם|הקימי|תקים|תקימי|להקים|שים\s+משימ|שימי\s+משימ|תשים\s+משימ|תשימי\s+משימ|לשים\s+משימ|שים\s+פרויקט|שימי\s+פרויקט|תשים\s+פרויקט|תשימי\s+פרויקט)'
+    entity_creation_nouns = r'(?:משימה\s+חדשה|פרויקט\s+חדש|צוות\s+חדש|חבר\s+(?:צוות\s+)?חדש|משתמש\s+חדש|משימה\s+עם\s+צ[\'״]קליסט|צ[\'״]קליסט)'
 
     if is_inquiry_starter:
-        if is_action_request_wrapper and re.search(create_verbs, msg):
+        if is_action_request_wrapper and (re.search(create_verbs, msg) or re.search(entity_creation_nouns, msg)):
             return True
         return False
 
     if is_view_starter:
         return False
+
+    if re.search(entity_creation_nouns, msg):
+        return True
 
     return bool(re.search(create_verbs, msg))
 
@@ -554,7 +565,8 @@ def get_member_tasks_query_info(user_msg, ctx=None):
     if not found_member_he:
         for t in ctx.get('teams', []):
             for m in t.get('members', []):
-                if text_contains_entity(m['name_he'], msg) or text_contains_entity(m['name_en'], msg):
+                first_name = m['name_he'].split()[0]
+                if text_contains_entity(m['name_he'], msg) or text_contains_entity(m['name_en'], msg) or text_contains_entity(first_name, msg):
                     found_member_he = m['name_he']
                     break
             if found_member_he:
@@ -570,7 +582,7 @@ def get_member_tasks_query_info(user_msg, ctx=None):
     for t in all_tasks:
         t_members = t.get('members', [])
         m_he = [members_lookup.get(m.lower().strip(), m) for m in t_members]
-        if any(found_member_he.lower() in m.lower() for m in m_he):
+        if any(found_member_he.lower() in m.lower() or m.lower() in found_member_he.lower() for m in m_he):
             matching.append(t)
 
     all_member_tasks = list(matching)
@@ -792,16 +804,30 @@ def find_target_task_in_context(user_msg, ai_reply='', history=None):
 
     return None
 
+def extract_quoted_strings(text):
+    if not text:
+        return []
+    # Replace single quote within a word (like צ'קליסט) with a placeholder so it's not treated as a quote
+    clean = re.sub(r'(?<=[a-zA-Z\u0590-\u05fe])\'(?=[a-zA-Z\u0590-\u05fe])', '’', text)
+    matches = re.findall(r'[\'\"״׳]([^\'\"״׳\n]+)[\'\"״׳]', clean)
+    return [m.replace('’', "'").strip() for m in matches if m.strip()]
+
 def detect_fallback_action(user_msg, ai_reply, history=None):
     """
     Intelligently detects user action intent when the AI failed to emit a valid JSON action block.
     Supports:
-    - Status updates
-    - Delete task / project
-    - Archive task / project
-    - Unarchive task / project
-    - Create task
+    - Create task (with project, assignees, subtasks, dates, priority, notes, hours)
     - Create project
+    - Create member
+    - Delete task / project
+    - Archive / Unarchive task / project
+    - Priority update
+    - Rename task
+    - Add subtasks to task
+    - Add / append notes to task
+    - Assign / remove / add members
+    - Reschedule / date changes
+    - Status updates
     - Multi-turn follow up
     
     CRITICAL: Returns None if user message is an informational query.
@@ -833,9 +859,14 @@ def detect_fallback_action(user_msg, ai_reply, history=None):
         'סמן', 'סמני', 'תסמן', 'תסמני', 'לסמן', 'נסמן',
         'השלם', 'השלימי', 'תושלם', 'תשלים', 'תשלימי', 'להשלים', 'הושלם', 'הושלמה',
         'סגור', 'סגרי', 'תסגור', 'תסגרי', 'לסגור', 'נסגר', 'נסגרה',
-        'סיים', 'סיימי', 'תסיים', 'תסיימי', 'לסיים', 'סיימתי',
+        'סיים', 'סיימי', 'תסיים', 'תסיימי', 'לסיים', 'סיימתי', 'סיימנו',
+        'הסתיים', 'הסתיימה', 'הסתיימו',
         'קבע', 'קבעי', 'תקבע', 'תקבעי', 'לקבוע',
         'הגדר', 'הגדירי', 'תגדיר', 'תגדירי', 'להגדיר',
+        'תקצה', 'תקצי', 'הקצה', 'הקצי', 'להקצות',
+        'תשייך', 'תשייכי', 'שייך', 'שייכי', 'לשייך',
+        'תוריד', 'תורידי', 'הורד', 'הורידי', 'להוריד',
+        'תחזיר', 'תחזירי', 'החזר', 'החזירי', 'להחזיר',
         'בצע', 'בצעי', 'תבצע', 'תבצעי', 'לבצע', 'בוצע', 'בוצעה',
         'עשה', 'עשי', 'תעשה', 'תעשי', 'לעשות',
         'mark', 'set', 'close', 'finish', 'complete', 'done', 'update', 'change'
@@ -857,118 +888,186 @@ def detect_fallback_action(user_msg, ai_reply, history=None):
 
     action_context = f"{user_msg_clean} {inherited_intent or ''}"
 
-    # 1. DELETE INTENT
-    if any(k in action_context for k in ['מחק', 'תמחק', 'מחקי', 'תמחקי', 'למחוק', 'הסר', 'הסירי', 'תסיר', 'תסירי', 'להסיר', 'delete', 'remove']):
-        if 'פרויקט' in user_msg_clean:
-            p = resolve_project_from_context(user_msg, history)
-            if p:
-                return [{'action': 'delete_project', 'params': {'id': p.id, 'name': p.name}}]
+    # 1. ADD NOTE / COMMENT INTENT (Check before create if note is added to a task!)
+    if any(k in user_msg_clean for k in ['תוסיף הערה', 'הוסף הערה', 'הוסיפי הערה', 'להוסיף הערה', 'הערה למשימה', 'הערה:']):
         t = find_target_task_in_context(user_msg, ai_reply, history)
-        if t and is_task_referenced_in_context(t, user_msg, history):
-            return [{'action': 'delete_task', 'params': {'id': t.id, 'task': t.task}}]
+        if t:
+            quotes = extract_quoted_strings(user_msg)
+            note_content = quotes[0].strip() if quotes else None
+            if not note_content:
+                match = re.search(r'הערה(?:\s+למשימה\s*#?\d+)?\s*:\s*([^\n]+)', user_msg)
+                if match:
+                    note_content = match.group(1).strip(' "\'״׳:')
+            if note_content:
+                return [{'action': 'edit_task', 'params': {'id': t.id, 'append_notes': note_content, 'task': t.task}}]
 
-    # 2. UNARCHIVE INTENT
-    if any(k in action_context for k in ['שחזר', 'תשחזר', 'שחזרי', 'תשחזרי', 'לשחזר', 'החזר מהארכיון', 'החזירי מהארכיון', 'תחזיר מהארכיון', 'תחזירי מהארכיון', 'להחזיר מהארכיון', 'unarchive', 'restore']):
-        if 'פרויקט' in user_msg_clean:
-            p = resolve_project_from_context(user_msg, history)
-            if p:
-                return [{'action': 'unarchive_project', 'params': {'id': p.id, 'name': p.name, 'is_archived': False}}]
-        t = find_target_task_in_context(user_msg, ai_reply, history)
-        if t and is_task_referenced_in_context(t, user_msg, history):
-            return [{'action': 'unarchive_task', 'params': {'id': t.id, 'task': t.task, 'is_archived': False}}]
+    # 2. ADD SUBTASK TO TASK INTENT (Check before create if subtask is added to an existing task!)
+    if any(k in user_msg_clean for k in ['תת משימה', 'תת-משימה', 'subtask']):
+        if any(k in user_msg_clean for k in ['הוסף', 'הוסיפי', 'תוסיף', 'תוסיפי', 'להוסיף', 'צור', 'צרי']):
+            t = find_target_task_in_context(user_msg, ai_reply, history)
+            if t:
+                quotes = extract_quoted_strings(user_msg)
+                st_title = quotes[0].strip() if quotes else None
+                if not st_title:
+                    match = re.search(r'(?:תת\s*משימה|תת-משימה)\s+([^\n]+?)\s+למשימ', user_msg)
+                    if match:
+                        st_title = match.group(1).strip(' "\'״׳:')
+                if st_title:
+                    return [{'action': 'edit_task', 'params': {'id': t.id, 'add_subtasks': [st_title], 'task': t.task}}]
 
-    # 3. ARCHIVE INTENT
-    archive_in_user = any(k in action_context for k in ['ארכיון', 'לארכיון', 'ארכב', 'תארכב', 'ארכבי', 'תארכבי', 'לארכב', 'archive']) and not any(k in action_context for k in ['שחזר', 'תשחזר', 'שחזרי', 'תשחזרי', 'unarchive'])
-    archive_in_ai = ai_reply and any(k in ai_reply.lower() for k in ['ארכיב', 'הועברה לארכיון', 'הועבר לארכיון', 'לארכיון']) and not any(k in ai_reply.lower() for k in ['שחזר', 'unarchive'])
-    if archive_in_user or archive_in_ai:
-        if 'פרויקט' in user_msg_clean:
-            p = resolve_project_from_context(user_msg, history)
-            if p:
-                return [{'action': 'archive_project', 'params': {'id': p.id, 'name': p.name, 'is_archived': True}}]
-        t = find_target_task_in_context(user_msg, ai_reply, history)
-        if t and is_task_referenced_in_context(t, user_msg, history):
-            return [{'action': 'archive_task', 'params': {'id': t.id, 'task': t.task, 'is_archived': True}}]
+    # 3. CREATE TASK INTENT (Must run before general status updates!)
+    if is_user_requesting_creation(user_msg) and ('משימ' in user_msg_clean or "צ'קליסט" in user_msg_clean or "צ״קליסט" in user_msg_clean or 'task' in user_msg_clean) and not (('פרויקט' in user_msg_clean or 'project' in user_msg_clean) and not ('בפרויקט' in user_msg_clean or 'לפרויקט' in user_msg_clean or 'עבור פרויקט' in user_msg_clean)):
+        quotes = extract_quoted_strings(user_msg)
+        title = None
+        if quotes:
+            title = quotes[0].strip()
+        else:
+            match = re.search(r'(?:תוסיף|תוסיפי|צור|צרי|הוסף|הוסיפי|פתח|פתחי|תפתח|תפתחי|שים|שימי)\s+משימה\s+(?:חדשה\s+)?(?:דחופה\s+)?(?:בשם\s+|שנקראת\s+)?([^\n,]+)', user_msg, re.IGNORECASE)
+            if match:
+                raw_title = match.group(1).strip()
+                title = re.split(r'\s+(?:בפרויקט|לפרויקט|לאלעד|לדוד|לנועה|לגל|לצוות|בעדיפות|עם|עבור)\b', raw_title)[0].strip(' "\'״׳:')
 
-    # 4. STATUS UPDATE INTENT
-    target_status = None
-    status_keywords = {
-        'status-inprogress': ['בתהליך', 'תהליך', 'בביצוע', 'בעבודה', 'in progress', 'inprogress', 'in-progress', 'החל', 'התחיל'],
-        'status-done': ['הושלם', 'הושלמה', 'הסתיים', 'הסתיימה', 'בוצע', 'בוצעה', 'סיימתי', 'גמור', 'גמורה', 'done', 'completed', 'נסגר', 'נסגרה', 'סגור', 'סגורה', 'השלמתי', 'closed', 'finished'],
-        'status-delayed': ['מעוכב', 'מעוכבת', 'עיכוב', 'ממתין', 'ממתינה', 'תקוע', 'תקועה', 'delayed', 'hold'],
-        'status-notstarted': ['טרם החל', 'לא החל', 'לא התחיל', 'not started', 'notstarted', 'חדש', 'חדשה', 'פתוח', 'פתוחה']
-    }
-    for st, keywords in status_keywords.items():
-        if any(kw in action_context for kw in keywords):
-            target_status = st
-            break
+        if not title:
+            title_cand = re.sub(r'^(?:תוסיף|תוסיפי|צור|צרי|הוסף|הוסיפי|פתח|פתחי|תפתח|תפתחי|שים|שימי)\s+משימה\s+(?:חדשה\s+)?(?:דחופה\s+)?', '', user_msg, flags=re.IGNORECASE).strip()
+            title = re.split(r'\s+(?:בפרויקט|לפרויקט|לאלעד|לדוד|לנועה|לגל|לצוות|בעדיפות)\b', title_cand)[0].strip(' "\'״׳:')
 
-    # If verb is mark/close/complete and no other status is given, default to status-done
-    if not target_status and any(k in action_context for k in ['סמן', 'סמני', 'תסמן', 'תסמני', 'לסמן', 'סגור', 'סגרי', 'תסגור', 'תסגרי', 'לסגור', 'סיים', 'סיימי', 'תסיים', 'תסיימי', 'לסיים', 'השלם', 'השלימי', 'תשלים', 'תשלימי', 'להשלים', 'סיימתי', 'mark', 'close', 'complete', 'check']):
-        target_status = 'status-done'
-
-    # If AI reply claims a status and user had action intent
-    if not target_status and ai_reply and (has_action or inherited_intent):
-        ai_lower = ai_reply.lower()
-        for st, keywords in status_keywords.items():
-            if any(f"סטטוס: {kw}" in ai_lower or f"סטטוס:{kw}" in ai_lower or f"סטטוס {kw}" in ai_lower or f"status: {kw}" in ai_lower for kw in keywords):
-                target_status = st
-                break
-
-    has_target_task_mention = bool(re.search(r'(?:^|\b)(?:משימה\s+)?#?\d+', user_msg_clean))
-    if target_status and (has_action or inherited_intent or has_target_task_mention or any(p in user_msg_clean for p in ['אותה', 'אותו', 'זה', 'את זה', 'אותם'])):
-        t = find_target_task_in_context(user_msg, ai_reply, history)
-        if t and is_task_referenced_in_context(t, user_msg, history):
-            return [{
-                'action': 'edit_task',
-                'params': {
-                    'id': t.id,
-                    'status': target_status,
-                    'task': t.task
-                }
-            }]
-
-    # 5. CREATE TASK INTENT
-    if any(k in user_msg_clean for k in ['תוסיף משימה', 'תוסיפי משימה', 'צור משימה', 'צרי משימה', 'הוסף משימה', 'הוסיפי משימה', 'פתח משימה', 'פתחי משימה', 'תפתח משימה', 'תפתחי משימה', 'add task', 'create task']):
-        t_clean = re.sub(r'^(?:תוסיף|תוסיפי|צור|צרי|הוסף|הוסיפי|פתח|פתחי|תפתח|תפתחי)\s+משימה\s+(?:חדשה\s+)?', '', user_msg, flags=re.IGNORECASE).strip()
-        prio = 'none'
-        if 'גבוהה' in t_clean or 'דחוף' in t_clean: prio = 'high'
-        elif 'בינונית' in t_clean: prio = 'medium'
-        elif 'נמוכה' in t_clean: prio = 'low'
-        
+        # Project extraction
         p_name = None
-        proj_match = re.search(r'\b(?:בפרויקט|לפרויקט)\s+([^\s]+(?:\s+[^\s]+){0,3})', t_clean)
+        proj_match = re.search(r'\b(?:בפרויקט|לפרויקט)\s+([^\n]+)', user_msg)
         if proj_match:
-            p_cand = proj_match.group(1)
-            p_cand = re.split(r'\s+(?:עבור|ל-|בעדיפות|בסטטוס)\b', p_cand)[0].strip()
+            p_cand = proj_match.group(1).strip()
+            p_cand = re.split(r'\s+(?:עם|עבור|ל-|בעדיפות|בסטטוס|שמשויכת)\b', p_cand)[0].strip(' "\'״׳:')
             p_obj = resolve_project(p_cand)
-            if p_obj: p_name = p_obj.name
-        
-        member = None
-        m_match = re.search(r'\b(?:עבור|לחבר|למשתמש)\s+([^\s]+)', t_clean)
-        if m_match:
-            member = m_match.group(1).strip()
-            
-        title = re.split(r'\s+(?:בפרויקט|לפרויקט|עבור|בעדיפות)\b', t_clean)[0].strip()
-        if title:
-            return [{
-                'action': 'create_task',
-                'params': {
-                    'task': title,
-                    'project': p_name,
-                    'members': [member] if member else [],
-                    'priority': prio,
-                    'status': 'status-notstarted'
-                }
-            }]
+            if p_obj:
+                p_name = p_obj.name
+        if not p_name:
+            for p in Project.query.all():
+                if p.name.lower() in user_msg_clean:
+                    p_name = p.name
+                    break
 
-    # 6. CREATE PROJECT INTENT
-    if any(k in user_msg_clean for k in ['תוסיף פרויקט', 'תוסיפי פרויקט', 'צור פרויקט', 'צרי פרויקט', 'הוסף פרויקט', 'הוסיפי פרויקט', 'פתח פרויקט', 'פתחי פרויקט', 'תפתח פרויקט', 'תפתחי פרויקט', 'add project', 'create project']):
-        p_clean = re.sub(r'^(?:תוסיף|תוסיפי|צור|צרי|הוסף|הוסיפי|פתח|פתחי|תפתח|תפתחי)\s+פרויקט\s+(?:חדש\s+)?(?:בשם\s+)?', '', user_msg, flags=re.IGNORECASE).strip()
-        team = None
-        team_match = re.search(r'\b(?:לצוות|עבור צוות|בצוות)\s+([^\s]+)', p_clean)
+        # Priority extraction
+        prio = 'none'
+        if any(k in user_msg_clean for k in ['דחוף', 'דחופה', 'גבוהה', 'גבוה', 'urgent', 'high']):
+            prio = 'high'
+        elif any(k in user_msg_clean for k in ['בינונית', 'medium']):
+            prio = 'medium'
+        elif any(k in user_msg_clean for k in ['נמוכה', 'נמוך', 'low']):
+            prio = 'low'
+
+        # Status extraction
+        st_val = 'status-notstarted'
+        if any(k in user_msg_clean for k in ['בתהליך', 'בביצוע', 'בעבודה', 'in progress', 'inprogress']):
+            st_val = 'status-inprogress'
+        elif any(k in user_msg_clean for k in ['מעוכב', 'מעוכבת', 'עיכוב', 'delayed']):
+            st_val = 'status-delayed'
+
+        # Assignee / Members extraction
+        members = []
+        try:
+            from ai_context import build_system_context
+            ctx = build_system_context()
+            mem_lookup = ctx.get('members_lookup', {})
+        except Exception:
+            mem_lookup = {}
+
+        assign_match = re.search(r'\b(?:עבור|ל|שמשויכת\s+ל|משויכת\s+ל)\s+([^\n,]+)', user_msg)
+        if assign_match:
+            target_str = assign_match.group(1).strip()
+            target_str = re.split(r'\s+(?:עם|בעדיפות|בפרויקט|לפרויקט|בסטטוס)\b', target_str)[0].strip()
+            sub_names = re.split(r'\s*(?:,|ועוד|ו-|\s+ו|\s+)\s*', target_str)
+            for sn in sub_names:
+                sn_clean = sn.strip(' ול')
+                if sn_clean and (sn_clean in mem_lookup or text_contains_entity(sn_clean, target_str)):
+                    resolved = resolve_member_names([sn_clean])
+                    if resolved:
+                        members.extend(resolved)
+
+        # Team extraction
+        team_id = None
+        team_match = re.search(r'\b(?:לצוות|בצוות|עבור\s+צוות)\s+([^\s]+)', user_msg)
         if team_match:
-            team = team_match.group(1).strip()
-        p_name = re.split(r'\s+(?:לצוות|עבור צוות|בצוות)\b', p_clean)[0].strip(' "״\'')
+            t_cand = team_match.group(1).strip()
+            t_obj = resolve_team(t_cand)
+            if t_obj:
+                team_id = t_obj.id
+
+        # Subtasks extraction
+        subtasks = []
+        if any(k in user_msg_clean for k in ["צ'קליסט", "צ״קליסט", "תתי משימות", "תת משימות"]):
+            if len(quotes) > 1:
+                subtasks = [q.strip() for q in quotes[1:] if q.strip()]
+            else:
+                st_match = re.search(r'(?:תתי\s+משימות|צ[\'\"״׳]קליסט)\s*:\s*([^\n]+)', user_msg)
+                if st_match:
+                    parts = re.split(r'[,;]\s*', st_match.group(1))
+                    subtasks = [p.strip(' "\'״׳:') for p in parts if p.strip(' "\'״׳:')]
+
+        # Date extraction
+        end_date = None
+        if 'למחר' in user_msg_clean:
+            end_date = (date.today() + timedelta(days=1)).isoformat()
+        else:
+            d_match = re.search(r'\b(?:ל-|עד\s+)?(\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?|\d{4}-\d{2}-\d{2})\b', user_msg)
+            if d_match:
+                d_obj = parse_date_value(d_match.group(1))
+                if d_obj:
+                    end_date = d_obj.isoformat()
+
+        # Estimated hours
+        est_hours = None
+        h_match = re.search(r'(\d+(?:\.\d+)?)\s*שעות', user_msg)
+        if h_match:
+            est_hours = float(h_match.group(1))
+
+        # Notes extraction
+        notes_val = ""
+        notes_match = re.search(r'\b(?:עם\s+)?הערות?\s*[\'\"״׳]?([^\'\"״׳\n]+)[\'\"״׳]?', user_msg)
+        if notes_match:
+            notes_val = notes_match.group(1).strip()
+
+        if title:
+            params = {
+                'task': title,
+                'project': p_name,
+                'priority': prio,
+                'status': st_val
+            }
+            if members:
+                params['members'] = list(dict.fromkeys(members))
+            if team_id:
+                params['team_id'] = team_id
+            if subtasks:
+                params['subtasks'] = subtasks
+            if end_date:
+                params['end_date'] = end_date
+            if est_hours:
+                params['estimated_hours'] = est_hours
+            if notes_val:
+                params['notes'] = notes_val
+
+            return [{'action': 'create_task', 'params': params}]
+
+    # 4. CREATE PROJECT INTENT
+    if is_user_requesting_creation(user_msg) and ('פרויקט' in user_msg_clean or 'project' in user_msg_clean):
+        quotes = extract_quoted_strings(user_msg)
+        p_name = None
+        if quotes:
+            p_name = quotes[0].strip()
+        else:
+            p_clean = re.sub(r'^(?:תוסיף|תוסיפי|צור|צרי|הוסף|הוסיפי|פתח|פתחי|תפתח|תפתחי)\s+פרויקט\s+(?:חדש\s+)?(?:בשם\s+)?', '', user_msg, flags=re.IGNORECASE).strip()
+            p_name = re.split(r'\s+(?:לצוות|עבור צוות|בצוות)\b', p_clean)[0].strip(' "״\'')
+        
+        team = None
+        team_match = re.search(r'\b(?:לצוות|עבור צוות|בצוות)\s+([^\s]+(?:\s+[^\s]+)?)', user_msg)
+        if team_match:
+            team_cand = team_match.group(1).strip(' "״\'')
+            t_obj = resolve_team(team_cand)
+            if t_obj:
+                team = t_obj.name_he
+            else:
+                team = team_cand
+
         if p_name:
             return [{
                 'action': 'create_project',
@@ -978,11 +1077,11 @@ def detect_fallback_action(user_msg, ai_reply, history=None):
                 }
             }]
 
-    # 7. CREATE MEMBER INTENT
+    # 5. CREATE MEMBER INTENT
     if any(k in user_msg_clean for k in ['חבר צוות', 'חבר חדש', 'חברה חדשה', 'משתמש חדש', 'משתמשת חדשה', 'create_member', 'add member']):
         if any(k in user_msg_clean for k in ['הוסף', 'הוסיפי', 'תוסיף', 'תוסיפי', 'להוסיף', 'צור', 'צרי', 'תייצר', 'תייצרי', 'ליצור', 'פתח', 'פתחי']):
             name_he = None
-            he_match = re.search(r'\bבשם\s+[\'\"״]?([^\s\'\"״()]+)', user_msg)
+            he_match = re.search(r'\bבשם\s+[\'\"״׳]?([^\s\'\"״׳()]+)', user_msg)
             if he_match:
                 name_he = he_match.group(1).strip()
 
@@ -1008,28 +1107,103 @@ def detect_fallback_action(user_msg, ai_reply, history=None):
                     }
                 }]
 
-    # 8. ADD MEMBER TO TASK INTENT
+    # 6. DELETE INTENT
+    if any(k in action_context for k in ['מחק', 'תמחק', 'מחקי', 'תמחקי', 'למחוק', 'הסר', 'הסירי', 'תסיר', 'תסירי', 'להסיר', 'delete', 'remove']):
+        if 'פרויקט' in user_msg_clean:
+            p = resolve_project_from_context(user_msg, history)
+            if p:
+                return [{'action': 'delete_project', 'params': {'id': p.id, 'name': p.name}}]
+        t = find_target_task_in_context(user_msg, ai_reply, history)
+        if t and is_task_referenced_in_context(t, user_msg, history):
+            return [{'action': 'delete_task', 'params': {'id': t.id, 'task': t.task}}]
+
+    # 7. UNARCHIVE INTENT
+    if any(k in action_context for k in ['שחזר', 'תשחזר', 'שחזרי', 'תשחזרי', 'לשחזר', 'החזר מהארכיון', 'החזירי מהארכיון', 'תחזיר מהארכיון', 'תחזירי מהארכיון', 'להחזיר מהארכיון', 'unarchive', 'restore']):
+        if 'פרויקט' in user_msg_clean:
+            p = resolve_project_from_context(user_msg, history)
+            if p:
+                return [{'action': 'unarchive_project', 'params': {'id': p.id, 'name': p.name, 'is_archived': False}}]
+        t = find_target_task_in_context(user_msg, ai_reply, history)
+        if t and is_task_referenced_in_context(t, user_msg, history):
+            return [{'action': 'unarchive_task', 'params': {'id': t.id, 'task': t.task, 'is_archived': False}}]
+
+    # 8. ARCHIVE INTENT
+    archive_in_user = any(k in action_context for k in ['ארכיון', 'לארכיון', 'ארכב', 'תארכב', 'ארכבי', 'תארכבי', 'לארכב', 'archive']) and not any(k in action_context for k in ['שחזר', 'תשחזר', 'שחזרי', 'תשחזרי', 'unarchive'])
+    archive_in_ai = ai_reply and any(k in ai_reply.lower() for k in ['ארכיב', 'הועברה לארכיון', 'הועבר לארכיון', 'לארכיון']) and not any(k in ai_reply.lower() for k in ['שחזר', 'unarchive'])
+    if archive_in_user or archive_in_ai:
+        if 'פרויקט' in user_msg_clean:
+            p = resolve_project_from_context(user_msg, history)
+            if p:
+                return [{'action': 'archive_project', 'params': {'id': p.id, 'name': p.name, 'is_archived': True}}]
+        t = find_target_task_in_context(user_msg, ai_reply, history)
+        if t and is_task_referenced_in_context(t, user_msg, history):
+            return [{'action': 'archive_task', 'params': {'id': t.id, 'task': t.task, 'is_archived': True}}]
+
+    # 9. RENAME TASK INTENT
+    if any(k in user_msg_clean for k in ['תשנה את השם', 'תשני את השם', 'שנה את השם', 'תשנה שם', 'תעדכן את השם', 'לשנות את השם', 'rename']):
+        t = find_target_task_in_context(user_msg, ai_reply, history)
+        if t:
+            quotes = extract_quoted_strings(user_msg)
+            new_title = quotes[-1].strip() if quotes else None
+            if not new_title:
+                match = re.search(r'\b(?:ל-|ל)\s*([^\n]+)', user_msg)
+                if match:
+                    new_title = match.group(1).strip(' "\'״׳:')
+            if new_title:
+                return [{'action': 'edit_task', 'params': {'id': t.id, 'task': new_title}}]
+
+    # 10. REMOVE MEMBER INTENT
+    rem_member_match = re.search(r'(?:תוריד|תורידי|הורד|הורידי|להוריד|תסיר|תסירי|הסר|הסירי|להסיר)\s+את\s+([^\s]+)\s+ממשימ', user_msg_clean)
+    if rem_member_match:
+        m_name = rem_member_match.group(1).strip()
+        t = find_target_task_in_context(user_msg, ai_reply, history)
+        if t:
+            return [{'action': 'edit_task', 'params': {'id': t.id, 'remove_members': [m_name], 'task': t.task}}]
+
+    # 11. ASSIGN MEMBER EXCLUSIVELY INTENT
+    assign_match = re.search(r'(?:תקצה|תקצי|הקצה|הקצי|להקצות|תשייך|תשייכי|שייך|שייכי|לשייך)\s+את\s+משימ(?:ה)?\s+#?(\d+)\s+ל-?([^\s]+)', user_msg_clean)
+    if assign_match:
+        t_id = int(assign_match.group(1))
+        m_name = assign_match.group(2).strip()
+        t = db.session.get(Task, t_id)
+        if t:
+            resolved = resolve_member_names([m_name])
+            return [{'action': 'edit_task', 'params': {'id': t.id, 'members': resolved if resolved else [m_name], 'task': t.task}}]
+
+    # 12. ADD MEMBER TO TASK INTENT
     add_member_match = re.search(r'(?:תוסיף|תוסיפי|הוסף|הוסיפי|צרף|צרפי|תצרף|תצרפי)\s+את\s+([^\s]+)\s+למשימ', user_msg_clean)
     if add_member_match:
         m_name = add_member_match.group(1).strip()
         t = find_target_task_in_context(user_msg, ai_reply, history)
         if t:
-            existing = [x.strip() for x in (t.members or '').split(',') if x.strip()]
-            new_m = resolve_member_names([m_name])
-            for nm in new_m:
-                if nm not in existing:
-                    existing.append(nm)
-            return [{
-                'action': 'edit_task',
-                'params': {
-                    'id': t.id,
-                    'members': existing,
-                    'task': t.task
-                }
-            }]
+            return [{'action': 'edit_task', 'params': {'id': t.id, 'add_members': [m_name], 'task': t.task}}]
 
-    # 9. POSTPONE / DATE CHANGE INTENT
-    if any(k in action_context for k in ['תדחה', 'תדחי', 'דחה', 'דחי', 'לדחות', 'תזיז', 'תזיזי', 'הזז', 'הזיזי', 'להזיז', 'תקדים', 'תקדימי', 'הקדם', 'הקדימי', 'להקדים']):
+    # 13. PRIORITY UPDATE INTENT
+    if any(k in user_msg_clean for k in ['תשנה את העדיפות', 'תעדכן את העדיפות', 'עדיפות שלה', 'שים את משימה', 'העדיפות של משימה', 'עדיפות דחופה', 'בעדיפות']):
+        prio = None
+        if any(k in user_msg_clean for k in ['דחוף', 'דחופה', 'urgent', 'גבוהה', 'גבוה', 'high']):
+            prio = 'high'
+        elif any(k in user_msg_clean for k in ['בינונית', 'medium']):
+            prio = 'medium'
+        elif any(k in user_msg_clean for k in ['נמוכה', 'נמוך', 'low']):
+            prio = 'low'
+        elif any(k in user_msg_clean for k in ['ללא', 'none']):
+            prio = 'none'
+
+        if prio:
+            t = find_target_task_in_context(user_msg, ai_reply, history)
+            if t and is_task_referenced_in_context(t, user_msg, history):
+                return [{
+                    'action': 'edit_task',
+                    'params': {
+                        'id': t.id,
+                        'priority': prio,
+                        'task': t.task
+                    }
+                }]
+
+    # 14. DATE / POSTPONE INTENT
+    if any(k in action_context for k in ['תאריך היעד', 'תאריך יעד', 'יעד', 'תדחה', 'תדחי', 'דחה', 'דחי', 'לדחות', 'תזיז', 'תזיזי', 'הזז', 'הזיזי', 'להזיז', 'תקדים', 'תקדימי', 'הקדם', 'הקדימי', 'להקדים']):
         t = find_target_task_in_context(user_msg, ai_reply, history)
         if t and is_task_referenced_in_context(t, user_msg, history):
             date_match = re.search(r'\b(?:ל-|עד\s+)?(\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?|\d{4}-\d{2}-\d{2})\b', user_msg)
@@ -1044,6 +1218,44 @@ def detect_fallback_action(user_msg, ai_reply, history=None):
                             'task': t.task
                         }
                     }]
+
+    # 15. STATUS UPDATE INTENT
+    target_status = None
+    status_keywords = {
+        'status-inprogress': ['בתהליך', 'תהליך', 'בביצוע', 'בעבודה', 'in progress', 'inprogress', 'in-progress', 'התחלנו לעבוד', 'החל', 'התחיל'],
+        'status-done': ['הושלם', 'הושלמה', 'הסתיים', 'הסתיימה', 'הסתיימה בהצלחה', 'בוצע', 'בוצעה', 'סיימתי', 'סיימנו', 'גמור', 'גמורה', 'done', 'completed', 'נסגר', 'נסגרה', 'סגור', 'סגורה', 'השלמתי', 'closed', 'finished'],
+        'status-delayed': ['מעוכב', 'מעוכבת', 'עיכוב', 'ממתין', 'ממתינה', 'תקוע', 'תקועה', 'delayed', 'hold'],
+        'status-notstarted': ['טרם החל', 'לא החל', 'לא התחיל', 'טרם התחיל', 'טרם בוצע', 'not started', 'notstarted', 'איפוס סטטוס', 'לאפס סטטוס', 'החזר לטרם החל', 'תחזיר לטרם החל']
+    }
+    for st, keywords in status_keywords.items():
+        if any(kw in action_context for kw in keywords):
+            target_status = st
+            break
+
+    # If verb is mark/close/complete and no other status is given, default to status-done
+    if not target_status and any(k in action_context for k in ['סמן', 'סמני', 'תסמן', 'תסמני', 'לסמן', 'סגור', 'סגרי', 'תסגור', 'תסגרי', 'לסגור', 'סיים', 'סיימי', 'תסיים', 'תסיימי', 'לסיים', 'השלם', 'השלימי', 'תשלים', 'תשלימי', 'להשלים', 'סיימתי', 'סיימנו', 'mark', 'close', 'complete', 'check']):
+        target_status = 'status-done'
+
+    # If AI reply claims a status and user had action intent
+    if not target_status and ai_reply and (has_action or inherited_intent):
+        ai_lower = ai_reply.lower()
+        for st, keywords in status_keywords.items():
+            if any(f"סטטוס: {kw}" in ai_lower or f"סטטוס:{kw}" in ai_lower or f"סטטוס {kw}" in ai_lower or f"status: {kw}" in ai_lower for kw in keywords):
+                target_status = st
+                break
+
+    has_target_task_mention = bool(re.search(r'(?:^|\b)(?:משימה\s+)?#?\d+', user_msg_clean))
+    if target_status and (has_action or inherited_intent or has_target_task_mention or any(p in user_msg_clean for p in ['אותה', 'אותו', 'זה', 'את זה', 'אותם'])):
+        t = find_target_task_in_context(user_msg, ai_reply, history)
+        if t and is_task_referenced_in_context(t, user_msg, history):
+            return [{
+                'action': 'edit_task',
+                'params': {
+                    'id': t.id,
+                    'status': target_status,
+                    'task': t.task
+                }
+            }]
 
     return None
 
@@ -1545,13 +1757,23 @@ def _action_create_task(params):
     project_obj = resolve_project(proj_val)
     
     if not project_obj:
-        # Create project if not exists
-        p_name = str(proj_val).strip() if proj_val else "פרויקט כללי"
-        first_team = Team.query.first()
-        teams = [first_team] if first_team else []
-        project_obj = Project(name=p_name, teams=teams)
-        db.session.add(project_obj)
-        db.session.flush()
+        p_name = str(proj_val).strip() if proj_val else ""
+        if p_name:
+            project_obj = Project.query.filter(db.func.lower(Project.name) == p_name.lower()).first()
+        if not project_obj and not p_name:
+            if members_resolved:
+                mem = TeamMember.query.filter(TeamMember.name_en.in_(members_resolved) | TeamMember.name_he.in_(members_resolved)).first()
+                if mem and mem.teams and mem.teams[0].projects:
+                    project_obj = mem.teams[0].projects[0]
+            if not project_obj:
+                project_obj = Project.query.filter_by(is_archived=False).first()
+        if not project_obj:
+            p_name = p_name or "פרויקט כללי"
+            first_team = Team.query.first()
+            teams = [first_team] if first_team else []
+            project_obj = Project(name=p_name, teams=teams)
+            db.session.add(project_obj)
+            db.session.flush()
 
     task_title = params.get('task') or params.get('title') or 'משימה חדשה'
     members_resolved = resolve_member_names(params.get('members'))
@@ -1698,6 +1920,7 @@ def _action_delete_task(params):
     return {
         'action': 'delete_task',
         'status': 'success',
+        'task_id': task_id,
         'description': f'נמחקה משימה #{task_id}: "{title}"'
     }
 
@@ -2022,3 +2245,110 @@ def _action_delete_special_day(params):
         'status': 'success',
         'description': f'נמחק יום מיוחד: "{name}"'
     }
+
+def get_fallback_read_reply(user_msg, ctx=None):
+    """
+    Provides natural Hebrew responses for informational / read / conversational queries
+    when the generative model is offline, rate-limited, or returns empty.
+    """
+    clean_msg = (user_msg or "").strip()
+
+    # 1. Greetings & Bot Identity
+    if re.search(r'^(?:היי|שלום|אהלן|בוקר\s*טוב|ערב\s*טוב)\b|מי\s+אתה|מה\s+אתה\s+יודע\s+לעשות', clean_msg, re.IGNORECASE):
+        return (
+            "שלום! אני TeamTasks AI, העוזר החכם שלך לניהול משימות ופרויקטים.\n\n"
+            "אני יכול לסייע לך במגוון פעולות:\n"
+            "• יצירה, עדכון, מחיקה וארכוב של משימות ופרויקטים\n"
+            "• מעקב אחר עומסי צוותים וחברי צוות\n"
+            "• בדיקת דדליינים, משימות בעיכוב וסטטוס התקדמות\n"
+            "• הפקת סיכומי מנהלים ותובנות מערכת"
+        )
+
+    # 2. Gratitude / Casual
+    if re.search(r'^(?:תודה|תודה\s+רבה|עזרת\s+לי|אחלה|מעולה|יופי)', clean_msg, re.IGNORECASE):
+        return "בשמחה רבה! תמיד כאן לעזור. אם תצטרך פעולה או מידע נוסף, רק תגיד."
+
+    # 3. Executive summary
+    if re.search(r'סיכום\s+מנהלים|סקירה\s+ניהולית|תמונת\s+מצב|דוח\s+מנהלים', clean_msg, re.IGNORECASE):
+        from ai_context import get_executive_summary
+        summ = get_executive_summary()
+        status_map = {
+            'status-done': 'הושלם',
+            'status-inprogress': 'בתהליך',
+            'status-notstarted': 'טרם החל',
+            'status-delayed': 'מעוכב'
+        }
+        st_parts = [f"{he}: {summ['status_counts'].get(en, 0)}" for en, he in status_map.items()]
+        return (
+            f"**סיכום מנהלים:**\n\n"
+            f"* **תאריך:** {summ['date_hebrew']}\n"
+            f"* **פרויקטים:** {summ['total_projects']} פרויקטים פעילים\n"
+            f"* **משימות:** {summ['total_tasks']} משימות פעילות (אחוז השלמה: {summ['completion_rate']}%)\n"
+            f"* **התפלגות סטטוסים:** {', '.join(st_parts)}\n"
+            f"* **משימות ללא משויך:** {summ['unassigned_count']}"
+        )
+
+    # 4. Deadlines
+    if re.search(r'דדליין|דדליינים|מועד\s*יעד|שמגיעים\s+השבוע|השבוע', clean_msg, re.IGNORECASE):
+        from ai_context import get_deadlines_analysis
+        deadlines = get_deadlines_analysis()
+        lines = ["**דדליינים השבוע:**\n"]
+        if deadlines.get('overdue_tasks'):
+            lines.append("*משימות באיחור:*")
+            for t in deadlines['overdue_tasks'][:5]:
+                lines.append(f"• #{t['id']} [{t['project']}]: {t['task']} (איחור של {t['days_overdue']} ימים)")
+        if deadlines.get('due_this_week_tasks'):
+            lines.append("\n*משימות להשלמה השבוע:*")
+            for t in deadlines['due_this_week_tasks'][:5]:
+                lines.append(f"• #{t['id']} [{t['project']}]: {t['task']} (דדליין: {t['end_date']})")
+        if not deadlines.get('overdue_tasks') and not deadlines.get('due_this_week_tasks'):
+            lines.append("אין משימות קרובות לדדליין או באיחור השבוע.")
+        return "\n".join(lines)
+
+    # 5. Delayed tasks
+    if re.search(r'עיכוב|מעוכב|באיחור|תקועות', clean_msg, re.IGNORECASE):
+        tasks = Task.query.filter_by(status='status-delayed', is_archived=False).all()
+        if not tasks:
+            return "אין כרגע משימות בסטטוס עיכוב במערכת."
+        lines = ["**משימות בעיכוב:**\n"]
+        for t in tasks:
+            lines.append(f"• **#{t.id} [{t.project or 'ללא פרויקט'}]:** {t.task}")
+        return "\n".join(lines)
+
+    # 6. Unassigned / stale tasks
+    if re.search(r'בלי\s+אחראי|ללא\s+אחראי|ללא\s+משויך|לא\s+משויכות', clean_msg, re.IGNORECASE):
+        tasks = Task.query.filter(Task.is_archived == False, (Task.members == None) | (Task.members == '')).all()
+        if not tasks:
+            return "כל המשימות הפעילות במערכת משויכות לאחראים."
+        lines = ["**חיפוש משימות ללא אחראי:**\n"]
+        for t in tasks[:10]:
+            lines.append(f"• **משימה #{t.id}:** [{t.project or 'ללא פרויקט'}]: {t.task}")
+        return "\n".join(lines)
+
+    # 7. Teams and members overview
+    if re.search(r'איזה\s+צוותים|צוותים\s+במערכת|מי\s+נמצא\s+בהם', clean_msg, re.IGNORECASE):
+        teams = Team.query.all()
+        if not teams:
+            return "אין צוותים מוגדרים כרגע במערכת."
+        lines = ["**צוותים במערכת:**\n"]
+        for t in teams:
+            m_names = [m.name_he or m.name_en for m in t.members]
+            lines.append(f"• **{t.name_he or t.name_en}** - חברים: {', '.join(m_names) if m_names else 'ללא חברים'}")
+        return "\n".join(lines)
+
+    # 8. Project overview inquiry (e.g. "ספר לי קצת על פרויקט אפליקציית מובייל ללקוחות")
+    p_match = re.search(r'פרויקט\s+([\'\"״׳]?)(.+?)\1(?:\s*$|\s+(?:כולל|מה|איזה|פרטים))', clean_msg, re.IGNORECASE)
+    if p_match or 'פרויקט' in clean_msg:
+        projects = Project.query.filter_by(is_archived=False).all()
+        for p in projects:
+            if p.name.lower() in clean_msg.lower():
+                tasks = [t for t in p.tasks if not t.is_archived]
+                teams_names = [t.name_he for t in p.teams]
+                return (
+                    f"**פרויקט {p.name}:**\n\n"
+                    f"* **צוותים אחראיים:** {', '.join(teams_names) if teams_names else 'ללא צוות'}\n"
+                    f"* **סה\"כ משימות פעילות:** {len(tasks)}\n"
+                    f"* **משימות מובילות:** {', '.join([t.task for t in tasks[:3]]) if tasks else 'אין משימות'}"
+                )
+
+    return None

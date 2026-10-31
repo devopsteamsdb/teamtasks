@@ -3,7 +3,7 @@ import * as API from './api.js';
 import * as UI from './ui.js';
 import * as Events from './events.js';
 import * as Utils from './utils.js';
-import { state, setTeams, setMembers, setProjects, setLastUpdateTimestamp, setActiveTeamFilter, setActiveMemberFilter, setStatusFilter, setPriorityFilter, setCurrentTaskItem } from './state.js';
+import { state, setTeams, setMembers, setProjects, setSpecialDays, setLastUpdateTimestamp, setActiveTeamFilter, setActiveMemberFilter, setStatusFilter, setPriorityFilter, setCurrentTaskItem } from './state.js';
 import { subscribeLiveSync } from './live_sync.js';
 
 // Expose for global coordination (e.g. AI Assistant)
@@ -19,6 +19,10 @@ async function checkForUpdates() {
     try {
         const data = await API.fetchVersion();
         if (data && data.timestamp && state.lastUpdateTimestamp && data.timestamp > state.lastUpdateTimestamp) {
+            if (UI.isAnyModalOpen()) {
+                UI.setPendingRefresh(true);
+                return;
+            }
             isUpdating = true;
             setLastUpdateTimestamp(data.timestamp);
             await UI.refreshContent(Events.attachEventListeners);
@@ -34,16 +38,18 @@ async function init() {
     UI.initializeFlatpickr();
 
     // Load Initial Data
-    const [teams, members, projects, versionData] = await Promise.all([
+    const [teams, members, projects, versionData, specialDays] = await Promise.all([
         API.fetchTeams(),
         API.fetchMembers(),
         API.fetchProjects(),
-        API.fetchVersion()
+        API.fetchVersion(),
+        API.fetchSpecialDays()
     ]);
 
     setTeams(teams);
     setMembers(members);
     setProjects(projects);
+    setSpecialDays(specialDays || []);
     if (versionData) {
         setLastUpdateTimestamp(versionData.timestamp);
     }
@@ -52,6 +58,7 @@ async function init() {
     UI.populateProjectDropdowns();
     UI.populateProjectTeamCheckboxes();
     UI.populateMemberCheckboxes();
+    UI.setLastListenersCallback(Events.attachEventListeners);
     Events.attachEventListeners();
     Events.attachGlobalListeners();
 
@@ -114,7 +121,21 @@ async function init() {
         setActiveMemberFilter(storedMember);
     }
 
+    const urlView = urlParams.get('view');
+    const storedView = urlView || localStorage.getItem('teamtasks_view_mode') || 'grid';
+    UI.switchViewMode(storedView);
+
     UI.applyFilters();
+
+    // Open specific task from URL parameter if provided (e.g. from Admin page or direct link)
+    const openTaskId = urlParams.get('open_task') || urlParams.get('task');
+    if (openTaskId) {
+        setTimeout(() => {
+            if (typeof window.openTaskEditModal === 'function') {
+                window.openTaskEditModal(openTaskId);
+            }
+        }, 250);
+    }
 }
 
 // Run init when DOM is ready

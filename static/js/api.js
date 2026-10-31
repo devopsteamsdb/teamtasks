@@ -180,10 +180,160 @@ export async function searchTasks(query) {
 
 export async function fetchPageContent(url) {
     try {
-        const response = await fetch(url);
+        const u = new URL(url, window.location.origin);
+        u.searchParams.set('_t', Date.now().toString());
+        const response = await fetch(u.toString(), {
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            }
+        });
         return await response.text();
     } catch (error) {
         console.error('Error fetching page content:', error);
+        throw error;
+    }
+}
+
+// Subtasks API
+export async function fetchTaskSubtasks(taskId) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/subtasks`);
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching subtasks:', error);
+        return [];
+    }
+}
+
+export async function createSubtask(taskId, title) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/subtasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: title })
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error creating subtask:', error);
+        throw error;
+    }
+}
+
+export async function updateSubtask(subtaskId, payload) {
+    try {
+        const response = await fetch(`/api/subtasks/${subtaskId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error updating subtask:', error);
+        throw error;
+    }
+}
+
+export async function deleteSubtask(subtaskId) {
+    try {
+        const response = await fetch(`/api/subtasks/${subtaskId}`, {
+            method: 'DELETE'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting subtask:', error);
+        throw error;
+    }
+}
+
+// Comments API
+export async function fetchTaskComments(taskId) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/comments`);
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching comments:', error);
+        return [];
+    }
+}
+
+export async function createTaskComment(taskId, payload) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error creating comment:', error);
+        throw error;
+    }
+}
+
+export async function deleteTaskComment(commentId) {
+    try {
+        const response = await fetch(`/api/comments/${commentId}`, {
+            method: 'DELETE'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        throw error;
+    }
+}
+
+// Special Days API
+export async function fetchSpecialDays(startDateStr = '', endDateStr = '') {
+    try {
+        let url = '/api/special-days';
+        if (startDateStr && endDateStr) {
+            url += `?start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}`;
+        }
+        const response = await fetch(url);
+        return await response.json();
+    } catch (error) {
+        console.error('Error loading special days:', error);
+        return [];
+    }
+}
+
+export async function createSpecialDay(payload) {
+    try {
+        const response = await fetch('/api/special-days', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error creating special day:', error);
+        throw error;
+    }
+}
+
+export async function updateSpecialDay(id, payload) {
+    try {
+        const response = await fetch(`/api/special-days/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error updating special day:', error);
+        throw error;
+    }
+}
+
+export async function deleteSpecialDay(id) {
+    try {
+        const response = await fetch(`/api/special-days/${id}`, {
+            method: 'DELETE'
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting special day:', error);
         throw error;
     }
 }

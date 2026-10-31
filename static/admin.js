@@ -13,12 +13,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const addMemberBtn = document.getElementById('addMemberBtn');
     const teamModal = document.getElementById('teamModal');
     const memberModal = document.getElementById('memberModal');
-    const closeModalBtns = document.querySelectorAll('.close-modal, .close-member-modal');
+    const specialDayModal = document.getElementById('specialDayModal');
+    const closeModalBtns = document.querySelectorAll('.close-modal, .close-member-modal, .close-special-modal');
     const saveTeamBtn = document.getElementById('saveTeamBtn');
     const saveMemberBtn = document.getElementById('saveMemberBtn');
     const cancelTeamBtn = document.getElementById('cancelTeamBtn');
     const cancelMemberBtn = document.getElementById('cancelMemberBtn');
     const toast = document.getElementById('toast');
+
+    // Special Days Elements
+    let specialDays = [];
+    const specialDaysContainer = document.getElementById('specialDaysContainer');
+    const addSpecialDayBtn = document.getElementById('addSpecialDayBtn');
+    const saveSpecialDayBtn = document.getElementById('saveSpecialDayBtn');
+    const cancelSpecialDayBtn = document.getElementById('cancelSpecialDayBtn');
+    const specialDayDateInput = document.getElementById('specialDayDateInput');
+    const specialDayNameInput = document.getElementById('specialDayNameInput');
+    const specialDayTypeSelect = document.getElementById('specialDayTypeSelect');
+    const specialDayIdInput = document.getElementById('specialDayId');
+    const specialDayColorPicker = document.getElementById('specialDayColorPicker');
+    const specialDayColorInput = document.getElementById('specialDayColorInput');
 
     // Helper to notify other tabs/pages
     function broadcastAdminChange() {
@@ -32,7 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function isAnyAdminModalOpen() {
-        return (teamModal && teamModal.style.display === 'block') || (memberModal && memberModal.style.display === 'block');
+        return (teamModal && teamModal.style.display === 'block') ||
+               (memberModal && memberModal.style.display === 'block') ||
+               (specialDayModal && specialDayModal.style.display === 'block');
     }
 
     let lastAdminVersion = null;
@@ -52,6 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastAdminVersion = data.timestamp;
                     isAdminUpdating = true;
                     await loadTeams();
+                    const activeSection = document.querySelector('.settings-section.active');
+                    if (activeSection && activeSection.id === 'section-special-days') {
+                        await loadSpecialDays();
+                    } else if (activeSection && activeSection.id === 'section-backup') {
+                        await loadDbBackups();
+                    }
                     isAdminUpdating = false;
                 }
             }
@@ -74,6 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (event.data && event.data.type === 'teamtasks:data_changed') {
                     if (!isAnyAdminModalOpen()) {
                         loadTeams();
+                        const activeSection = document.querySelector('.settings-section.active');
+                        if (activeSection && activeSection.id === 'section-special-days') {
+                            loadSpecialDays();
+                        } else if (activeSection && activeSection.id === 'section-backup') {
+                            loadDbBackups();
+                        }
                     }
                 }
             };
@@ -83,6 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('teamtasks:refresh', () => {
         if (!isAnyAdminModalOpen()) {
             loadTeams();
+            const activeSection = document.querySelector('.settings-section.active');
+            if (activeSection && activeSection.id === 'section-special-days') {
+                loadSpecialDays();
+            } else if (activeSection && activeSection.id === 'section-backup') {
+                loadDbBackups();
+            }
         }
     });
 
@@ -106,7 +140,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            if (item.dataset.section === 'system') {
+            if (item.dataset.section === 'special-days') {
+                loadSpecialDays();
+            } else if (item.dataset.section === 'backup') {
+                loadDbBackups();
+            } else if (item.dataset.section === 'system') {
                 loadSystemSettings();
             } else if (item.dataset.section === 'mcp') {
                 loadMcpInfo();
@@ -195,6 +233,229 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Database Version History & Fast Restore ---
+    const btnRefreshDbBackups = document.getElementById('btnRefreshDbBackups');
+    if (btnRefreshDbBackups) {
+        btnRefreshDbBackups.addEventListener('click', () => {
+            loadDbBackups();
+            showToast('היסטוריית גרסאות רועננה', 'info');
+        });
+    }
+
+    const btnBackupNow = document.getElementById('btnBackupNow');
+    if (btnBackupNow) {
+        btnBackupNow.addEventListener('click', () => triggerBackupNow());
+    }
+
+    async function loadDbBackups() {
+        const tbody = document.getElementById('dbBackupsTableBody');
+        if (!tbody) return;
+
+        try {
+            const response = await fetch('/api/backups');
+            const data = await response.json();
+
+            if (!data.success) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ef4444; padding: 2rem;">שגיאה בטעינת גיבויים: ${escapeHtml(data.error || 'שגיאה לא ידועה')}</td></tr>`;
+                return;
+            }
+
+            const backups = data.backups || [];
+            const countBadge = document.getElementById('badgeBackupsCount');
+            if (countBadge) {
+                countBadge.textContent = `${backups.length} / ${data.retention_limit || 14} גרסאות`;
+            }
+            const retentionBadge = document.getElementById('badgeRetentionPolicy');
+            if (retentionBadge && data.retention_limit) {
+                retentionBadge.textContent = `שמירת ${data.retention_limit} גרסאות`;
+            }
+
+            if (backups.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #6b7280; padding: 2.5rem 1rem;">
+                            <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">אין עדיין גיבויים שמורים במערכת</div>
+                            <p style="font-size: 0.875rem; margin: 0 0 1rem 0; color: #9ca3af;">הגיבוי האוטומטי מתבצע מדי יום ב-23:00, או שניתן לבצע גיבוי ידני כעת בלחיצה על הכפתור.</p>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="triggerBackupNow()">
+                                גבה עכשיו לשרת
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = '';
+            backups.forEach(item => {
+                const typeClass = item.type === 'daily' ? 'backup-type-daily' : (item.type === 'manual' ? 'backup-type-manual' : 'backup-type-system');
+                const typeIcon = item.type === 'daily' ? '🕒' : (item.type === 'manual' ? '⚡' : '💾');
+
+                html += `
+                    <tr data-filename="${escapeHtml(item.filename)}">
+                        <td style="font-weight: 600; white-space: nowrap;">
+                            ${escapeHtml(item.created_at_formatted || '')}
+                        </td>
+                        <td>
+                            <span class="backup-type-pill ${typeClass}">
+                                <span>${typeIcon}</span>
+                                <span>${escapeHtml(item.type_label || item.type)}</span>
+                            </span>
+                        </td>
+                        <td dir="ltr" style="font-family: monospace; font-size: 0.825rem; color: #4b5563; text-align: left;">
+                            ${escapeHtml(item.filename)}
+                        </td>
+                        <td style="white-space: nowrap; color: #6b7280; font-weight: 500;">
+                            ${escapeHtml(item.size_formatted || '')}
+                        </td>
+                        <td>
+                            <span class="status-pill status-pill-success" style="font-size: 0.75rem; padding: 0.15rem 0.5rem;">
+                                ✓ מאומת
+                            </span>
+                        </td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <div class="backup-actions-cell">
+                                <button type="button" class="btn-restore-action" onclick="fastRestoreBackup('${escapeHtml(item.filename)}', '${escapeHtml(item.created_at_formatted || item.filename)}')">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="1 4 1 10 7 10"></polyline>
+                                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                                    </svg>
+                                    שחזור מהיר
+                                </button>
+                                <a href="/api/backups/${encodeURIComponent(item.filename)}/download" class="btn-download-action" download title="הורד קובץ מסד נתונים .db">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    הורדה
+                                </a>
+                                <button type="button" class="btn-delete-backup-action" onclick="deleteDbBackup('${escapeHtml(item.filename)}')" title="מחק גרסת גיבוי זו">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+
+        } catch (e) {
+            console.error('Failed to load database backups:', e);
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ef4444; padding: 2rem;">שגיאה בתקשורת עם השרת: ${escapeHtml(e.message)}</td></tr>`;
+        }
+    }
+
+    async function triggerBackupNow() {
+        const btn = document.getElementById('btnBackupNow');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'מגבה לשרת...';
+        }
+
+        try {
+            const response = await fetch('/api/backups/now', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'manual' })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                showToast('גיבוי מסד הנתונים נוצר בהצלחה ונשמר בשרת!', 'success');
+                await loadDbBackups();
+                if (typeof loadSystemMetrics === 'function') loadSystemMetrics();
+            } else {
+                showToast(`שגיאה ביצירת גיבוי: ${result.error}`, 'error');
+            }
+        } catch (err) {
+            console.error('Backup now failed:', err);
+            showToast('שגיאה בתקשורת עם השרת ביצירת גיבוי', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    }
+
+    async function fastRestoreBackup(filename, displayDate) {
+        const confirmMsg = `אזהרה:\n\nהאם לשחזר את מסד הנתונים מהגרסה שנבחרה?\n\nקובץ: ${filename}\nמועד: ${displayDate}\n\nפעולה זו תחליף את מסד הנתונים הקיים בגרסת הגיבוי. האם להמשיך?`;
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+
+        const row = document.querySelector(`tr[data-filename="${filename}"]`);
+        const restoreBtn = row ? row.querySelector('.btn-restore-action') : null;
+        let origText = '';
+        if (restoreBtn) {
+            origText = restoreBtn.innerHTML;
+            restoreBtn.disabled = true;
+            restoreBtn.innerHTML = 'משחזר...';
+        }
+
+        try {
+            const response = await fetch(`/api/backups/${encodeURIComponent(filename)}/restore`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                showToast(result.message || 'מסד הנתונים שוחזר בהצלחה מגרסת הגיבוי!', 'success');
+                if (typeof loadTeams === 'function') loadTeams();
+                if (typeof loadSpecialDays === 'function') loadSpecialDays();
+                if (typeof loadSystemMetrics === 'function') loadSystemMetrics();
+                if (typeof broadcastAdminChange === 'function') broadcastAdminChange();
+                await loadDbBackups();
+            } else {
+                showToast(`שגיאה בשחזור: ${result.error}`, 'error');
+                if (restoreBtn) {
+                    restoreBtn.disabled = false;
+                    restoreBtn.innerHTML = origText;
+                }
+            }
+        } catch (err) {
+            console.error('Fast restore error:', err);
+            showToast('שגיאת תקשורת בעת ביצוע שחזור מהיר', 'error');
+            if (restoreBtn) {
+                restoreBtn.disabled = false;
+                restoreBtn.innerHTML = origText;
+            }
+        }
+    }
+
+    async function deleteDbBackup(filename) {
+        if (!confirm(`האם אתה בטוח שברצונך למחוק לצמיתות את גרסת הגיבוי "${filename}"?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/backups/${encodeURIComponent(filename)}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast('הגיבוי נמחק בהצלחה', 'success');
+                await loadDbBackups();
+            } else {
+                showToast(`שגיאה במחיקת גיבוי: ${result.error}`, 'error');
+            }
+        } catch (err) {
+            console.error('Delete backup error:', err);
+            showToast('שגיאת תקשורת במחיקת גיבוי', 'error');
+        }
+    }
+
+    // Expose helpers globally
+    window.loadDbBackups = loadDbBackups;
+    window.triggerBackupNow = triggerBackupNow;
+    window.fastRestoreBackup = fastRestoreBackup;
+    window.deleteDbBackup = deleteDbBackup;
+
     // Event Listeners
     addTeamBtn.addEventListener('click', () => openTeamModal());
     if (addMemberBtn) addMemberBtn.addEventListener('click', () => openMemberModal());
@@ -203,10 +464,15 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelTeamBtn.addEventListener('click', () => closeModal(teamModal));
     cancelMemberBtn.addEventListener('click', () => closeModal(memberModal));
 
+    if (addSpecialDayBtn) addSpecialDayBtn.addEventListener('click', () => openSpecialDayModal());
+    if (saveSpecialDayBtn) saveSpecialDayBtn.addEventListener('click', saveSpecialDay);
+    if (cancelSpecialDayBtn) cancelSpecialDayBtn.addEventListener('click', closeSpecialDayModal);
+
     closeModalBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             closeModal(teamModal);
             closeModal(memberModal);
+            if (specialDayModal) closeSpecialDayModal();
         });
     });
 
@@ -280,6 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('click', (e) => {
         if (e.target === teamModal) closeModal(teamModal);
         if (e.target === memberModal) closeModal(memberModal);
+        if (e.target === specialDayModal) closeSpecialDayModal();
     });
 
     // Functions
@@ -519,6 +786,327 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTeam = null;
         currentMember = null;
         selectedFile = null;
+    }
+
+    // ==========================================
+    // SPECIAL DAYS MANAGEMENT
+    // ==========================================
+    let specialDayPicker = null;
+    if (specialDayDateInput && typeof flatpickr !== 'undefined') {
+        const fpConfig = {
+            dateFormat: 'd/m/Y',
+            allowInput: false
+        };
+        if (flatpickr.l10ns && flatpickr.l10ns.he) {
+            fpConfig.locale = flatpickr.l10ns.he;
+        }
+        specialDayPicker = flatpickr(specialDayDateInput, fpConfig);
+    }
+
+    // Color preset listeners
+    document.querySelectorAll('#specialDayColorPresets .color-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const color = btn.dataset.color;
+            if (specialDayColorPicker) specialDayColorPicker.value = color;
+            if (specialDayColorInput) specialDayColorInput.value = color;
+            document.querySelectorAll('#specialDayColorPresets .color-preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    if (specialDayColorPicker) {
+        specialDayColorPicker.addEventListener('input', (e) => {
+            const val = e.target.value.toUpperCase();
+            if (specialDayColorInput) specialDayColorInput.value = val;
+            updatePresetActiveColor(val);
+        });
+    }
+
+    if (specialDayColorInput) {
+        specialDayColorInput.addEventListener('input', (e) => {
+            let val = e.target.value.trim();
+            if (!val.startsWith('#') && val.length > 0) val = '#' + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                if (specialDayColorPicker) specialDayColorPicker.value = val;
+                updatePresetActiveColor(val);
+            }
+        });
+    }
+
+    function updatePresetActiveColor(hex) {
+        if (!hex) return;
+        document.querySelectorAll('#specialDayColorPresets .color-preset-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.color.toUpperCase() === hex.toUpperCase());
+        });
+    }
+
+    const HEBREW_DAYS_NAMES = ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\''];
+    const SPECIAL_DAY_TYPE_LABELS = {
+        'holiday': 'חג / שבתון',
+        'company_event': 'אירוע חברה',
+        'other': 'מועד מיוחד'
+    };
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function formatSpecialDayDate(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.slice(0, 10).split('-');
+        if (parts.length !== 3) return dateStr;
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        const dt = new Date(y, m, d);
+        const dayLetter = HEBREW_DAYS_NAMES[dt.getDay()] || '';
+        return `יום ${dayLetter}, ${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function parseDateToISO(dmyStr) {
+        if (!dmyStr) return '';
+        if (dmyStr.includes('-')) return dmyStr.slice(0, 10);
+        const parts = dmyStr.split('/');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+        return dmyStr;
+    }
+
+    function formatISOToDMY(isoStr) {
+        if (!isoStr) return '';
+        const clean = isoStr.slice(0, 10);
+        const parts = clean.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return isoStr;
+    }
+
+    async function loadSpecialDays() {
+        try {
+            const res = await fetch('/api/special-days');
+            specialDays = await res.json();
+            renderSpecialDays();
+        } catch (err) {
+            console.error('Failed to load special days:', err);
+            showToast('שגיאה בטעינת ימים מיוחדים', 'error');
+        }
+    }
+
+    function renderSpecialDays() {
+        if (!specialDaysContainer) return;
+
+        if (!specialDays || specialDays.length === 0) {
+            specialDaysContainer.innerHTML = `
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <h3>אין ימים מיוחדים או חגים מוגדרים במערכת</h3>
+                    <p>לחץ על "הוסף יום מיוחד" כדי להגדיר ימי חג, שבתון או אירועי חברה שיוצגו בתרשים הגאנט.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const sorted = [...specialDays].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+        specialDaysContainer.innerHTML = `
+            <div class="special-days-table-wrapper">
+                <table class="special-days-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 48px;">צבע</th>
+                            <th style="width: 170px;">תאריך</th>
+                            <th>שם המועד / אירוע</th>
+                            <th style="width: 150px;">סוג</th>
+                            <th style="width: 110px; text-align: left; white-space: nowrap;">פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sorted.map(day => {
+                            const typeLabel = SPECIAL_DAY_TYPE_LABELS[day.type] || 'מועד מיוחד';
+                            const color = day.color || '#E91E63';
+                            const dateDisp = formatSpecialDayDate(day.date);
+                            return `
+                                <tr class="special-day-row" data-id="${day.id}">
+                                    <td>
+                                        <span class="special-day-color-dot" style="background-color: ${color};" title="${color}"></span>
+                                    </td>
+                                    <td>
+                                        <span class="special-day-date-badge">${escapeHtml(dateDisp)}</span>
+                                    </td>
+                                    <td>
+                                        <strong class="special-day-name">${escapeHtml(day.name)}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="special-day-type-badge ${day.type || 'other'}">${typeLabel}</span>
+                                    </td>
+                                    <td style="text-align: left; white-space: nowrap;">
+                                        <div class="table-actions">
+                                            <button type="button" class="btn-icon-small edit-special-day" data-id="${day.id}" title="ערוך מועד">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                </svg>
+                                            </button>
+                                            <button type="button" class="btn-icon-small delete delete-special-day" data-id="${day.id}" data-name="${escapeHtml(day.name)}" title="מחק מועד">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        attachSpecialDaysListeners();
+    }
+
+    function attachSpecialDaysListeners() {
+        if (!specialDaysContainer) return;
+
+        specialDaysContainer.querySelectorAll('.edit-special-day').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.id, 10);
+                openSpecialDayModal(id);
+            });
+        });
+
+        specialDaysContainer.querySelectorAll('.delete-special-day').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.id, 10);
+                const name = btn.dataset.name || '';
+                deleteSpecialDay(id, name);
+            });
+        });
+    }
+
+    function openSpecialDayModal(dayId = null) {
+        if (dayId) {
+            const day = specialDays.find(d => d.id === dayId);
+            if (!day) return;
+            document.getElementById('specialDayModalTitle').textContent = 'ערוך יום מיוחד';
+            specialDayIdInput.value = day.id;
+            const cleanDate = (day.date || '').slice(0, 10);
+            if (specialDayPicker) {
+                specialDayPicker.setDate(cleanDate, true);
+            } else {
+                specialDayDateInput.value = formatISOToDMY(cleanDate);
+            }
+            specialDayNameInput.value = day.name || '';
+            specialDayTypeSelect.value = day.type || 'holiday';
+            const col = day.color || '#E91E63';
+            specialDayColorPicker.value = col;
+            specialDayColorInput.value = col;
+            updatePresetActiveColor(col);
+        } else {
+            document.getElementById('specialDayModalTitle').textContent = 'הוסף יום מיוחד';
+            specialDayIdInput.value = '';
+            if (specialDayPicker) {
+                specialDayPicker.clear();
+            } else {
+                specialDayDateInput.value = '';
+            }
+            specialDayNameInput.value = '';
+            specialDayTypeSelect.value = 'holiday';
+            specialDayColorPicker.value = '#E91E63';
+            specialDayColorInput.value = '#E91E63';
+            updatePresetActiveColor('#E91E63');
+        }
+        specialDayModal.style.display = 'block';
+    }
+
+    function closeSpecialDayModal() {
+        if (specialDayModal) {
+            specialDayModal.style.display = 'none';
+        }
+    }
+
+    async function saveSpecialDay() {
+        const rawDate = specialDayDateInput ? specialDayDateInput.value.trim() : '';
+        const name = specialDayNameInput ? specialDayNameInput.value.trim() : '';
+        const type = specialDayTypeSelect ? specialDayTypeSelect.value : 'holiday';
+        const color = specialDayColorInput ? specialDayColorInput.value.trim() : (specialDayColorPicker ? specialDayColorPicker.value : '#E91E63');
+        const dayId = (specialDayIdInput && specialDayIdInput.value) ? parseInt(specialDayIdInput.value, 10) : null;
+
+        if (!rawDate) {
+            showToast('נא לבחור תאריך', 'error');
+            return;
+        }
+        if (!name) {
+            showToast('נא להזין שם עבור המועד', 'error');
+            return;
+        }
+
+        const isoDate = parseDateToISO(rawDate);
+        const payload = {
+            date: isoDate,
+            name: name,
+            type: type,
+            color: color
+        };
+
+        try {
+            const url = dayId ? `/api/special-days/${dayId}` : '/api/special-days';
+            const method = dayId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showToast(dayId ? 'המועד עודכן בהצלחה' : 'המועד נוסף בהצלחה', 'success');
+                closeSpecialDayModal();
+                await loadSpecialDays();
+                broadcastAdminChange();
+            } else {
+                showToast(data.error || 'שגיאה בשמירת המועד', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('שגיאה בשמירת המועד', 'error');
+        }
+    }
+
+    async function deleteSpecialDay(id, name) {
+        if (!confirm(`האם אתה בטוח שברצונך למחוק את המועד "${name}"?`)) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/special-days/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showToast('המועד נמחק בהצלחה', 'success');
+                await loadSpecialDays();
+                broadcastAdminChange();
+            } else {
+                showToast(data.error || 'שגיאה במחיקת המועד', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('שגיאה במחיקת המועד', 'error');
+        }
     }
 
     async function saveTeam() {

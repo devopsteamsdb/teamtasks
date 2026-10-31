@@ -20,9 +20,35 @@
             <a href="/" class="navbar-brand-logo" title="TeamTasks">
                 <img src="{{ url_for('static', filename='logo.svg') }}" alt="Logo" class="navbar-logo">
             </a>
-            <div class="navbar-nav-tabs">
-                <a href="/" class="navbar-brand-link active" id="navTasksLink"><span>לוח משימות</span></a>
-                <a href="/calendar" class="navbar-brand-link" id="navCalendarLink"><span>לוח שנה</span></a>
+            <div class="navbar-nav-tabs" role="tablist" aria-label="תצוגות">
+                <a href="/?view=grid" class="navbar-brand-link active" id="viewBtnGrid" data-view="grid" title="תצוגת פרויקטים">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 5px;">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    <span>פרויקטים</span>
+                </a>
+                <a href="/?view=kanban" class="navbar-brand-link" id="viewBtnKanban" data-view="kanban" title="לוח קנבן">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 5px;">
+                        <rect x="4" y="4" width="4" height="16" rx="1"></rect>
+                        <rect x="10" y="4" width="4" height="10" rx="1"></rect>
+                        <rect x="16" y="4" width="4" height="14" rx="1"></rect>
+                    </svg>
+                    <span>קנבן</span>
+                </a>
+                <a href="/?view=gantt" class="navbar-brand-link" id="viewBtnGantt" data-view="gantt" title="תרשים גאנט וציר זמן">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 5px;">
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <rect x="5" y="4" width="8" height="4" rx="1" fill="currentColor"></rect>
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <rect x="10" y="10" width="9" height="4" rx="1" fill="currentColor"></rect>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                        <rect x="7" y="16" width="6" height="4" rx="1" fill="currentColor"></rect>
+                    </svg>
+                    <span>גאנט</span>
+                </a>
             </div>
         </div>
 
@@ -93,7 +119,7 @@
 
         <header class="dashboard-header">
             <div class="dashboard-title">
-                <button id="addProjectBtn" class="btn-add-task">
+                <button id="addProjectBtn" class="btn-add-task"{% if request.args.get('view') in ['kanban', 'gantt'] %} style="display: none;"{% endif %}>
                     <img src="{{ url_for('static', filename='icons/plus.svg') }}" width="18" height="18" alt="Add"> הוסף פרויקט
                 </button>
 
@@ -115,7 +141,45 @@
             </div>
         </header>
 
-        <div class="projects-grid">
+        <div id="viewContainerGrid" class="dashboard-view active">
+            {% set ns_grid = namespace(has_visible_projects=(projects|length > 0 and not active_team_id)) %}
+            {% if active_team_id and projects|length > 0 %}
+                {% for p in projects %}
+                    {% set p_tasks = tasks|selectattr('project', 'equalto', p.name)|list %}
+                    {% set p_teams = p.teams|map(attribute='id')|list %}
+                    {% set is_p_team_assigned = (active_team_id in p_teams) %}
+                    {% set ns_p = namespace(has_task_match=false) %}
+                    {% for t in p_tasks %}
+                        {% set t_team_match = (t.team_id == active_team_id) %}
+                        {% set t_member_match = false %}
+                        {% if active_team_members %}
+                            {% set tm_list = t.members.split(',') if t.members else [] %}
+                            {% for m in tm_list %}
+                                {% if m in active_team_members %}
+                                    {% set t_member_match = true %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        {% if t_team_match or t_member_match %}
+                            {% set ns_p.has_task_match = true %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if is_p_team_assigned and (p_tasks|length == 0 or ns_p.has_task_match) %}
+                        {% set ns_grid.has_visible_projects = true %}
+                    {% elif not is_p_team_assigned and ns_p.has_task_match %}
+                        {% set ns_grid.has_visible_projects = true %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            <div id="projectsEmptyState" class="projects-empty-state gantt-empty-state" style="{% if not ns_grid.has_visible_projects %}display: flex;{% else %}display: none;{% endif %}">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="4" y1="6" x2="16" y2="6"></line><line x1="8" y1="12" x2="20" y2="12"></line><line x1="6" y1="18" x2="14" y2="18"></line>
+                </svg>
+                <p>אין פרויקטים להצגה בסינון הנוכחי</p>
+            </div>
+
+            <div class="projects-grid" style="{% if not ns_grid.has_visible_projects %}display: none;{% endif %}">
             {% for project in projects %}
             {% set project_tasks = tasks|selectattr('project', 'equalto', project.name)|list %}
             {% set project_team_ids = project.teams|map(attribute='id')|list %}
@@ -145,57 +209,66 @@
                 {% endif %}
             {% endif %}
 
+            {% set project_colors = [
+            {'bg': '#EEF2FF', 'color': '#4F46E5'},
+            {'bg': '#ECFDF5', 'color': '#10B981'},
+            {'bg': '#FFF7ED', 'color': '#F97316'},
+            {'bg': '#FEF2F2', 'color': '#EF4444'},
+            {'bg': '#F0F9FF', 'color': '#0EA5E9'},
+            {'bg': '#FDF2FF', 'color': '#A21CAF'},
+            {'bg': '#F1F5F9', 'color': '#0F172A'},
+            {'bg': '#FFFBEB', 'color': '#CA8A04'},
+            {'bg': '#E0F2FE', 'color': '#0369A1'},
+            {'bg': '#F3F4F6', 'color': '#7C3AED'},
+            {'bg': '#FDE68A', 'color': '#B45309'},
+            {'bg': '#D1FAE5', 'color': '#047857'},
+            {'bg': '#FECACA', 'color': '#B91C1C'},
+            {'bg': '#EDE9FE', 'color': '#7C3AED'},
+            {'bg': '#C7D2FE', 'color': '#1D4ED8'}
+            ] %}
+            {% set priority_colors = {
+            'high': '#ef4444',
+            'medium': '#f59e0b',
+            'low': '#fde047',
+            'none': '#cbd5e1',
+            '': '#cbd5e1'
+            } %}
+            {% set color = project_colors[(loop.index0) % project_colors|length] %}
+
             <div class="project-card {% if not project_visible %}filtered-hidden{% endif %}"
                 data-project-id="{{ project.id }}"
                 data-project-name="{{ project.name }}"
                 data-team-ids="{{ project_team_ids|join(',') }}"
-                data-is-empty="{% if project_tasks|length == 0 %}true{% else %}false{% endif %}">
+                data-is-empty="{% if project_tasks|length == 0 %}true{% else %}false{% endif %}"
+                style="border-top-color: {{ color.color }};">
                 <div class="project-header">
-                    <span class="project-title">
-                        <button class="add-task-project-btn" data-project="{{ project.name }}" data-project-id="{{ project.id }}" title="הוסף משימה לפרויקט זה">
-                            <img src="{{ url_for('static', filename='icons/plus-small.svg') }}" width="16" height="16"
-                                alt="Add" class="icon-img">
-                        </button>
-                        <span class="project-name-text">{{ project.name }}</span>
-                    </span>
-                    {% set project_colors = [
-                    {'bg': '#EEF2FF', 'color': '#4F46E5'},
-                    {'bg': '#ECFDF5', 'color': '#10B981'},
-                    {'bg': '#FFF7ED', 'color': '#F97316'},
-                    {'bg': '#FEF2F2', 'color': '#EF4444'},
-                    {'bg': '#F0F9FF', 'color': '#0EA5E9'},
-                    {'bg': '#FDF2FF', 'color': '#A21CAF'},
-                    {'bg': '#F1F5F9', 'color': '#0F172A'},
-                    {'bg': '#FFFBEB', 'color': '#CA8A04'},
-                    {'bg': '#E0F2FE', 'color': '#0369A1'},
-                    {'bg': '#F3F4F6', 'color': '#7C3AED'},
-                    {'bg': '#FDE68A', 'color': '#B45309'},
-                    {'bg': '#D1FAE5', 'color': '#047857'},
-                    {'bg': '#FECACA', 'color': '#B91C1C'},
-                    {'bg': '#EDE9FE', 'color': '#7C3AED'},
-                    {'bg': '#C7D2FE', 'color': '#1D4ED8'}
-                    ] %}
-                    {% set priority_colors = {
-                    'high': '#ef4444',
-                    'medium': '#f59e0b',
-                    'low': '#fde047',
-                    'none': '#cbd5e1',
-                    '': '#cbd5e1'
-                    } %}
-                    {% set color = project_colors[(loop.index0) % project_colors|length] %}
-                    <div class="project-header-actions">
+                    <div class="project-header-main">
+                        <span class="project-title">
+                            <span class="project-name-text" title="{{ project.name }}">{{ project.name }}</span>
+                        </span>
+                        <div class="project-header-actions">
+                            <button class="add-task-project-btn" data-project="{{ project.name }}" data-project-id="{{ project.id }}" title="הוסף משימה לפרויקט זה">
+                                <img src="{{ url_for('static', filename='icons/plus-small.svg') }}" width="14" height="14"
+                                    alt="Add" class="icon-img">
+                            </button>
+                            <button class="edit-project-btn" data-project-id="{{ project.id }}" data-project-name="{{ project.name }}" title="ערוך פרויקט">
+                                <img src="{{ url_for('static', filename='icons/edit.svg') }}" width="14" height="14" alt="Edit" class="icon-img">
+                            </button>
+                        </div>
+                    </div>
+                    <div class="project-header-meta">
                         <div class="project-badges">
                             {% for team in project.teams %}
-                            <span class="project-badge" style="background-color: {{ color.bg }}; color: {{ color.color }};">
+                            <span class="project-badge" style="background-color: {{ color.bg }}; color: {{ color.color }}; border-color: {{ color.color }}33;">
                                 {{ team.name_he }}
                             </span>
                             {% else %}
                             <span class="project-badge">כללי</span>
                             {% endfor %}
                         </div>
-                        <button class="edit-project-btn" data-project-id="{{ project.id }}" data-project-name="{{ project.name }}" title="ערוך פרויקט">
-                            <img src="{{ url_for('static', filename='icons/edit.svg') }}" width="14" height="14" alt="Edit" class="icon-img">
-                        </button>
+                        <span class="project-tasks-count" title="{{ project_tasks|length }} משימות בפרויקט זה">
+                            {{ project_tasks|length }} משימות
+                        </span>
                     </div>
                 </div>
                 <div class="project-body">
@@ -227,31 +300,171 @@
                         {% endif %}
                         {% endif %}
                         <li class="task-item {% if not show_task %}filtered-hidden{% endif %}" data-id="{{ task.id }}"
+                            data-task-name="{{ task.task }}"
                             data-notes="{{ task.notes|default('') }}"
                             data-priority="{{ task.priority|default('none') }}" data-team-id="{{ task.team_id }}"
                             data-start-date="{{ task.start_date.isoformat() if task.start_date else '' }}"
                             data-end-date="{{ task.end_date.isoformat() if task.end_date else '' }}"
-                            data-is-archived="{{ task.is_archived|lower }}" data-status="{{ task.status }}">
+                            data-is-archived="{{ task.is_archived|lower }}" data-status="{{ task.status }}"
+                            {% if task.notes %}title="{{ task.notes }}"{% endif %}>
                             <div class="task-info">
                                 <span class="task-marker"
                                     style="background-color: {{ priority_colors.get(task.priority, '#cbd5e1') }};"></span>
                                 <span class="task-name">{{ task.task }}</span>
-                                <span class="note-icon{% if not task.notes %} hidden{% endif %}"
-                                    title="{{ task.notes|truncate(200) if task.notes else '' }}"
-                                    style="vertical-align:middle;">
-                                    <img src="{{ url_for('static', filename='icons/note.svg') }}" width="16" height="16"
-                                        alt="Note" style="vertical-align:middle;">
-                                </span>
                             </div>
 
                             <div class="task-meta">
+                                <div class="task-meta-top">
+                                    <div class="task-meta-start">
+                                        <span class="status-badge {{ task.status }}">{{
+                                            task.status|replace('status-inprogress',
+                                            'בתהליך')|replace('status-done', 'הושלם')|replace('status-notstarted', 'טרם
+                                            החל')|replace('status-delayed', 'מעוכב') }}</span>
+                                        {% set subtasks_len = task.subtasks|length %}
+                                        {% set comments_len = task.comments|length %}
+                                        <div class="task-meta-badges" {% if subtasks_len == 0 and comments_len == 0 %}style="display: none;"{% endif %}>
+                                            {% if subtasks_len > 0 %}
+                                            {% set completed_subtasks = task.subtasks|selectattr('is_completed', 'equalto', true)|list|length %}
+                                            <span class="subtask-badge {% if completed_subtasks == subtasks_len %}all-done{% endif %}"
+                                                title="{{ completed_subtasks }}/{{ subtasks_len }} תתי-משימות הושלמו">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                                <span>{{ completed_subtasks }}/{{ subtasks_len }}</span>
+                                            </span>
+                                            {% endif %}
+                                            {% if comments_len > 0 %}
+                                            <span class="comment-badge" title="{{ comments_len }} תגובות">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                                <span>{{ comments_len }}</span>
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="avatar-group">
+                                        {% set member_list = task.members.split(',') if task.members else [] %}
+                                        {% set ns = namespace(shown=0, total=0, extra_names=[]) %}
+                                        {% for member_name in member_list %}
+                                        {% set member_key = member_name|lower|trim %}
+                                        {% if member_key %}
+                                        {% set member_obj = members|selectattr('name_en', 'equalto',
+                                        member_key)|first %}
+                                        {% if member_obj %}
+                                        {% set ns.total = ns.total + 1 %}
+                                        {% set m_obj_teams = member_obj.teams|map(attribute='name_he')|join(', ') if member_obj.teams else (member_obj.team.name_he if member_obj.team else 'ללא צוות') %}
+                                        {% if ns.shown < 3 %}
+                                        {% set ns.shown = ns.shown + 1 %}
+                                        <img src="/uploads/avatars/{{ member_obj.avatar_path }}"
+                                            onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
+                                            class="avatar" title="{{ member_obj.name_he }} - {{ m_obj_teams }}"
+                                            data-member-name="{{ member_obj.name_en }}">
+                                        {% else %}
+                                        {% set _ = ns.extra_names.append(member_obj.name_he) %}
+                                        <img src="/uploads/avatars/{{ member_obj.avatar_path }}"
+                                            onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
+                                            class="avatar avatar-hidden" title="{{ member_obj.name_he }} - {{ m_obj_teams }}"
+                                            data-member-name="{{ member_obj.name_en }}" style="display: none;">
+                                        {% endif %}
+                                        {% endif %}
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% if ns.total > 3 %}
+                                        <span class="avatar-more" title="{{ ns.extra_names|join(', ') }}">+{{ ns.total - 3 }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        </div>
+
+        <div id="viewContainerKanban" class="dashboard-view" style="display: none;">
+            <div class="kanban-board">
+                <!-- Column: טרם החל -->
+                {% set col_tasks_notstarted = tasks|selectattr('status', 'equalto', 'status-notstarted')|list %}
+                <div class="kanban-column" data-status="status-notstarted">
+                    <div class="kanban-column-header header-notstarted">
+                        <div class="kanban-col-title-group">
+                            <span class="kanban-col-dot status-notstarted"></span>
+                            <span class="kanban-col-title">טרם החל</span>
+                            <span class="kanban-col-count" id="count-status-notstarted">{{ col_tasks_notstarted|length }}</span>
+                        </div>
+                    </div>
+                    <div class="kanban-column-body">
+                        {% for task in col_tasks_notstarted %}
+                        <div class="task-item kanban-card" draggable="true"
+                            data-id="{{ task.id }}"
+                            data-task-name="{{ task.task }}"
+                            data-notes="{{ task.notes|default('') }}"
+                            data-project="{{ task.project }}"
+                            data-start-date="{{ task.start_date.strftime('%Y-%m-%d') if task.start_date else '' }}"
+                            data-end-date="{{ task.end_date.strftime('%Y-%m-%d') if task.end_date else '' }}"
+                            data-priority="{{ task.priority or 'none' }}"
+                            data-status="{{ task.status }}"
+                            data-team-id="{{ task.team_id or '' }}"
+                            data-order="{{ task.order }}"
+                            {% if task.notes %}title="{{ task.notes }}"{% endif %}>
+                            <div class="kanban-card-top">
+                                <span class="kanban-project-pill" title="פרויקט">{{ task.project }}</span>
+                                {% if task.priority and task.priority != 'none' %}
+                                {% set prio_title = 'עדיפות גבוהה' if task.priority == 'high' else ('עדיפות בינונית' if task.priority == 'medium' else 'עדיפות נמוכה') %}
+                                <span class="priority-tag priority-{{ task.priority }}" title="{{ prio_title }}"></span>
+                                {% endif %}
+                            </div>
+                            <div class="kanban-card-title">
+                                <span class="task-name">{{ task.task }}</span>
+                            </div>
+                            <div class="kanban-card-meta">
+                                <div class="kanban-card-badges">
+                                    {% set subtasks_len = task.subtasks|length %}
+                                    {% if subtasks_len > 0 %}
+                                    {% set completed_subtasks = task.subtasks|selectattr('is_completed', 'equalto', true)|list|length %}
+                                    <span class="subtask-badge {% if completed_subtasks == subtasks_len %}all-done{% endif %}"
+                                        title="{{ completed_subtasks }}/{{ subtasks_len }} תתי-משימות הושלמו">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                        <span>{{ completed_subtasks }}/{{ subtasks_len }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% set comments_len = task.comments|length %}
+                                    {% if comments_len > 0 %}
+                                    <span class="comment-badge" title="{{ comments_len }} תגובות">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                        <span>{{ comments_len }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% if task.start_date and task.end_date %}
+                                    {% set date_disp = (task.start_date.strftime('%d/%m') ~ ' - ' ~ task.end_date.strftime('%d/%m')) if task.start_date != task.end_date else task.end_date.strftime('%d/%m') %}
+                                    {% set date_tip = (task.start_date.strftime('%d/%m/%Y') ~ ' - ' ~ task.end_date.strftime('%d/%m/%Y')) if task.start_date != task.end_date else task.end_date.strftime('%d/%m/%Y') %}
+                                    <span class="kanban-date-badge" title="תאריכים: {{ date_tip }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ date_disp }}</span>
+                                    </span>
+                                    {% elif task.end_date %}
+                                    <span class="kanban-date-badge" title="יעד: {{ task.end_date.strftime('%d/%m/%Y') }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ task.end_date.strftime('%d/%m') }}</span>
+                                    </span>
+                                    {% elif task.start_date %}
+                                    <span class="kanban-date-badge" title="התחלה: {{ task.start_date.strftime('%d/%m/%Y') }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ task.start_date.strftime('%d/%m') }}</span>
+                                    </span>
+                                    {% else %}
+                                    <span class="kanban-date-badge no-date" title="לא נקבע תאריך - לחץ לקביעת תאריכים">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span>+ תאריך</span>
+                                    </span>
+                                    {% endif %}
+                                </div>
                                 <div class="avatar-group">
                                     {% set member_list = task.members.split(',') if task.members else [] %}
                                     {% for member_name in member_list %}
                                     {% set member_key = member_name|lower|trim %}
                                     {% if member_key %}
-                                    {% set member_obj = members|selectattr('name_en', 'equalto',
-                                    member_key)|first %}
+                                    {% set member_obj = members|selectattr('name_en', 'equalto', member_key)|first %}
                                     {% if member_obj %}
                                     {% set m_obj_teams = member_obj.teams|map(attribute='name_he')|join(', ') if member_obj.teams else (member_obj.team.name_he if member_obj.team else 'ללא צוות') %}
                                     <img src="/uploads/avatars/{{ member_obj.avatar_path }}"
@@ -262,17 +475,333 @@
                                     {% endif %}
                                     {% endfor %}
                                 </div>
-                                <span class="status-badge {{ task.status }}">{{
-                                    task.status|replace('status-inprogress',
-                                    'בתהליך')|replace('status-done', 'הושלם')|replace('status-notstarted', 'טרם
-                                    החל')|replace('status-delayed', 'מעוכב') }}</span>
                             </div>
-                        </li>
+                        </div>
                         {% endfor %}
-                    </ul>
+                    </div>
+                </div>
+
+                <!-- Column: בתהליך -->
+                {% set col_tasks_inprogress = tasks|selectattr('status', 'equalto', 'status-inprogress')|list %}
+                <div class="kanban-column" data-status="status-inprogress">
+                    <div class="kanban-column-header header-inprogress">
+                        <div class="kanban-col-title-group">
+                            <span class="kanban-col-dot status-inprogress"></span>
+                            <span class="kanban-col-title">בתהליך</span>
+                            <span class="kanban-col-count" id="count-status-inprogress">{{ col_tasks_inprogress|length }}</span>
+                        </div>
+                    </div>
+                    <div class="kanban-column-body">
+                        {% for task in col_tasks_inprogress %}
+                        <div class="task-item kanban-card" draggable="true"
+                            data-id="{{ task.id }}"
+                            data-task-name="{{ task.task }}"
+                            data-notes="{{ task.notes|default('') }}"
+                            data-project="{{ task.project }}"
+                            data-start-date="{{ task.start_date.strftime('%Y-%m-%d') if task.start_date else '' }}"
+                            data-end-date="{{ task.end_date.strftime('%Y-%m-%d') if task.end_date else '' }}"
+                            data-priority="{{ task.priority or 'none' }}"
+                            data-status="{{ task.status }}"
+                            data-team-id="{{ task.team_id or '' }}"
+                            data-order="{{ task.order }}"
+                            {% if task.notes %}title="{{ task.notes }}"{% endif %}>
+                            <div class="kanban-card-top">
+                                <span class="kanban-project-pill" title="פרויקט">{{ task.project }}</span>
+                                {% if task.priority and task.priority != 'none' %}
+                                {% set prio_title = 'עדיפות גבוהה' if task.priority == 'high' else ('עדיפות בינונית' if task.priority == 'medium' else 'עדיפות נמוכה') %}
+                                <span class="priority-tag priority-{{ task.priority }}" title="{{ prio_title }}"></span>
+                                {% endif %}
+                            </div>
+                            <div class="kanban-card-title">
+                                <span class="task-name">{{ task.task }}</span>
+                            </div>
+                            <div class="kanban-card-meta">
+                                <div class="kanban-card-badges">
+                                    {% set subtasks_len = task.subtasks|length %}
+                                    {% if subtasks_len > 0 %}
+                                    {% set completed_subtasks = task.subtasks|selectattr('is_completed', 'equalto', true)|list|length %}
+                                    <span class="subtask-badge {% if completed_subtasks == subtasks_len %}all-done{% endif %}"
+                                        title="{{ completed_subtasks }}/{{ subtasks_len }} תתי-משימות הושלמו">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                        <span>{{ completed_subtasks }}/{{ subtasks_len }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% set comments_len = task.comments|length %}
+                                    {% if comments_len > 0 %}
+                                    <span class="comment-badge" title="{{ comments_len }} תגובות">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                        <span>{{ comments_len }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% if task.start_date and task.end_date %}
+                                    {% set date_disp = (task.start_date.strftime('%d/%m') ~ ' - ' ~ task.end_date.strftime('%d/%m')) if task.start_date != task.end_date else task.end_date.strftime('%d/%m') %}
+                                    {% set date_tip = (task.start_date.strftime('%d/%m/%Y') ~ ' - ' ~ task.end_date.strftime('%d/%m/%Y')) if task.start_date != task.end_date else task.end_date.strftime('%d/%m/%Y') %}
+                                    <span class="kanban-date-badge" title="תאריכים: {{ date_tip }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ date_disp }}</span>
+                                    </span>
+                                    {% elif task.end_date %}
+                                    <span class="kanban-date-badge" title="יעד: {{ task.end_date.strftime('%d/%m/%Y') }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ task.end_date.strftime('%d/%m') }}</span>
+                                    </span>
+                                    {% elif task.start_date %}
+                                    <span class="kanban-date-badge" title="התחלה: {{ task.start_date.strftime('%d/%m/%Y') }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ task.start_date.strftime('%d/%m') }}</span>
+                                    </span>
+                                    {% else %}
+                                    <span class="kanban-date-badge no-date" title="לא נקבע תאריך - לחץ לקביעת תאריכים">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span>+ תאריך</span>
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="avatar-group">
+                                    {% set member_list = task.members.split(',') if task.members else [] %}
+                                    {% for member_name in member_list %}
+                                    {% set member_key = member_name|lower|trim %}
+                                    {% if member_key %}
+                                    {% set member_obj = members|selectattr('name_en', 'equalto', member_key)|first %}
+                                    {% if member_obj %}
+                                    {% set m_obj_teams = member_obj.teams|map(attribute='name_he')|join(', ') if member_obj.teams else (member_obj.team.name_he if member_obj.team else 'ללא צוות') %}
+                                    <img src="/uploads/avatars/{{ member_obj.avatar_path }}"
+                                        onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
+                                        class="avatar" title="{{ member_obj.name_he }} - {{ m_obj_teams }}"
+                                        data-member-name="{{ member_obj.name_en }}">
+                                    {% endif %}
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Column: מעוכב -->
+                {% set col_tasks_delayed = tasks|selectattr('status', 'equalto', 'status-delayed')|list %}
+                <div class="kanban-column" data-status="status-delayed">
+                    <div class="kanban-column-header header-delayed">
+                        <div class="kanban-col-title-group">
+                            <span class="kanban-col-dot status-delayed"></span>
+                            <span class="kanban-col-title">מעוכב</span>
+                            <span class="kanban-col-count" id="count-status-delayed">{{ col_tasks_delayed|length }}</span>
+                        </div>
+                    </div>
+                    <div class="kanban-column-body">
+                        {% for task in col_tasks_delayed %}
+                        <div class="task-item kanban-card" draggable="true"
+                            data-id="{{ task.id }}"
+                            data-task-name="{{ task.task }}"
+                            data-notes="{{ task.notes|default('') }}"
+                            data-project="{{ task.project }}"
+                            data-start-date="{{ task.start_date.strftime('%Y-%m-%d') if task.start_date else '' }}"
+                            data-end-date="{{ task.end_date.strftime('%Y-%m-%d') if task.end_date else '' }}"
+                            data-priority="{{ task.priority or 'none' }}"
+                            data-status="{{ task.status }}"
+                            data-team-id="{{ task.team_id or '' }}"
+                            data-order="{{ task.order }}"
+                            {% if task.notes %}title="{{ task.notes }}"{% endif %}>
+                            <div class="kanban-card-top">
+                                <span class="kanban-project-pill" title="פרויקט">{{ task.project }}</span>
+                                {% if task.priority and task.priority != 'none' %}
+                                {% set prio_title = 'עדיפות גבוהה' if task.priority == 'high' else ('עדיפות בינונית' if task.priority == 'medium' else 'עדיפות נמוכה') %}
+                                <span class="priority-tag priority-{{ task.priority }}" title="{{ prio_title }}"></span>
+                                {% endif %}
+                            </div>
+                            <div class="kanban-card-title">
+                                <span class="task-name">{{ task.task }}</span>
+                            </div>
+                            <div class="kanban-card-meta">
+                                <div class="kanban-card-badges">
+                                    {% set subtasks_len = task.subtasks|length %}
+                                    {% if subtasks_len > 0 %}
+                                    {% set completed_subtasks = task.subtasks|selectattr('is_completed', 'equalto', true)|list|length %}
+                                    <span class="subtask-badge {% if completed_subtasks == subtasks_len %}all-done{% endif %}"
+                                        title="{{ completed_subtasks }}/{{ subtasks_len }} תתי-משימות הושלמו">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                        <span>{{ completed_subtasks }}/{{ subtasks_len }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% set comments_len = task.comments|length %}
+                                    {% if comments_len > 0 %}
+                                    <span class="comment-badge" title="{{ comments_len }} תגובות">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                        <span>{{ comments_len }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% if task.start_date and task.end_date %}
+                                    {% set date_disp = (task.start_date.strftime('%d/%m') ~ ' - ' ~ task.end_date.strftime('%d/%m')) if task.start_date != task.end_date else task.end_date.strftime('%d/%m') %}
+                                    {% set date_tip = (task.start_date.strftime('%d/%m/%Y') ~ ' - ' ~ task.end_date.strftime('%d/%m/%Y')) if task.start_date != task.end_date else task.end_date.strftime('%d/%m/%Y') %}
+                                    <span class="kanban-date-badge" title="תאריכים: {{ date_tip }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ date_disp }}</span>
+                                    </span>
+                                    {% elif task.end_date %}
+                                    <span class="kanban-date-badge" title="יעד: {{ task.end_date.strftime('%d/%m/%Y') }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ task.end_date.strftime('%d/%m') }}</span>
+                                    </span>
+                                    {% elif task.start_date %}
+                                    <span class="kanban-date-badge" title="התחלה: {{ task.start_date.strftime('%d/%m/%Y') }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ task.start_date.strftime('%d/%m') }}</span>
+                                    </span>
+                                    {% else %}
+                                    <span class="kanban-date-badge no-date" title="לא נקבע תאריך - לחץ לקביעת תאריכים">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span>+ תאריך</span>
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="avatar-group">
+                                    {% set member_list = task.members.split(',') if task.members else [] %}
+                                    {% for member_name in member_list %}
+                                    {% set member_key = member_name|lower|trim %}
+                                    {% if member_key %}
+                                    {% set member_obj = members|selectattr('name_en', 'equalto', member_key)|first %}
+                                    {% if member_obj %}
+                                    {% set m_obj_teams = member_obj.teams|map(attribute='name_he')|join(', ') if member_obj.teams else (member_obj.team.name_he if member_obj.team else 'ללא צוות') %}
+                                    <img src="/uploads/avatars/{{ member_obj.avatar_path }}"
+                                        onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
+                                        class="avatar" title="{{ member_obj.name_he }} - {{ m_obj_teams }}"
+                                        data-member-name="{{ member_obj.name_en }}">
+                                    {% endif %}
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Column: הושלם -->
+                {% set col_tasks_done = tasks|selectattr('status', 'equalto', 'status-done')|list %}
+                <div class="kanban-column" data-status="status-done">
+                    <div class="kanban-column-header header-done">
+                        <div class="kanban-col-title-group">
+                            <span class="kanban-col-dot status-done"></span>
+                            <span class="kanban-col-title">הושלם</span>
+                            <span class="kanban-col-count" id="count-status-done">{{ col_tasks_done|length }}</span>
+                        </div>
+                    </div>
+                    <div class="kanban-column-body">
+                        {% for task in col_tasks_done %}
+                        <div class="task-item kanban-card" draggable="true"
+                            data-id="{{ task.id }}"
+                            data-task-name="{{ task.task }}"
+                            data-notes="{{ task.notes|default('') }}"
+                            data-project="{{ task.project }}"
+                            data-start-date="{{ task.start_date.strftime('%Y-%m-%d') if task.start_date else '' }}"
+                            data-end-date="{{ task.end_date.strftime('%Y-%m-%d') if task.end_date else '' }}"
+                            data-priority="{{ task.priority or 'none' }}"
+                            data-status="{{ task.status }}"
+                            data-team-id="{{ task.team_id or '' }}"
+                            data-order="{{ task.order }}"
+                            {% if task.notes %}title="{{ task.notes }}"{% endif %}>
+                            <div class="kanban-card-top">
+                                <span class="kanban-project-pill" title="פרויקט">{{ task.project }}</span>
+                                {% if task.priority and task.priority != 'none' %}
+                                {% set prio_title = 'עדיפות גבוהה' if task.priority == 'high' else ('עדיפות בינונית' if task.priority == 'medium' else 'עדיפות נמוכה') %}
+                                <span class="priority-tag priority-{{ task.priority }}" title="{{ prio_title }}"></span>
+                                {% endif %}
+                            </div>
+                            <div class="kanban-card-title">
+                                <span class="task-name">{{ task.task }}</span>
+                            </div>
+                            <div class="kanban-card-meta">
+                                <div class="kanban-card-badges">
+                                    {% set subtasks_len = task.subtasks|length %}
+                                    {% if subtasks_len > 0 %}
+                                    {% set completed_subtasks = task.subtasks|selectattr('is_completed', 'equalto', true)|list|length %}
+                                    <span class="subtask-badge {% if completed_subtasks == subtasks_len %}all-done{% endif %}"
+                                        title="{{ completed_subtasks }}/{{ subtasks_len }} תתי-משימות הושלמו">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                        <span>{{ completed_subtasks }}/{{ subtasks_len }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% set comments_len = task.comments|length %}
+                                    {% if comments_len > 0 %}
+                                    <span class="comment-badge" title="{{ comments_len }} תגובות">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                        <span>{{ comments_len }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% if task.start_date and task.end_date %}
+                                    {% set date_disp = (task.start_date.strftime('%d/%m') ~ ' - ' ~ task.end_date.strftime('%d/%m')) if task.start_date != task.end_date else task.end_date.strftime('%d/%m') %}
+                                    {% set date_tip = (task.start_date.strftime('%d/%m/%Y') ~ ' - ' ~ task.end_date.strftime('%d/%m/%Y')) if task.start_date != task.end_date else task.end_date.strftime('%d/%m/%Y') %}
+                                    <span class="kanban-date-badge" title="תאריכים: {{ date_tip }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ date_disp }}</span>
+                                    </span>
+                                    {% elif task.end_date %}
+                                    <span class="kanban-date-badge" title="יעד: {{ task.end_date.strftime('%d/%m/%Y') }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ task.end_date.strftime('%d/%m') }}</span>
+                                    </span>
+                                    {% elif task.start_date %}
+                                    <span class="kanban-date-badge" title="התחלה: {{ task.start_date.strftime('%d/%m/%Y') }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span dir="ltr">{{ task.start_date.strftime('%d/%m') }}</span>
+                                    </span>
+                                    {% else %}
+                                    <span class="kanban-date-badge no-date" title="לא נקבע תאריך - לחץ לקביעת תאריכים">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span>+ תאריך</span>
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="avatar-group">
+                                    {% set member_list = task.members.split(',') if task.members else [] %}
+                                    {% for member_name in member_list %}
+                                    {% set member_key = member_name|lower|trim %}
+                                    {% if member_key %}
+                                    {% set member_obj = members|selectattr('name_en', 'equalto', member_key)|first %}
+                                    {% if member_obj %}
+                                    {% set m_obj_teams = member_obj.teams|map(attribute='name_he')|join(', ') if member_obj.teams else (member_obj.team.name_he if member_obj.team else 'ללא צוות') %}
+                                    <img src="/uploads/avatars/{{ member_obj.avatar_path }}"
+                                        onerror="this.src='{{ url_for('static', filename='images/default.png') }}'"
+                                        class="avatar" title="{{ member_obj.name_he }} - {{ m_obj_teams }}"
+                                        data-member-name="{{ member_obj.name_en }}">
+                                    {% endif %}
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
-            {% endfor %}
+        </div>
+
+        <div id="viewContainerGantt" class="dashboard-view" style="display: none;">
+            <div class="gantt-wrapper">
+                <div class="gantt-header-bar">
+                    <div class="gantt-nav-controls">
+                        <button type="button" id="ganttPrevBtn" class="gantt-nav-btn" title="תקופה קודמת">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                        <button type="button" id="ganttTodayBtn" class="gantt-today-btn">היום</button>
+                        <button type="button" id="ganttNextBtn" class="gantt-nav-btn" title="תקופה הבאה">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        </button>
+                        <h3 id="ganttPeriodTitle" class="gantt-period-title"></h3>
+                    </div>
+                    <div class="gantt-legend">
+                        <span class="legend-item"><span class="legend-dot status-notstarted"></span> טרם החל</span>
+                        <span class="legend-item"><span class="legend-dot status-inprogress"></span> בתהליך</span>
+                        <span class="legend-item"><span class="legend-dot status-delayed"></span> מעוכב</span>
+                        <span class="legend-item"><span class="legend-dot status-done"></span> הושלם</span>
+                        <span class="legend-item"><span class="legend-dot special-day-legend-dot"></span> יום מיוחד / חג</span>
+                    </div>
+                </div>
+                <div id="ganttChartBody" class="gantt-chart-body">
+                    <!-- Rendered dynamically by gantt.js -->
+                </div>
+            </div>
         </div>
 
 
@@ -306,139 +835,91 @@
 
     <!-- Create Task Modal -->
     <div id="createTaskModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal-create">&times;</span>
-            <h2 id="createModalTitle">יצירת משימה חדשה</h2>
-            <div class="form-group">
-                <label for="createTaskProject">פרויקט:</label>
-                <select id="createTaskProject" class="form-control">
-                    <!-- Populated dynamically by JavaScript -->
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="createTaskTeam">צוות:</label>
-                <select id="createTaskTeam" class="form-control">
-                    <!-- Populated dynamically by JavaScript -->
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="createTaskNameInput">שם המשימה:</label>
-                <input type="text" id="createTaskNameInput" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>חברי צוות:</label>
-                <div class="members-select">
-                    <!-- Populated dynamically by JavaScript -->
+        <div class="modal-content modal-content-wide">
+            <div class="modal-header-bar">
+                <div class="modal-header-title-group">
+                    <h2 id="createModalTitle">יצירת משימה חדשה</h2>
                 </div>
+                <span class="close-modal-create" title="סגור">&times;</span>
             </div>
-            <div class="form-row">
-                <div class="form-group half">
-                    <label for="createTaskStatus">סטטוס:</label>
-                    <select id="createTaskStatus" class="form-control">
-                        <option value="status-notstarted">טרם החל</option>
-                        <option value="status-inprogress">בתהליך</option>
-                        <option value="status-done">הושלם</option>
-                        <option value="status-delayed">מעוכב</option>
-                    </select>
+
+            <div class="task-modal-layout-grid create-task-grid">
+                <!-- Primary Column (Right in RTL) -->
+                <div class="task-modal-col-primary">
+                    <div class="form-group title-form-group">
+                        <label for="createTaskNameInput">שם המשימה:</label>
+                        <input type="text" id="createTaskNameInput" class="form-control task-name-large-input" placeholder="הזן שם משימה...">
+                    </div>
+                    <div class="form-group notes-form-group">
+                        <label for="createTaskNotes">תיאור והערות:</label>
+                        <textarea id="createTaskNotes" rows="4" class="form-control" placeholder="הוסף הערות או פירוט למשימה החדשה..."></textarea>
+                    </div>
+                    <div class="form-group members-form-group">
+                        <label>חברי צוות משויכים:</label>
+                        <div class="members-select side-members-select">
+                            <!-- Populated dynamically by JavaScript -->
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group half">
-                    <label for="createTaskPriority">עדיפות:</label>
-                    <select id="createTaskPriority" class="form-control">
-                        <option value="none">ללא</option>
-                        <option value="low">נמוכה</option>
-                        <option value="medium">בינונית</option>
-                        <option value="high">גבוהה</option>
-                    </select>
+
+                <!-- Secondary Column (Left in RTL) -->
+                <div class="task-modal-col-secondary">
+                    <div class="task-modal-card-box">
+                        <h3 class="side-box-title">שיוך והגדרות</h3>
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label for="createTaskProject">פרויקט:</label>
+                                <select id="createTaskProject" class="form-control">
+                                    <!-- Populated dynamically by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="form-group half">
+                                <label for="createTaskTeam">צוות:</label>
+                                <select id="createTaskTeam" class="form-control">
+                                    <!-- Populated dynamically by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label for="createTaskStatus">סטטוס:</label>
+                                <select id="createTaskStatus" class="form-control">
+                                    <option value="status-notstarted">טרם החל</option>
+                                    <option value="status-inprogress">בתהליך</option>
+                                    <option value="status-done">הושלם</option>
+                                    <option value="status-delayed">מעוכב</option>
+                                </select>
+                            </div>
+                            <div class="form-group half">
+                                <label for="createTaskPriority">עדיפות:</label>
+                                <select id="createTaskPriority" class="form-control">
+                                    <option value="none">ללא</option>
+                                    <option value="low">נמוכה</option>
+                                    <option value="medium">בינונית</option>
+                                    <option value="high">גבוהה</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label for="createTaskStartDate">תאריך התחלה (אופציונלי):</label>
+                                <input type="text" id="createTaskStartDate" class="form-control" placeholder="dd/mm/yyyy">
+                            </div>
+                            <div class="form-group half">
+                                <label for="createTaskEndDate">תאריך סיום (אופציונלי):</label>
+                                <input type="text" id="createTaskEndDate" class="form-control" placeholder="dd/mm/yyyy">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-actions-sidebar">
+                        <button id="createSaveBtn" class="btn btn-primary btn-block">צור משימה</button>
+                    </div>
                 </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group half">
-                    <label for="createTaskStartDate">תאריך התחלה (אופציונלי):</label>
-                    <input type="text" id="createTaskStartDate" class="form-control" placeholder="dd/mm/yyyy">
-                </div>
-                <div class="form-group half">
-                    <label for="createTaskEndDate">תאריך סיום (אופציונלי):</label>
-                    <input type="text" id="createTaskEndDate" class="form-control" placeholder="dd/mm/yyyy">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="createTaskNotes">הערות:</label>
-                <textarea id="createTaskNotes" rows="4" placeholder="הוסף הערות כאן..."></textarea>
-            </div>
-            <div class="modal-actions">
-                <button id="createSaveBtn" class="btn btn-primary">צור משימה</button>
             </div>
         </div>
     </div>
 
-    <!-- Edit Task Modal -->
-    <div id="taskModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2 id="modalTitle">עריכת משימה</h2>
-            <div class="form-group">
-                <label for="taskProject">פרויקט:</label>
-                <select id="taskProject" class="form-control">
-                    <!-- Populated dynamically by JavaScript -->
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="taskTeam">צוות:</label>
-                <select id="taskTeam" class="form-control">
-                    <!-- Populated dynamically by JavaScript -->
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="taskNameInput">שם המשימה:</label>
-                <input type="text" id="taskNameInput" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>חברי צוות:</label>
-                <div class="members-select">
-                    <!-- Populated dynamically by JavaScript -->
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group half">
-                    <label for="taskStatus">סטטוס:</label>
-                    <select id="taskStatus" class="form-control">
-                        <option value="status-notstarted">טרם החל</option>
-                        <option value="status-inprogress">בתהליך</option>
-                        <option value="status-done">הושלם</option>
-                        <option value="status-delayed">מעוכב</option>
-                    </select>
-                </div>
-                <div class="form-group half">
-                    <label for="taskPriority">עדיפות:</label>
-                    <select id="taskPriority" class="form-control">
-                        <option value="none">ללא</option>
-                        <option value="low">נמוכה</option>
-                        <option value="medium">בינונית</option>
-                        <option value="high">גבוהה</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group half">
-                    <label for="taskStartDate">תאריך התחלה (אופציונלי):</label>
-                    <input type="text" id="taskStartDate" class="form-control" placeholder="dd/mm/yyyy">
-                </div>
-                <div class="form-group half">
-                    <label for="taskEndDate">תאריך סיום (אופציונלי):</label>
-                    <input type="text" id="taskEndDate" class="form-control" placeholder="dd/mm/yyyy">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="taskNotes">הערות:</label>
-                <textarea id="taskNotes" rows="4" placeholder="הוסף הערות כאן..."></textarea>
-            </div>
-            <div class="modal-actions">
-                <button id="saveBtn" class="btn btn-primary">שמור שינויים</button>
-                <button id="archiveBtn" class="btn btn-secondary">העבר לארכיון</button>
-                <button id="deleteBtn" class="btn btn-danger">מחק משימה</button>
-            </div>
-        </div>
-    </div>
+    {% include 'task_modal.html' %}
 
     <script src="{{ url_for('static', filename='flatpickr.min.js') }}"></script>
     <script src="{{ url_for('static', filename='flatpickr.he.js') }}"></script>
