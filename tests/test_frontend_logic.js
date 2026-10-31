@@ -482,6 +482,7 @@ it('admin.css defines table, date badges, color dots, table actions and modal pr
     assert.ok(adminCss.includes('.special-day-type-badge.holiday'), 'admin.css defines holiday badge');
     assert.ok(adminCss.includes('.table-actions'), 'admin.css defines .table-actions');
     assert.ok(adminCss.includes('display: inline-flex'), 'admin.css uses inline-flex for action buttons');
+    assert.ok(/\.member-name-en\s*\{[^}]*text-align:\s*right/.test(adminCss), 'admin.css member-name-en aligns right');
 });
 
 it('gantt.js reflects special days in header cells and grid cells with badges', () => {

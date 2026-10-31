@@ -2481,8 +2481,12 @@ html.dark-mode .task-modal-section {
 .task-modal-section .section-header {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     gap: 0.4rem;
     margin-bottom: 0.75rem;
+    flex-wrap: nowrap;
+    text-align: right;
 }
 
 .task-modal-section .section-title-wrap {
@@ -3876,8 +3880,14 @@ html.dark-mode .gantt-no-date-btn {
 }
 
 .modal-content-wide .task-modal-section .section-header {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     margin-bottom: 0.4rem;
     gap: 0.25rem;
+    flex-wrap: nowrap;
+    text-align: right;
 }
 
 .modal-content-wide .task-modal-section .section-title {

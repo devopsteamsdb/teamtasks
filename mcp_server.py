@@ -708,7 +708,7 @@ MCP_TOOLS = [
                 },
                 "avatar_path": {
                     "type": "string",
-                    "description": "Avatar filename (e.g. 'avatar_1.png' through 'avatar_30.png', or 'default.png')"
+                    "description": "Avatar filename (e.g. 'avatar_1.png' through 'avatar_48.png', or 'default.png')"
                 }
             },
             "required": ["name_en", "name_he"]

@@ -1,6 +1,6 @@
 # TeamTasks - Infrastructure Task Management System
 
-A modern, bilingual (Hebrew/English) task and project management platform built with Python & Flask, tailored for Infrastructure and DevOps teams. Features an intelligent natural-language AI Assistant, dual AI engine support (Local/Air-Gapped Ollama or Cloudflare Workers AI), real-time live synchronization, an advanced workload calendar, a collection of 30 3D superhero avatars, and automated CI/CD deployment to Docker Hub and GCP.
+A modern, bilingual (Hebrew/English) task and project management platform built with Python & Flask, tailored for Infrastructure and DevOps teams. Features an intelligent natural-language AI Assistant, dual AI engine support (Local/Air-Gapped Ollama or Cloudflare Workers AI), real-time live synchronization, an advanced workload calendar, a collection of 48 preset 3D superhero and cartoon avatars, and automated CI/CD deployment to Docker Hub and GCP.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.12+-blue.svg)
@@ -74,9 +74,9 @@ A modern, bilingual (Hebrew/English) task and project management platform built 
 - 🎈 **Special Days & Holidays** - Manage organizational holidays and events with custom colors.
 
 ### 🦸 3D Avatars & Customization
-- 🎨 **30 Built-in 3D Clay Avatars** - High-resolution characters including:
-  - Superhero collection: Superman, Batman, Spider-Man, Iron Man, Wonder Woman, Hulk, Captain America, Flash, Deadpool, Goku, etc.
-  - Fun cartoons & mascots: SpongeBob, Pikachu, Ninja, Mario, Sonic, Minion, Ninja Turtle, Baby Yoda (Grogu), and more.
+- 🎨 **48 Built-in Preset Avatars** - High-resolution characters including:
+  - Superhero collection: Superman, Batman, Spider-Man, Iron Man, Wonder Woman, Hulk, Captain America, Flash, Deadpool, Goku, Wolverine, Thor, Black Panther, Doctor Strange, Joker, Harley Quinn, Darth Vader, etc.
+  - Fun cartoons & mascots: SpongeBob, Pikachu, Ninja, Mario, Sonic, Minion, Ninja Turtles (Michelangelo & Leonardo), Baby Yoda (Grogu), Homer Simpson, Rick Sanchez, Morty Smith, Shrek, Bugs Bunny, Mickey Mouse, Donald Duck, Patrick Star, Squidward, Luigi, and more.
 - 🖼️ **Custom Avatar Uploads** - Built-in avatar picker and image uploader.
 
 ### ⚙️ Admin & System Diagnostics
@@ -240,7 +240,7 @@ Connect directly to the running Flask server over network:
 - `create_member` - Add new team member with avatar selection and team assignments.
 - `update_member` - Update member name, email, role, avatar, or team associations.
 - `delete_member` - Remove member from system.
-- `list_avatars` - Retrieve full catalog of 30 predefined 3D superhero and mascot avatar files.
+- `list_avatars` - Retrieve full catalog of 48 predefined 3D superhero, cartoon, and mascot avatar files.
 
 #### 📅 Calendar & Workload Planning (6 Tools)
 - `get_calendar_week` - Fetch weekly task schedule and special days for any target date.
@@ -540,8 +540,8 @@ Executes SQLite `PRAGMA integrity_check`.
 - 🤖 **Bilingual Natural-Language AI Assistant**:
   - Dual AI engine support: Local/Air-gapped LLMs (Ollama, vLLM) and Cloudflare Workers AI.
   - Deterministic guardrails against hallucinations and invalid database mutations.
-- 🦸 **30 3D Clay Avatars**:
-  - Built-in superhero and mascot avatar suite with custom upload support.
+- 🦸 **48 Preset Avatars**:
+  - Built-in superhero, cartoon, and mascot avatar suite with custom upload support.
 - 🩺 **Admin Diagnostics & Live Configuration**:
   - Real-time `.env` live configuration management directly from the web interface without restarting the server.
   - SQLite integrity diagnostics and database metrics.

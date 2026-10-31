@@ -87,6 +87,20 @@
     /* Force black if originally white */
 }
 
+/* Fix for settings icon being lighter (#555) than other icons in settings sidebar */
+.nav-item img[src*="settings.svg"] {
+    filter: brightness(0);
+}
+
+html.dark-mode .nav-item img[src*="save.svg"],
+html.dark-mode .nav-item img[src*="archive.svg"] {
+    filter: none;
+}
+
+html.dark-mode .nav-item img[src*="settings.svg"] {
+    filter: invert(1) brightness(2);
+}
+
 .nav-item:hover {
     background: #f3f4f6;
     color: #1f2937;
@@ -123,7 +137,9 @@
     }
 }
 
-.section-header {
+.settings-section .section-header,
+.settings-content .section-header,
+.section-header:not(.task-modal-section *) {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -200,17 +216,29 @@
     border-bottom: 2px solid #f3f4f6;
 }
 
+.team-title-wrap {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    direction: rtl;
+    flex-wrap: wrap;
+}
+
 .team-name {
     font-size: 1.25rem;
     font-weight: 600;
     color: #1f2937;
+    direction: rtl;
+    unicode-bidi: isolate;
 }
 
 .team-name-en {
     font-size: 0.875rem;
     color: #6b7280;
     font-weight: normal;
-    margin-right: 0.5rem;
+    margin: 0;
+    direction: ltr;
+    unicode-bidi: isolate;
 }
 
 .team-actions {
@@ -310,11 +338,16 @@
 .member-name-he {
     font-weight: 500;
     color: #1f2937;
+    direction: rtl;
+    unicode-bidi: isolate;
 }
 
 .member-name-en {
     font-size: 0.75rem;
     color: #9ca3af;
+    direction: ltr;
+    text-align: right;
+    unicode-bidi: isolate;
 }
 
 .member-actions {
@@ -766,19 +799,30 @@ html.dark-mode .modal-actions {
 }
 
 .team-checkbox-label {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
     font-size: 0.9rem;
     font-weight: 500;
     color: #1f2937;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    direction: rtl;
+}
+
+.team-checkbox-he {
+    direction: rtl;
+    unicode-bidi: isolate;
 }
 
 .team-checkbox-en {
     font-size: 0.78rem;
     color: #6b7280;
     font-weight: normal;
-    margin-right: 4px;
+    margin: 0;
+    direction: ltr;
+    unicode-bidi: isolate;
 }
 
 /* Multi-team badge on member in team list */
@@ -796,9 +840,19 @@ html.dark-mode .modal-actions {
     color: #4338ca;
     border-radius: 4px;
     font-weight: 500;
+    direction: rtl;
+    unicode-bidi: isolate;
 }
 
 /* Dark mode adjustments */
+html.dark-mode .team-name {
+    color: #f3f4f6;
+}
+
+html.dark-mode .team-name-en {
+    color: #9ca3af;
+}
+
 html.dark-mode .teams-checkbox-grid {
     background: #111827;
     border-color: #374151;
@@ -821,6 +875,10 @@ html.dark-mode .team-checkbox-card.checked {
 }
 
 html.dark-mode .team-checkbox-label {
+    color: #f3f4f6;
+}
+
+html.dark-mode .team-checkbox-he {
     color: #f3f4f6;
 }
 
@@ -2033,4 +2091,34 @@ html.dark-mode .btn-download-action:hover {
 html.dark-mode .btn-delete-backup-action:hover {
     background: rgba(239, 68, 68, 0.2);
     border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Ensure Task Modal sections are never centered or broken by admin styles */
+#taskModal .task-modal-section .section-header,
+.task-modal-section .section-header,
+.modal-content-wide .task-modal-section .section-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    text-align: right !important;
+    flex-wrap: nowrap !important;
+    margin-bottom: 0.4rem !important;
+    gap: 0.25rem !important;
+}
+
+#taskModal .task-modal-section .section-title-wrap,
+.task-modal-section .section-title-wrap,
+.modal-content-wide .task-modal-section .section-title-wrap {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    text-align: right !important;
+}
+
+#taskModal .task-modal-section .section-title,
+.task-modal-section .section-title,
+.modal-content-wide .task-modal-section .section-title {
+    text-align: right !important;
 }

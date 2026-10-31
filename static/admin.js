@@ -581,9 +581,9 @@ document.addEventListener('DOMContentLoaded', () => {
         teamsContainer.innerHTML = teams.map(team => `
             <div class="team-card" data-team-id="${team.id}">
                 <div class="team-card-header">
-                    <div>
-                        <span class="team-name">${team.name_he}</span>
-                        <span class="team-name-en">(${team.name_en})</span>
+                    <div class="team-title-wrap">
+                        <span class="team-name" dir="rtl">${team.name_he}</span>
+                        <span class="team-name-en" dir="ltr">(${team.name_en})</span>
                     </div>
                     <div class="team-actions">
                         <button class="btn-icon-small edit-team" data-team-id="${team.id}" title="ערוך צוות">
@@ -615,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const otherTeams = (member.teams || []).filter(t => t.id !== team.id);
                         const otherTeamsHtml = otherTeams.length > 0 ? `
                             <div class="member-other-teams">
-                                ${otherTeams.map(t => `<span class="team-badge-pill" title="משויך גם לצוות ${t.name_he}">${t.name_he}</span>`).join('')}
+                                ${otherTeams.map(t => `<span class="team-badge-pill" title="משויך גם לצוות ${t.name_he}" dir="rtl">${t.name_he}</span>`).join('')}
                             </div>
                         ` : '';
                         return `
@@ -624,8 +624,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <img src="/uploads/avatars/${member.avatar_path}" class="member-avatar" alt="${member.name_he}"
                                  onerror="this.src='/static/images/default.png'">
                                 <div class="member-names">
-                                    <span class="member-name-he">${member.name_he}</span>
-                                    <span class="member-name-en">${member.name_en}</span>
+                                    <span class="member-name-he" dir="rtl">${member.name_he}</span>
+                                    <span class="member-name-en" dir="ltr">${member.name_en}</span>
                                     ${otherTeamsHtml}
                                 </div>
                             </div>
@@ -762,7 +762,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                     <label class="team-checkbox-card ${isChecked ? 'checked' : ''}">
                         <input type="checkbox" name="memberTeams" value="${t.id}" ${isChecked ? 'checked' : ''}>
-                        <span class="team-checkbox-label" title="${t.name_he}">${t.name_he} <span class="team-checkbox-en">(${t.name_en})</span></span>
+                        <span class="team-checkbox-label" title="${t.name_he} (${t.name_en})">
+                            <span class="team-checkbox-he" dir="rtl">${t.name_he}</span>
+                            <span class="team-checkbox-en" dir="ltr">(${t.name_en})</span>
+                        </span>
                     </label>
                 `;
             }).join('');
