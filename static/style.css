@@ -2415,7 +2415,8 @@ html.dark-mode .month-special-day-label {
 
 /* Badges on Task Items (Dashboard & Views) */
 .subtask-badge,
-.comment-badge {
+.comment-badge,
+.task-date-badge {
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -2426,6 +2427,7 @@ html.dark-mode .month-special-day-label {
     line-height: 1.3;
     white-space: nowrap;
     vertical-align: middle;
+    font-variant-numeric: tabular-nums;
 }
 
 .subtask-badge {
@@ -2446,6 +2448,16 @@ html.dark-mode .month-special-day-label {
     border: 1px solid #dbeafe;
 }
 
+.task-date-badge {
+    background-color: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.task-date-badge svg {
+    flex-shrink: 0;
+}
+
 html.dark-mode .subtask-badge {
     background-color: #1e293b;
     color: #94a3b8;
@@ -2462,6 +2474,12 @@ html.dark-mode .comment-badge {
     background-color: rgba(59, 130, 246, 0.15);
     color: #60a5fa;
     border-color: rgba(59, 130, 246, 0.3);
+}
+
+html.dark-mode .task-date-badge {
+    background-color: #1e293b;
+    color: #94a3b8;
+    border-color: #334155;
 }
 
 /* Modal Sections */

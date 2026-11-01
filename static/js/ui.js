@@ -690,7 +690,12 @@ export function updateTaskCommentBadges(taskId, count) {
                 badge = document.createElement('span');
                 badge.className = 'comment-badge';
                 badge.innerHTML = `${commentSvg}<span></span>`;
-                badgesContainer.appendChild(badge);
+                const dateBadge = badgesContainer.querySelector('.task-date-badge');
+                if (dateBadge) {
+                    badgesContainer.insertBefore(badge, dateBadge);
+                } else {
+                    badgesContainer.appendChild(badge);
+                }
             }
             badge.setAttribute('title', titleText);
             const span = badge.querySelector('span');
@@ -734,6 +739,123 @@ export function updateTaskCommentBadges(taskId, count) {
             if (span) span.textContent = count;
         } else if (badge) {
             badge.remove();
+        }
+    });
+}
+
+export function updateTaskDateBadge(taskId, startStr, endStr) {
+    if (!taskId) return;
+    const idStr = String(taskId);
+
+    const startParts = startStr ? startStr.split('-') : null;
+    const endParts = endStr ? endStr.split('-') : null;
+    let shortDisp = '';
+    let kanbanDisp = '';
+    let tip = '';
+
+    if (startParts && endParts) {
+        const startDisp = `${startParts[2]}/${startParts[1]}`;
+        const endDisp = `${endParts[2]}/${endParts[1]}`;
+        shortDisp = (startStr === endStr) ? endDisp : `${startDisp}-${endDisp}`;
+        kanbanDisp = (startStr === endStr) ? endDisp : `${startDisp} - ${endDisp}`;
+        tip = (startStr === endStr)
+            ? `תאריך: ${endParts[2]}/${endParts[1]}/${endParts[0]}`
+            : `תאריכים: ${startParts[2]}/${startParts[1]}/${startParts[0]} - ${endParts[2]}/${endParts[1]}/${endParts[0]}`;
+    } else if (endParts) {
+        shortDisp = `${endParts[2]}/${endParts[1]}`;
+        kanbanDisp = shortDisp;
+        tip = `יעד: ${endParts[2]}/${endParts[1]}/${endParts[0]}`;
+    } else if (startParts) {
+        shortDisp = `${startParts[2]}/${startParts[1]}`;
+        kanbanDisp = shortDisp;
+        tip = `התחלה: ${startParts[2]}/${startParts[1]}/${startParts[0]}`;
+    }
+
+    const dateSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+
+    // 1. Projects Grid task items
+    const gridItems = document.querySelectorAll(`.projects-grid .task-item[data-id="${idStr}"]`);
+    gridItems.forEach(item => {
+        item.dataset.startDate = startStr || '';
+        item.dataset.endDate = endStr || '';
+
+        const meta = item.querySelector('.task-meta');
+        if (!meta) return;
+        let badgesContainer = meta.querySelector('.task-meta-badges');
+        let badge = badgesContainer ? badgesContainer.querySelector('.task-date-badge') : null;
+
+        if (shortDisp) {
+            if (!badgesContainer) {
+                badgesContainer = document.createElement('div');
+                badgesContainer.className = 'task-meta-badges';
+                const startContainer = meta.querySelector('.task-meta-start');
+                if (startContainer) {
+                    startContainer.appendChild(badgesContainer);
+                } else {
+                    meta.appendChild(badgesContainer);
+                }
+            }
+            badgesContainer.style.display = 'inline-flex';
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'task-date-badge date-badge';
+                badge.innerHTML = `${dateSvg}<span dir="ltr">${shortDisp}</span>`;
+                badgesContainer.appendChild(badge);
+            } else {
+                const span = badge.querySelector('span');
+                if (span) {
+                    span.textContent = shortDisp;
+                    span.setAttribute('dir', 'ltr');
+                }
+            }
+            badge.setAttribute('title', tip);
+        } else if (badge) {
+            badge.remove();
+            if (badgesContainer && badgesContainer.children.length === 0) {
+                badgesContainer.style.display = 'none';
+            }
+        }
+    });
+
+    // 2. Kanban cards
+    const kanbanCards = document.querySelectorAll(`.kanban-card[data-id="${idStr}"]`);
+    kanbanCards.forEach(card => {
+        card.dataset.startDate = startStr || '';
+        card.dataset.endDate = endStr || '';
+        const meta = card.querySelector('.kanban-card-meta');
+        if (!meta) return;
+        let badgesContainer = meta.querySelector('.kanban-card-badges');
+        if (!badgesContainer && kanbanDisp) {
+            badgesContainer = document.createElement('div');
+            badgesContainer.className = 'kanban-card-badges';
+            meta.appendChild(badgesContainer);
+        }
+        if (!badgesContainer) return;
+        const dateBadge = badgesContainer.querySelector('.kanban-date-badge');
+        if (dateBadge) {
+            if (kanbanDisp) {
+                dateBadge.classList.remove('no-date');
+                dateBadge.setAttribute('title', tip);
+                const span = dateBadge.querySelector('span');
+                if (span) {
+                    span.textContent = kanbanDisp;
+                    span.setAttribute('dir', 'ltr');
+                }
+            } else {
+                dateBadge.classList.add('no-date');
+                dateBadge.setAttribute('title', 'לא נקבע תאריך - לחץ לקביעת תאריכים');
+                const span = dateBadge.querySelector('span');
+                if (span) {
+                    span.textContent = '+ תאריך';
+                    span.removeAttribute('dir');
+                }
+            }
+        } else if (kanbanDisp) {
+            const badge = document.createElement('span');
+            badge.className = 'kanban-date-badge';
+            badge.setAttribute('title', tip);
+            badge.innerHTML = `${dateSvg}<span dir="ltr">${kanbanDisp}</span>`;
+            badgesContainer.appendChild(badge);
         }
     });
 }

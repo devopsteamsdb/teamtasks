@@ -339,6 +339,28 @@ it('kanban-date-badge displays date ranges correctly in templates and gantt.js',
     assert.ok(css.includes('.kanban-date-badge {') && css.includes('white-space: nowrap;'), 'kanban-date-badge has nowrap styling');
 });
 
+it('task-meta-badges displays short date badge in day/month format when task is scheduled with dates', () => {
+    const html = fs.readFileSync('templates/index.html', 'utf8');
+    const css = fs.readFileSync('static/style.css', 'utf8');
+    const ganttJs = fs.readFileSync('static/js/gantt.js', 'utf8');
+    const uiJs = fs.readFileSync('static/js/ui.js', 'utf8');
+
+    // Verify template renders task-date-badge inside task-meta-badges when scheduled
+    assert.ok(html.includes('task-date-badge'), 'templates/index.html must include task-date-badge in task-meta-badges');
+    assert.ok(html.includes("task.start_date.strftime('%d/%m') ~ '-' ~ task.end_date.strftime('%d/%m')"), 'templates/index.html must format date range in day/month format (e.g. 01/11-02/11)');
+    assert.ok(html.includes('<span dir="ltr">{{ task_date_disp }}</span>'), 'template renders task_date_disp in dir ltr span');
+    assert.ok(html.includes('not has_task_dates'), 'task-meta-badges stays visible when task has scheduled dates');
+
+    // Verify style.css defines task-date-badge
+    assert.ok(css.includes('.task-date-badge'), 'style.css defines .task-date-badge');
+    assert.ok(css.includes('html.dark-mode .task-date-badge'), 'style.css defines dark mode styling for .task-date-badge');
+
+    // Verify ui.js and gantt.js update task-date-badge dynamically
+    assert.ok(uiJs.includes('export function updateTaskDateBadge('), 'ui.js must export updateTaskDateBadge');
+    assert.ok(ganttJs.includes('task-date-badge'), 'gantt.js must update task-date-badge on grid items');
+    assert.ok(ganttJs.includes('startDisp}-${endDisp}'), 'gantt.js must format short date range without spaces');
+});
+
 it('gantt-bar-subtasks displays subtask numbers without v icon', () => {
     const ganttJs = fs.readFileSync('static/js/gantt.js', 'utf8');
     // Verify gantt-bar-subtasks does not contain checkmark icon

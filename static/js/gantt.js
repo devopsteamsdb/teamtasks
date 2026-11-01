@@ -162,6 +162,41 @@ export async function updateTaskDates(taskId, startStr, endStr) {
                 badgesContainer.appendChild(badge);
             }
         }
+
+        // Projects Grid task-meta-badges
+        const metaBadges = el.querySelector('.task-meta-badges');
+        if (metaBadges) {
+            let shortDisp = '';
+            if (startParts && endParts) {
+                const startDisp = `${startParts[2]}/${startParts[1]}`;
+                const endDisp = `${endParts[2]}/${endParts[1]}`;
+                shortDisp = (startStr === endStr) ? endDisp : `${startDisp}-${endDisp}`;
+            } else if (endParts) {
+                shortDisp = `${endParts[2]}/${endParts[1]}`;
+            } else if (startParts) {
+                shortDisp = `${startParts[2]}/${startParts[1]}`;
+            }
+            if (shortDisp) {
+                metaBadges.style.display = 'inline-flex';
+                let gridDateBadge = metaBadges.querySelector('.task-date-badge');
+                if (!gridDateBadge) {
+                    gridDateBadge = document.createElement('span');
+                    gridDateBadge.className = 'task-date-badge date-badge';
+                    gridDateBadge.innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <span dir="ltr">${shortDisp}</span>
+                    `;
+                    metaBadges.appendChild(gridDateBadge);
+                } else {
+                    const span = gridDateBadge.querySelector('span');
+                    if (span) {
+                        span.textContent = shortDisp;
+                        span.setAttribute('dir', 'ltr');
+                    }
+                }
+                gridDateBadge.setAttribute('title', tip);
+            }
+        }
     });
 
     // 2. Re-render Gantt immediately
