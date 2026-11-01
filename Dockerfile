@@ -32,4 +32,6 @@ ENV FLASK_DEBUG=0
 ENV PYTHONUNBUFFERED=1
 
 # Run with Gunicorn WSGI production server
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "2", "app:app"]
+# Use 2 workers with 16 threads each (32 concurrent request threads) so slow AI calls,
+# SSE streams, or parallel asset fetches never starve Chrome HTTP/1.1 Keep-Alive sockets.
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "16", "--timeout", "120", "--graceful-timeout", "30", "--keep-alive", "5", "--error-logfile", "-", "app:app"]

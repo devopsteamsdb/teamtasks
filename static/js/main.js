@@ -13,9 +13,11 @@ window.mainState = state;
 window.setCurrentTaskItem = setCurrentTaskItem;
 
 let isUpdating = false;
+let isCheckingVersion = false;
 
 async function checkForUpdates() {
-    if (isUpdating) return;
+    if (isUpdating || isCheckingVersion || document.hidden) return;
+    isCheckingVersion = true;
     try {
         const data = await API.fetchVersion();
         if (data && data.timestamp && state.lastUpdateTimestamp && data.timestamp > state.lastUpdateTimestamp) {
@@ -24,12 +26,17 @@ async function checkForUpdates() {
                 return;
             }
             isUpdating = true;
-            setLastUpdateTimestamp(data.timestamp);
-            await UI.refreshContent(Events.attachEventListeners);
-            isUpdating = false;
+            try {
+                setLastUpdateTimestamp(data.timestamp);
+                await UI.refreshContent(Events.attachEventListeners);
+            } finally {
+                isUpdating = false;
+            }
         }
     } catch (e) {
         isUpdating = false;
+    } finally {
+        isCheckingVersion = false;
     }
 }
 
@@ -62,8 +69,13 @@ async function init() {
     Events.attachEventListeners();
     Events.attachGlobalListeners();
 
-    // Start fast polling (every 1.5 seconds)
+    // Start fast polling (every 1.5 seconds) and check on tab visibility restore
     setInterval(checkForUpdates, 1500);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            checkForUpdates();
+        }
+    });
 
     // Live cross-tab sync listener
     subscribeLiveSync(async () => {

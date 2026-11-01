@@ -1,11 +1,20 @@
 from flask import Flask, render_template, redirect, url_for, request, jsonify, send_from_directory
-from sqlalchemy import case, distinct, or_, and_
+from sqlalchemy import case, distinct, or_, and_, event
+from sqlalchemy.engine import Engine
 from werkzeug.utils import secure_filename
 import os
 import time
 import json
 import re
 import logging
+import sqlite3
+
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +22,34 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'timeout': 30, 'check_same_thread': False},
+    'pool_size': 20,
+    'max_overflow': 20,
+    'pool_timeout': 30,
+    'pool_recycle': 300,
+    'pool_pre_ping': True,
+}
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 3600
 app.config['UPLOAD_FOLDER'] = 'uploads/avatars'
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
+
+
+@event.listens_for(Engine, 'connect')
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA busy_timeout=30000")
+            cursor.execute("PRAGMA foreign_keys=ON")
+        except Exception:
+            pass
+        finally:
+            cursor.close()
+
+
 # Import models and initialize db
 from models import db, Team, TeamMember, Task, SpecialDay, Project, project_teams, member_teams, Subtask, TaskComment
 from datetime import datetime, date, timedelta
@@ -93,6 +128,8 @@ def add_cache_headers(response):
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
+    elif request.path.startswith('/static/') or request.path.startswith('/uploads/'):
+        response.headers['Cache-Control'] = 'public, max-age=300, stale-while-revalidate=3600'
     return response
 
 
@@ -100,14 +137,20 @@ def add_cache_headers(response):
 def api_version():
     global _last_data_version
     try:
-        # Check database file modification time
+        # Check database file modification time (including WAL & SHM files for multi-worker consistency)
         db_path = os.path.join(app.instance_path, 'tasks.db')
         if not os.path.exists(db_path):
-             db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'tasks.db')
-             
-        file_mtime = os.path.getmtime(db_path) if os.path.exists(db_path) else 0
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'tasks.db')
+
+        file_mtime = 0
+        for candidate in (db_path, db_path + '-wal', db_path + '-shm'):
+            if os.path.exists(candidate):
+                try:
+                    file_mtime = max(file_mtime, os.path.getmtime(candidate))
+                except OSError:
+                    pass
         current_version = max(_last_data_version, file_mtime)
-            
+
         response = jsonify({'timestamp': current_version})
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
         return response
@@ -1130,58 +1173,76 @@ def api_delete_special_day(id):
 # Initialize database tables and migrations
 def init_db():
     with app.app_context():
-        db.create_all()
-        # Ensure project_id column exists on task table in SQLite
-        from sqlalchemy import inspect, text
-        inspector = inspect(db.engine)
-        columns = [col['name'] for col in inspector.get_columns('task')]
-        if 'project_id' not in columns:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE task ADD COLUMN project_id INTEGER REFERENCES project(id)"))
-                conn.commit()
+        try:
+            db.create_all()
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('task')]
+            if 'project_id' not in columns:
+                try:
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE task ADD COLUMN project_id INTEGER REFERENCES project(id)"))
+                        conn.commit()
+                except Exception:
+                    pass
 
-        # Ensure is_archived column exists on project table in SQLite
-        columns_project = [col['name'] for col in inspector.get_columns('project')]
-        if 'is_archived' not in columns_project:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE project ADD COLUMN is_archived BOOLEAN DEFAULT 0"))
-                conn.commit()
+            # Ensure is_archived column exists on project table in SQLite
+            columns_project = [col['name'] for col in inspector.get_columns('project')]
+            if 'is_archived' not in columns_project:
+                try:
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE project ADD COLUMN is_archived BOOLEAN DEFAULT 0"))
+                        conn.commit()
+                except Exception:
+                    pass
 
-        # Migrate existing team_member.team_id to member_teams table
-        all_members = TeamMember.query.all()
-        for m in all_members:
-            if m.team_id and not m.teams:
-                t = db.session.get(Team, m.team_id)
-                if t and t not in m.teams:
-                    m.teams.append(t)
-        db.session.commit()
+            # Migrate existing team_member.team_id to member_teams table
+            members_dirty = False
+            all_members = TeamMember.query.all()
+            for m in all_members:
+                if m.team_id and not m.teams:
+                    t = db.session.get(Team, m.team_id)
+                    if t and t not in m.teams:
+                        m.teams.append(t)
+                        members_dirty = True
+            if members_dirty:
+                db.session.commit()
 
-        # Migrate existing distinct projects to Project model
-        distinct_projects = db.session.query(Task.project).distinct().all()
-        for (p_name,) in distinct_projects:
-            if not p_name or not p_name.strip():
-                continue
-            p_name = p_name.strip()
-            proj = Project.query.filter_by(name=p_name).first()
-            if not proj:
-                proj = Project(name=p_name)
-                db.session.add(proj)
-                db.session.flush()
-            # Link project teams based on existing tasks
-            tasks_in_project = Task.query.filter_by(project=p_name).all()
-            team_ids = set(t.team_id for t in tasks_in_project if t.team_id)
-            for tid in team_ids:
-                team = db.session.get(Team, tid)
-                if team and team not in proj.teams:
-                    proj.teams.append(team)
-            if not proj.teams:
-                first_team = Team.query.first()
-                if first_team:
-                    proj.teams.append(first_team)
-            for t in tasks_in_project:
-                if not t.project_id:
-                    t.project_id = proj.id
-        db.session.commit()
+            # Migrate existing distinct projects to Project model
+            projects_dirty = False
+            distinct_projects = db.session.query(Task.project).distinct().all()
+            for (p_name,) in distinct_projects:
+                if not p_name or not p_name.strip():
+                    continue
+                p_name = p_name.strip()
+                proj = Project.query.filter_by(name=p_name).first()
+                if not proj:
+                    proj = Project(name=p_name)
+                    db.session.add(proj)
+                    db.session.flush()
+                    projects_dirty = True
+                # Link project teams based on existing tasks
+                tasks_in_project = Task.query.filter_by(project=p_name).all()
+                team_ids = set(t.team_id for t in tasks_in_project if t.team_id)
+                for tid in team_ids:
+                    team = db.session.get(Team, tid)
+                    if team and team not in proj.teams:
+                        proj.teams.append(team)
+                        projects_dirty = True
+                if not proj.teams:
+                    first_team = Team.query.first()
+                    if first_team:
+                        proj.teams.append(first_team)
+                        projects_dirty = True
+                for t in tasks_in_project:
+                    if not t.project_id:
+                        t.project_id = proj.id
+                        projects_dirty = True
+            if projects_dirty:
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.warning(f"Database initialization warning: {e}")
 
 init_db()
 
@@ -2739,12 +2800,24 @@ def mcp_http_endpoint():
         return _add_mcp_cors_headers(resp)
 
     if request.method == 'DELETE':
+        from mcp_server import _sse_sessions
+        sess_id = request.headers.get('Mcp-Session-Id', '')
+        old_q = _sse_sessions.pop(sess_id, None)
+        if old_q is not None:
+            try:
+                old_q.put_nowait(None)
+            except Exception:
+                pass
         return _add_mcp_cors_headers(Response('', status=204))
 
     if request.method == 'GET':
         accept = request.headers.get('Accept', '')
         if 'text/event-stream' in accept:
-            return mcp_sse_endpoint()
+            # Per MCP Streamable HTTP (2025-03-26) spec: return 405 Method Not Allowed
+            # when server-initiated standalone GET SSE stream is not needed on /mcp.
+            # This prevents MCP Streamable HTTP clients from permanently holding open
+            # a Gunicorn worker thread on an idle infinite SSE stream.
+            return _add_mcp_cors_headers(Response('', status=405))
         return _add_mcp_cors_headers(jsonify({
             'server': MCP_SERVER_NAME,
             'version': MCP_SERVER_VERSION,
@@ -2813,20 +2886,39 @@ def mcp_sse_endpoint():
     if not _check_mcp_auth():
         return _add_mcp_cors_headers(jsonify({'error': 'Unauthorized'})), 401
 
+    # Evict oldest SSE sessions if limit exceeded to prevent worker thread starvation
+    MAX_SSE_SESSIONS = 2
+    while len(_sse_sessions) >= MAX_SSE_SESSIONS:
+        oldest_sid = next(iter(_sse_sessions), None)
+        if oldest_sid is None:
+            break
+        old_q = _sse_sessions.pop(oldest_sid, None)
+        if old_q is not None:
+            try:
+                old_q.put_nowait(None)
+            except Exception:
+                pass
+
     session_id = uuid.uuid4().hex
     msg_queue = queue.Queue()
     _sse_sessions[session_id] = msg_queue
 
     @stream_with_context
     def generate():
+        started_at = time.time()
+        max_lifetime_sec = 1800  # 30 minutes max per SSE stream
         try:
             yield f"event: endpoint\ndata: /mcp/messages?session_id={session_id}\n\n"
-            while True:
+            while time.time() - started_at < max_lifetime_sec:
                 try:
                     msg = msg_queue.get(timeout=15)
+                    if msg is None:
+                        break
                     yield f"event: message\ndata: {json.dumps(msg, ensure_ascii=False)}\n\n"
                 except queue.Empty:
                     yield ": keepalive\n\n"
+        except GeneratorExit:
+            pass
         finally:
             _sse_sessions.pop(session_id, None)
 

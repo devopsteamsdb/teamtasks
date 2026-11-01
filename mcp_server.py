@@ -59,6 +59,7 @@ _sse_sessions = {}
 
 
 _flask_ctx = None
+_mcp_db_initialized = False
 
 
 def _get_flask_context():
@@ -66,9 +67,11 @@ def _get_flask_context():
     global _flask_ctx
     if _flask_ctx is not None:
         return _flask_ctx
+    app_already_loaded = 'app' in sys.modules
     orig_stdout = sys.stdout
     try:
-        sys.stdout = sys.stderr
+        if not app_already_loaded:
+            sys.stdout = sys.stderr
         from app import app, _bump_data_version
         from models import db, Team, TeamMember, Project, Task, SpecialDay, project_teams, member_teams, TaskComment, Subtask
         import ai_tools
@@ -76,7 +79,8 @@ def _get_flask_context():
         _flask_ctx = (app, db, Team, TeamMember, Project, Task, SpecialDay, project_teams, member_teams, ai_tools, ai_context, _bump_data_version)
         return _flask_ctx
     finally:
-        sys.stdout = orig_stdout
+        if not app_already_loaded:
+            sys.stdout = orig_stdout
 
 
 def _notify_db_change(app, _bump_data_version_fn=None):
@@ -1134,7 +1138,10 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
     with app.app_context():
         try:
             from models import TaskComment, Subtask
-            db.create_all()
+            global _mcp_db_initialized
+            if not _mcp_db_initialized:
+                db.create_all()
+                _mcp_db_initialized = True
             # Build lookup maps for enriching responses
             all_members = TeamMember.query.all()
             members_map = {m.name_en.strip().lower(): m.name_he.strip() for m in all_members if m.name_en and m.name_he}

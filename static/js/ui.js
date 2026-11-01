@@ -1,5 +1,5 @@
 // UI Manipulation
-import { state, setTeams, setMembers, setProjects, setSpecialDays } from './state.js';
+import { state, setTeams, setMembers, setProjects, setSpecialDays, setLastUpdateTimestamp } from './state.js';
 import { formatDateFromISO, getStatusFromClass, getFlatpickrConfig } from './utils.js';
 import { renderGantt } from './gantt.js';
 import { updateKanbanCounters } from './kanban.js';
@@ -9,6 +9,7 @@ import {
     fetchMembers,
     fetchProjects,
     fetchSpecialDays,
+    fetchVersion,
     fetchTaskSubtasks,
     createSubtask,
     updateSubtask,
@@ -946,6 +947,9 @@ function updateFilterValidationUI() {
     }
 }
 
+let isRefreshingContent = false;
+let lastRefreshCompletedAt = 0;
+
 export async function refreshContent(attachedListenersCallback) {
     if (typeof attachedListenersCallback === 'function') {
         lastListenersCallback = attachedListenersCallback;
@@ -956,6 +960,14 @@ export async function refreshContent(attachedListenersCallback) {
         return;
     }
 
+    // Deduplicate overlapping or immediate back-to-back refresh calls
+    // (e.g., direct refreshContent() + window 'teamtasks:refresh' event from notifyDataChanged())
+    const now = Date.now();
+    if (isRefreshingContent || (now - lastRefreshCompletedAt < 400)) {
+        return;
+    }
+
+    isRefreshingContent = true;
     try {
         const activeElement = document.activeElement;
         const activeId = activeElement ? activeElement.id : null;
@@ -964,16 +976,20 @@ export async function refreshContent(attachedListenersCallback) {
         const selectionStart = (activeId === 'searchBox' && currentSearchInput) ? currentSearchInput.selectionStart : 0;
         const selectionEnd = (activeId === 'searchBox' && currentSearchInput) ? currentSearchInput.selectionEnd : 0;
 
-        const [teams, members, projects, specialDays] = await Promise.all([
+        const [teams, members, projects, specialDays, versionData] = await Promise.all([
             fetchTeams(),
             fetchMembers(),
             fetchProjects(),
-            fetchSpecialDays()
+            fetchSpecialDays(),
+            fetchVersion()
         ]);
         setTeams(teams);
         setMembers(members);
         setProjects(projects);
         setSpecialDays(specialDays || []);
+        if (versionData && versionData.timestamp) {
+            setLastUpdateTimestamp(versionData.timestamp);
+        }
 
         const html = await fetchPageContent(window.location.href);
         const parser = new DOMParser();
@@ -1023,8 +1039,11 @@ export async function refreshContent(attachedListenersCallback) {
 
         applyFilters();
         switchViewMode(state.viewMode || 'grid');
+        lastRefreshCompletedAt = Date.now();
 
     } catch (error) {
         console.error('Error refreshing content:', error);
+    } finally {
+        isRefreshingContent = false;
     }
 }

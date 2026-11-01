@@ -95,12 +95,22 @@ export async function unarchiveProject(id) {
 }
 
 export async function fetchVersion() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
     try {
-        const response = await fetch('/api/version?t=' + new Date().getTime());
+        const response = await fetch('/api/version?t=' + new Date().getTime(), {
+            signal: controller.signal,
+            cache: 'no-store'
+        });
+        if (!response.ok) return null;
         return await response.json();
     } catch (error) {
-        console.error('Error checking version:', error);
-        return null; // Return null on error
+        if (error && error.name !== 'AbortError') {
+            console.error('Error checking version:', error);
+        }
+        return null; // Return null on error or timeout
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
