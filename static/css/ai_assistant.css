@@ -693,3 +693,16 @@ html.dark-mode .btn-open-in-dashboard:hover {
     color: #ffffff;
 }
 
+/* Hide AI Assistant elements during print across entire website */
+@media print {
+    .ai-fab-btn,
+    .ai-panel,
+    #aiFabBtn,
+    #aiPanel,
+    #aiAssistantWidget {
+        display: none !important;
+        visibility: hidden !important;
+    }
+}
+
+

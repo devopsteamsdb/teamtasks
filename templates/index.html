@@ -6,18 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>לוח משימות</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
-    <link href="{{ url_for('static', filename='style.css') }}?v=6" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}?v=8" rel="stylesheet">
     <link href="{{ url_for('static', filename='flatpickr.min.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/ai_assistant.css') }}" rel="stylesheet">
-    <link rel="modulepreload" href="{{ url_for('static', filename='js/main.js') }}?v=5">
+    <link href="{{ url_for('static', filename='css/ai_assistant.css') }}?v=2" rel="stylesheet">
+    <link rel="modulepreload" href="{{ url_for('static', filename='js/main.js') }}?v=8">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/api.js') }}">
-    <link rel="modulepreload" href="{{ url_for('static', filename='js/ui.js') }}">
-    <link rel="modulepreload" href="{{ url_for('static', filename='js/events.js') }}">
+    <link rel="modulepreload" href="{{ url_for('static', filename='js/ui.js') }}?v=8">
+    <link rel="modulepreload" href="{{ url_for('static', filename='js/events.js') }}?v=8">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/utils.js') }}">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/state.js') }}">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/live_sync.js') }}">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/gantt.js') }}">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/kanban.js') }}">
+    <link rel="modulepreload" href="{{ url_for('static', filename='js/report.js') }}?v=8">
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 
@@ -57,6 +58,16 @@
                         <rect x="7" y="16" width="6" height="4" rx="1" fill="currentColor"></rect>
                     </svg>
                     <span>גאנט</span>
+                </a>
+                <a href="/?view=report" class="navbar-brand-link" id="viewBtnReport" data-view="report" title="דוחות מיקוד">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 5px;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span>דוחות</span>
                 </a>
             </div>
         </div>
@@ -128,7 +139,7 @@
 
         <header class="dashboard-header">
             <div class="dashboard-title">
-                <button id="addProjectBtn" class="btn-add-task"{% if request.args.get('view') in ['kanban', 'gantt'] %} style="display: none;"{% endif %}>
+                <button id="addProjectBtn" class="btn-add-task"{% if request.args.get('view') in ['kanban', 'gantt', 'report'] %} style="display: none;"{% endif %}>
                     <img src="{{ url_for('static', filename='icons/plus.svg') }}" width="18" height="18" alt="Add"> הוסף פרויקט
                 </button>
 
@@ -832,6 +843,12 @@
             </div>
         </div>
 
+        <div id="viewContainerReport" class="dashboard-view" style="display: none;">
+            <div id="reportViewBody" class="report-view-body">
+                <!-- Rendered dynamically by report.js -->
+            </div>
+        </div>
+
 
 
     </div>
@@ -959,7 +976,7 @@
 
     <script src="{{ url_for('static', filename='flatpickr.min.js') }}"></script>
     <script src="{{ url_for('static', filename='flatpickr.he.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/main.js') }}?v=5"></script>
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}?v=8"></script>
     {% include 'ai_assistant.html' %}
     <script src="{{ url_for('static', filename='js/ai_assistant.js') }}"></script>
 </body>

@@ -4157,3 +4157,952 @@ html.dark-mode .side-members-select {
     background: var(--info, #3b82f6);
 }
 
+/* =========================================================
+   PERSONAL, TEAM & GENERAL FOCUS REPORT (Executive Briefing)
+   ========================================================= */
+.report-briefing-container {
+    max-width: 1120px;
+    margin: 0 auto 2.5rem auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.report-quick-switcher {
+    display: none !important;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 0.85rem;
+    padding: 0.75rem 1rem;
+    box-shadow: var(--shadow-sm);
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.report-switcher-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.report-switcher-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--secondary, #64748b);
+    margin-left: 0.35rem;
+    white-space: nowrap;
+}
+
+.report-scope-pill,
+.report-member-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border, #e2e8f0);
+    background: var(--light, #f8fafc);
+    color: var(--dark, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.report-scope-pill:hover,
+.report-member-pill:hover {
+    border-color: var(--primary, #4F46E5);
+    background: #eef2ff;
+}
+
+.report-scope-pill.active,
+.report-member-pill.active {
+    background: var(--primary, #4F46E5);
+    color: #ffffff;
+    border-color: var(--primary, #4F46E5);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+
+.report-member-pills {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.report-pill-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.report-document-card {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+}
+
+.report-doc-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    flex-wrap: wrap;
+}
+
+.report-doc-identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    flex: 1;
+    min-width: 280px;
+}
+
+.report-header-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 1rem;
+    object-fit: cover;
+    border: 2px solid var(--primary, #4F46E5);
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+}
+
+.report-header-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    flex-shrink: 0;
+}
+
+.report-doc-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.report-doc-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.report-doc-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--dark, #1e293b);
+    margin: 0;
+}
+
+.report-doc-role-badge {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    background: var(--light, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    color: var(--secondary, #64748b);
+}
+
+.report-doc-narrative {
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--secondary, #475569);
+    margin: 0;
+}
+
+.report-highlight-primary {
+    color: var(--primary, #4F46E5);
+}
+
+.report-highlight-danger {
+    color: var(--danger, #ef4444);
+    font-weight: 700;
+}
+
+.report-doc-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.65rem;
+    flex-shrink: 0;
+}
+
+.report-kpi-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.report-kpi-box {
+    background: var(--light, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 0.65rem;
+    padding: 0.35rem 0.7rem;
+    text-align: center;
+    min-width: 72px;
+}
+
+.report-kpi-box.kpi-primary {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+.report-kpi-box.kpi-danger {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.report-kpi-num {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--dark, #1e293b);
+}
+
+.report-kpi-box.kpi-primary .report-kpi-num {
+    color: var(--primary, #4F46E5);
+}
+
+.report-kpi-box.kpi-danger .report-kpi-num {
+    color: var(--danger, #ef4444);
+}
+
+.report-kpi-label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--secondary, #64748b);
+    font-weight: 600;
+}
+
+.report-print-btn {
+    padding: 0.4rem 0.85rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border, #e2e8f0);
+    background: var(--light, #f8fafc);
+    color: var(--dark, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.report-print-btn:hover {
+    background: #eef2ff;
+    border-color: var(--primary, #4F46E5);
+    color: var(--primary, #4F46E5);
+}
+
+/* Sections */
+.report-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.report-section-delayed {
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border, #cbd5e1);
+    opacity: 0.92;
+}
+
+.report-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.report-section-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.report-section-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.report-section-dot.dot-today {
+    background: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+}
+
+.report-section-dot.dot-priority {
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+}
+
+.report-section-dot.dot-delayed {
+    background: #ea580c;
+}
+
+.report-section-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--dark, #1e293b);
+    margin: 0;
+}
+
+.report-section-subtitle {
+    font-size: 0.78rem;
+    color: var(--secondary, #64748b);
+}
+
+/* Primary Focus Card (#1) */
+.report-primary-card {
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(79, 70, 229, 0.01) 100%);
+    border: 2px solid rgba(79, 70, 229, 0.45);
+    border-radius: 0.9rem;
+    padding: 1.15rem 1.25rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.report-primary-card.is-overdue-primary {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(239, 68, 68, 0.01) 100%);
+    border-color: rgba(239, 68, 68, 0.55);
+}
+
+.report-primary-card:hover,
+.report-today-card:hover,
+.report-priority-row:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.report-card-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.report-badges-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.report-card-meta-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.report-rank-pill {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 0.45rem;
+    color: #ffffff;
+}
+
+.report-rank-pill.rank-primary {
+    background: var(--primary, #4F46E5);
+}
+
+.report-rank-pill.rank-overdue {
+    background: #dc2626;
+}
+
+.report-step-badge,
+.report-queue-num {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--primary, #4F46E5);
+    background: rgba(79, 70, 229, 0.1);
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.4rem;
+}
+
+.report-reason-badge {
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 0.18rem 0.55rem;
+    border-radius: 0.4rem;
+    border: 1px solid transparent;
+}
+
+.report-reason-overdue {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.report-reason-today-end {
+    background: #fff7ed;
+    color: #ea580c;
+    border-color: #fed7aa;
+}
+
+.report-reason-today-active {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+
+.report-prio-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.16rem 0.5rem;
+    border-radius: 0.4rem;
+    border: 1px solid transparent;
+}
+
+/* Match status badge sizing and visual style specifically inside report cards */
+.report-document-card .status-badge {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    padding: 0.16rem 0.5rem !important;
+    border-radius: 0.4rem !important;
+    line-height: inherit !important;
+    border: 1px solid transparent !important;
+}
+
+.report-document-card .status-badge.status-inprogress {
+    background-color: rgba(79, 70, 229, 0.12) !important;
+    color: #4338ca !important;
+    border-color: rgba(79, 70, 229, 0.28) !important;
+}
+
+.report-document-card .status-badge.status-done {
+    background-color: rgba(16, 185, 129, 0.12) !important;
+    color: #047857 !important;
+    border-color: rgba(16, 185, 129, 0.28) !important;
+}
+
+.report-document-card .status-badge.status-delayed {
+    background-color: rgba(234, 88, 12, 0.12) !important;
+    color: #c2410c !important;
+    border-color: rgba(234, 88, 12, 0.28) !important;
+}
+
+.report-document-card .status-badge.status-notstarted {
+    background-color: rgba(100, 116, 139, 0.12) !important;
+    color: #475569 !important;
+    border-color: rgba(100, 116, 139, 0.28) !important;
+}
+
+html.dark-mode .report-document-card .status-badge.status-inprogress {
+    background-color: rgba(79, 70, 229, 0.22) !important;
+    color: #a5b4fc !important;
+    border-color: rgba(99, 102, 241, 0.35) !important;
+}
+
+html.dark-mode .report-document-card .status-badge.status-done {
+    background-color: rgba(16, 185, 129, 0.2) !important;
+    color: #6ee7b7 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+html.dark-mode .report-document-card .status-badge.status-delayed {
+    background-color: rgba(234, 88, 12, 0.2) !important;
+    color: #fdba74 !important;
+    border-color: rgba(234, 88, 12, 0.35) !important;
+}
+
+html.dark-mode .report-document-card .status-badge.status-notstarted {
+    background-color: rgba(100, 116, 139, 0.2) !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(100, 116, 139, 0.35) !important;
+}
+
+.report-prio-badge.prio-high {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.28);
+}
+
+.report-prio-badge.prio-medium {
+    background: rgba(245, 158, 11, 0.14);
+    color: #d97706;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.report-prio-badge.prio-low {
+    background: rgba(234, 179, 8, 0.14);
+    color: #ca8a04;
+    border-color: rgba(234, 179, 8, 0.3);
+}
+
+.report-prio-badge.prio-none {
+    background: rgba(148, 163, 184, 0.15);
+    color: #64748b;
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+.report-project-tag,
+.report-card-project-line {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--secondary, #64748b);
+}
+
+.report-primary-task-title {
+    font-size: 1.12rem;
+    font-weight: 800;
+    color: var(--dark, #1e293b);
+    margin: 0.15rem 0 0 0;
+}
+
+.report-card-title {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--dark, #1e293b);
+    margin: 0.15rem 0 0 0;
+}
+
+.report-task-notes {
+    font-size: 0.84rem;
+    color: var(--secondary, #475569);
+    line-height: 1.5;
+    margin: 0;
+    white-space: pre-line;
+}
+
+/* Secondary Today Cards Grid */
+.report-today-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 0.85rem;
+}
+
+.report-today-card {
+    background: var(--light, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 0.8rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.report-today-card.is-overdue-card {
+    background: rgba(254, 242, 242, 0.55);
+}
+
+.prio-border-high {
+    border-right: 4px solid #ef4444 !important;
+}
+
+.prio-border-medium {
+    border-right: 4px solid #f59e0b !important;
+}
+
+.prio-border-low {
+    border-right: 4px solid #eab308 !important;
+}
+
+.prio-border-none {
+    border-right: 4px solid #cbd5e1 !important;
+}
+
+/* Priority Queue Rows */
+.report-priority-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.report-priority-row {
+    background: var(--light, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 0.8rem;
+    padding: 0.9rem 1.1rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.report-delayed-row {
+    border-right: 4px solid #ea580c !important;
+    background: rgba(255, 247, 237, 0.45);
+}
+
+.report-priority-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.report-priority-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.45rem;
+    flex-shrink: 0;
+}
+
+.report-date-pill {
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 0.4rem;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    color: var(--secondary, #64748b);
+    white-space: nowrap;
+}
+
+/* Subtasks Interactive Box inside Report */
+.report-subtasks-box {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 0.6rem;
+    padding: 0.65rem 0.85rem;
+    margin-top: 0.25rem;
+    cursor: default;
+}
+
+.report-subtasks-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.4rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--secondary, #64748b);
+}
+
+.report-subtasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.report-subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+    color: var(--dark, #1e293b);
+}
+
+.report-subtask-item.is-done .report-subtask-text {
+    text-decoration: line-through;
+    color: var(--secondary, #94a3b8);
+}
+
+.report-subtask-checkbox {
+    accent-color: var(--primary, #4F46E5);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.report-subtasks-summary {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--secondary, #64748b);
+}
+
+/* Last Comment Preview */
+.report-last-comment {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 0.55rem;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.79rem;
+    color: var(--secondary, #475569);
+    margin-top: 0.2rem;
+}
+
+.report-comment-date {
+    font-size: 0.72rem;
+    opacity: 0.75;
+    margin-right: 0.25rem;
+}
+
+/* Members in Report */
+.report-members-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.16rem 0.55rem;
+    border-radius: 0.4rem;
+    background: var(--light, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--secondary, #475569);
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.report-member-icon {
+    font-size: 0.72rem;
+    opacity: 0.85;
+}
+
+.report-member-names {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+html.dark-mode .report-members-badge {
+    background: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+.report-avatars-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.report-task-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.report-no-member {
+    font-size: 0.74rem;
+    color: var(--secondary, #94a3b8);
+}
+
+.report-empty-box {
+    background: var(--light, #f8fafc);
+    border: 1px dashed var(--border, #cbd5e1);
+    border-radius: 0.75rem;
+    padding: 1.15rem;
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--secondary, #64748b);
+}
+
+.report-done-details {
+    border-top: 1px solid var(--border, #e2e8f0);
+    padding-top: 0.85rem;
+}
+
+.report-done-summary {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--secondary, #64748b);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Dark Mode Overrides for Report */
+html.dark-mode .report-quick-switcher,
+html.dark-mode .report-document-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+html.dark-mode .report-doc-header,
+html.dark-mode .report-done-details,
+html.dark-mode .report-section-delayed {
+    border-color: #334155;
+}
+
+html.dark-mode .report-doc-title,
+html.dark-mode .report-section-title,
+html.dark-mode .report-primary-task-title,
+html.dark-mode .report-card-title,
+html.dark-mode .report-subtask-item,
+html.dark-mode .report-kpi-num {
+    color: #f1f5f9;
+}
+
+html.dark-mode .report-doc-narrative,
+html.dark-mode .report-task-notes,
+html.dark-mode .report-section-subtitle {
+    color: #cbd5e1;
+}
+
+html.dark-mode .report-scope-pill,
+html.dark-mode .report-member-pill,
+html.dark-mode .report-doc-role-badge,
+html.dark-mode .report-kpi-box,
+html.dark-mode .report-print-btn,
+html.dark-mode .report-today-card,
+html.dark-mode .report-priority-row,
+html.dark-mode .report-empty-box {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+html.dark-mode .report-scope-pill.active,
+html.dark-mode .report-member-pill.active {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: #ffffff;
+}
+
+html.dark-mode .report-subtasks-box,
+html.dark-mode .report-last-comment,
+html.dark-mode .report-date-pill {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+html.dark-mode .report-reason-overdue,
+html.dark-mode .report-kpi-box.kpi-danger {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+}
+
+html.dark-mode .report-reason-today-end {
+    background: rgba(249, 115, 22, 0.15);
+    border-color: rgba(249, 115, 22, 0.35);
+    color: #fdba74;
+}
+
+html.dark-mode .report-reason-today-active,
+html.dark-mode .report-kpi-box.kpi-primary,
+html.dark-mode .report-header-icon {
+    background: rgba(79, 70, 229, 0.18);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: #a5b4fc;
+}
+
+@media (max-width: 680px) {
+    .report-priority-row {
+        flex-direction: column;
+    }
+    .report-priority-side {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+    .report-doc-actions {
+        align-items: flex-start;
+        width: 100%;
+    }
+}
+
+@media print {
+    body[data-view-mode="report"] {
+        background: #ffffff !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    body[data-view-mode="report"] .navbar,
+    body[data-view-mode="report"] .dashboard-header,
+    body[data-view-mode="report"] .no-print,
+    body[data-view-mode="report"] #aiAssistantWidget,
+    body[data-view-mode="report"] #aiFabBtn,
+    body[data-view-mode="report"] #aiPanel {
+        display: none !important;
+    }
+
+    /* Convert flex/grid containers to block in print so Chrome pagination never slices cards across pages */
+    body[data-view-mode="report"] .main-container,
+    body[data-view-mode="report"] #viewContainerReport,
+    body[data-view-mode="report"] .report-view-body,
+    body[data-view-mode="report"] .report-briefing-container,
+    body[data-view-mode="report"] .report-document-card,
+    body[data-view-mode="report"] .report-section,
+    body[data-view-mode="report"] .report-priority-list {
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    body[data-view-mode="report"] .report-document-card {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    body[data-view-mode="report"] .report-doc-header {
+        margin-bottom: 1.25rem !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+
+    body[data-view-mode="report"] .report-section {
+        margin-bottom: 1.5rem !important;
+    }
+
+    body[data-view-mode="report"] .report-section-header {
+        margin-bottom: 0.75rem !important;
+        break-after: avoid !important;
+        page-break-after: avoid !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+
+    body[data-view-mode="report"] .report-today-grid {
+        display: block !important;
+        font-size: 0;
+        margin: 0 -0.4rem;
+    }
+
+    body[data-view-mode="report"] .report-today-card {
+        display: inline-block !important;
+        vertical-align: top;
+        width: calc(50% - 0.8rem) !important;
+        margin: 0 0.4rem 0.85rem 0.4rem !important;
+        font-size: 1rem;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        -webkit-column-break-inside: avoid !important;
+    }
+
+    body[data-view-mode="report"] .report-primary-card,
+    body[data-view-mode="report"] .report-priority-row,
+    body[data-view-mode="report"] .report-subtasks-box,
+    body[data-view-mode="report"] .report-last-comment {
+        display: block !important;
+        margin-bottom: 0.85rem !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        -webkit-column-break-inside: avoid !important;
+    }
+}
+
+

@@ -1,6 +1,6 @@
 // Event Listeners
 import { state, setActiveTeamFilter, setActiveMemberFilter, setCurrentTaskItem, setStatusFilter, setPriorityFilter } from './state.js';
-import * as UI from './ui.js';
+import * as UI from './ui.js?v=8';
 import * as API from './api.js';
 import * as Utils from './utils.js';
 import { notifyDataChanged } from './live_sync.js';

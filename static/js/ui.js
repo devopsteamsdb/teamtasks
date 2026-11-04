@@ -3,6 +3,7 @@ import { state, setTeams, setMembers, setProjects, setSpecialDays, setLastUpdate
 import { formatDateFromISO, getStatusFromClass, getFlatpickrConfig } from './utils.js';
 import { renderGantt } from './gantt.js';
 import { updateKanbanCounters } from './kanban.js';
+import { renderReport } from './report.js?v=8';
 import {
     fetchPageContent,
     fetchTeams,
@@ -34,9 +35,11 @@ export function updateDOMElements() {
     elements.viewBtnGrid = document.getElementById('viewBtnGrid');
     elements.viewBtnKanban = document.getElementById('viewBtnKanban');
     elements.viewBtnGantt = document.getElementById('viewBtnGantt');
+    elements.viewBtnReport = document.getElementById('viewBtnReport');
     elements.viewContainerGrid = document.getElementById('viewContainerGrid');
     elements.viewContainerKanban = document.getElementById('viewContainerKanban');
     elements.viewContainerGantt = document.getElementById('viewContainerGantt');
+    elements.viewContainerReport = document.getElementById('viewContainerReport');
     elements.projectsEmptyState = document.getElementById('projectsEmptyState');
     elements.projectsGrid = document.querySelector('.projects-grid');
 
@@ -451,18 +454,22 @@ export function switchViewMode(mode) {
     const btnGrid = document.getElementById('viewBtnGrid');
     const btnKanban = document.getElementById('viewBtnKanban');
     const btnGantt = document.getElementById('viewBtnGantt');
+    const btnReport = document.getElementById('viewBtnReport');
 
     if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
     if (btnKanban) btnKanban.classList.toggle('active', mode === 'kanban');
     if (btnGantt) btnGantt.classList.toggle('active', mode === 'gantt');
+    if (btnReport) btnReport.classList.toggle('active', mode === 'report');
 
     const containerGrid = document.getElementById('viewContainerGrid');
     const containerKanban = document.getElementById('viewContainerKanban');
     const containerGantt = document.getElementById('viewContainerGantt');
+    const containerReport = document.getElementById('viewContainerReport');
 
     if (containerGrid) containerGrid.style.display = (mode === 'grid' ? '' : 'none');
     if (containerKanban) containerKanban.style.display = (mode === 'kanban' ? '' : 'none');
     if (containerGantt) containerGantt.style.display = (mode === 'gantt' ? '' : 'none');
+    if (containerReport) containerReport.style.display = (mode === 'report' ? '' : 'none');
 
     const addProjectBtn = document.getElementById('addProjectBtn');
     if (addProjectBtn) {
@@ -478,6 +485,8 @@ export function switchViewMode(mode) {
         updateKanbanCounters();
     } else if (mode === 'gantt') {
         renderGantt();
+    } else if (mode === 'report') {
+        renderReport();
     }
 }
 
@@ -1013,6 +1022,8 @@ export function applyFilters() {
     updateKanbanCounters();
     if (state.viewMode === 'gantt') {
         renderGantt();
+    } else if (state.viewMode === 'report') {
+        renderReport();
     }
 }
 

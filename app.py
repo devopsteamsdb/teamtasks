@@ -124,7 +124,11 @@ def inject_now():
 
 @app.after_request
 def add_cache_headers(response):
-    if request.path in ['/', '/api/version'] or request.path.startswith('/api/'):
+    if (
+        request.path in ['/', '/api/version']
+        or request.path.startswith('/api/')
+        or request.path.endswith(('.js', '.css'))
+    ):
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
