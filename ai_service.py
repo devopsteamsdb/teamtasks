@@ -27,7 +27,7 @@ class AIService:
         # Cloudflare Workers AI settings
         self.cf_account_id = os.getenv('CLOUDFLARE_ACCOUNT_ID')
         self.cf_api_token = os.getenv('CLOUDFLARE_API_TOKEN')
-        self.cf_model = os.getenv('CLOUDFLARE_MODEL') or '@cf/meta/llama-3.1-8b-instruct'
+        self.cf_model = os.getenv('CLOUDFLARE_MODEL') or '@cf/google/gemma-4-26b-a4b-it'
         self.cf_fallback_model = '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
 
         # Explicit provider override: 'local_openai' or 'cloudflare'
@@ -132,33 +132,56 @@ class AIService:
             'messages': messages,
             'max_tokens': max_tokens
         }
-        
+
+        def _extract_cf_text(data):
+            if not isinstance(data, dict):
+                return ''
+            result = data.get('result', {})
+            choices = result.get('choices', [])
+            if choices and isinstance(choices, list) and len(choices) > 0 and 'message' in choices[0]:
+                msg = choices[0]['message']
+                content = msg.get('content')
+                if content:
+                    if isinstance(content, (dict, list)):
+                        return json.dumps(content, ensure_ascii=False)
+                    return str(content).strip()
+                reasoning = msg.get('reasoning') or msg.get('reasoning_content')
+                if reasoning:
+                    return str(reasoning).strip()
+            resp = result.get('response')
+            if resp is not None and resp != '':
+                if isinstance(resp, (dict, list)):
+                    return json.dumps(resp, ensure_ascii=False)
+                return str(resp).strip()
+            return ''
+
         # Try primary model first
         primary_url = f"https://api.cloudflare.com/client/v4/accounts/{self.cf_account_id}/ai/run/{self.cf_model}"
         try:
             response = requests.post(primary_url, headers=headers, json=payload, timeout=45)
             if response.status_code == 200:
-                result = response.json().get('result', {})
-                resp = result.get('response', '')
-                if isinstance(resp, (dict, list)):
-                    return json.dumps(resp, ensure_ascii=False)
-                return str(resp)
-            logger.warning(f"Cloudflare primary model {self.cf_model} returned status {response.status_code}: {response.text}")
+                text = _extract_cf_text(response.json())
+                if text:
+                    return text
+                logger.warning(f"Cloudflare primary model {self.cf_model} returned empty content. Trying fallback model.")
+            else:
+                logger.warning(f"Cloudflare primary model {self.cf_model} returned status {response.status_code}: {response.text}")
         except Exception as e:
             logger.warning(f"Cloudflare primary model failed with error: {e}. Trying fallback model.")
 
-        # Fallback to 8b instruct model
-        fallback_url = f"https://api.cloudflare.com/client/v4/accounts/{self.cf_account_id}/ai/run/{self.cf_fallback_model}"
-        try:
-            response = requests.post(fallback_url, headers=headers, json=payload, timeout=45)
-            response.raise_for_status()
-            result = response.json().get('result', {})
-            resp = result.get('response', '')
-            if isinstance(resp, (dict, list)):
-                return json.dumps(resp, ensure_ascii=False)
-            return str(resp)
-        except Exception as e:
-            logger.error(f"Error calling Cloudflare Workers AI fallback model: {e}")
-            raise RuntimeError(f"Cloudflare Workers AI error: {str(e)}")
+        # Fallback model
+        if self.cf_fallback_model and self.cf_fallback_model != self.cf_model:
+            fallback_url = f"https://api.cloudflare.com/client/v4/accounts/{self.cf_account_id}/ai/run/{self.cf_fallback_model}"
+            try:
+                response = requests.post(fallback_url, headers=headers, json=payload, timeout=45)
+                response.raise_for_status()
+                text = _extract_cf_text(response.json())
+                if text:
+                    return text
+            except Exception as e:
+                logger.error(f"Error calling Cloudflare Workers AI fallback model: {e}")
+                raise RuntimeError(f"Cloudflare Workers AI error: {str(e)}")
+
+        raise RuntimeError(f"Cloudflare Workers AI returned empty response from both primary ({self.cf_model}) and fallback ({self.cf_fallback_model}) models.")
 
 ai_service = AIService()

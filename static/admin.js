@@ -1342,7 +1342,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const inputCfApiToken = document.getElementById('inputCfApiToken');
             const hintCfTokenStatus = document.getElementById('hintCfTokenStatus');
             if (inputCfAccountId) inputCfAccountId.value = settings.cloudflare_account_id || '';
-            if (inputCfModel) inputCfModel.value = settings.cloudflare_model || '@cf/meta/llama-3.1-8b-instruct';
+            if (inputCfModel) inputCfModel.value = settings.cloudflare_model || '@cf/google/gemma-4-26b-a4b-it';
             if (inputCfApiToken) {
                 if (settings.has_cloudflare_token) {
                     inputCfApiToken.value = settings.cloudflare_api_token_masked || '••••••••••••••••';
@@ -1487,7 +1487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 openai_model: document.getElementById('inputOpenAiModel')?.value.trim() || 'llama3.3',
                 openai_api_key: document.getElementById('inputOpenAiApiKey')?.value.trim() || '',
                 cloudflare_account_id: document.getElementById('inputCfAccountId')?.value.trim() || '',
-                cloudflare_model: document.getElementById('inputCfModel')?.value.trim() || '@cf/meta/llama-3.1-8b-instruct',
+                cloudflare_model: document.getElementById('inputCfModel')?.value.trim() || '@cf/google/gemma-4-26b-a4b-it',
                 cloudflare_api_token: document.getElementById('inputCfApiToken')?.value.trim() || ''
             };
 

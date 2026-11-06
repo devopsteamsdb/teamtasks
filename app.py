@@ -2519,7 +2519,7 @@ def api_get_system_settings():
                 'cloudflare_account_id': env_vars.get('CLOUDFLARE_ACCOUNT_ID', ''),
                 'cloudflare_api_token_masked': cf_token_masked,
                 'has_cloudflare_token': bool(cf_token),
-                'cloudflare_model': env_vars.get('CLOUDFLARE_MODEL', '@cf/meta/llama-3.1-8b-instruct'),
+                'cloudflare_model': env_vars.get('CLOUDFLARE_MODEL', '@cf/google/gemma-4-26b-a4b-it'),
                 # MCP settings
                 'mcp_api_key_masked': mcp_key_masked,
                 'has_mcp_api_key': bool(mcp_key),
@@ -2675,7 +2675,7 @@ def api_test_ai_connection():
             api_token = data.get('cloudflare_api_token') or ai_service.cf_api_token
             if '••••' in api_token:
                 api_token = ai_service.cf_api_token
-            model = data.get('cloudflare_model') or ai_service.cf_model or '@cf/meta/llama-3.1-8b-instruct'
+            model = data.get('cloudflare_model') or ai_service.cf_model or '@cf/google/gemma-4-26b-a4b-it'
 
             if not account_id or not api_token:
                 return jsonify({'success': False, 'error': 'Account ID או API Token של Cloudflare חסרים'}), 400
@@ -2687,12 +2687,19 @@ def api_test_ai_connection():
             }
             payload = {
                 'messages': [{'role': 'user', 'content': 'ענה במילה אחת בלבד: פועל'}],
-                'max_tokens': 15
+                'max_tokens': 128
             }
             response = requests.post(url, headers=headers, json=payload, timeout=20)
             response.raise_for_status()
             res_json = response.json()
-            reply = res_json.get('result', {}).get('response', 'OK')
+            result = res_json.get('result', {})
+            choices = result.get('choices', [])
+            reply = ''
+            if choices and isinstance(choices, list) and len(choices) > 0 and 'message' in choices[0]:
+                msg = choices[0]['message']
+                reply = msg.get('content') or msg.get('reasoning') or msg.get('reasoning_content') or ''
+            if not reply:
+                reply = result.get('response', 'OK')
 
             latency_ms = round((time.time() - t0) * 1000)
             return jsonify({

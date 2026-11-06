@@ -55,7 +55,7 @@ A modern, bilingual (Hebrew/English) task and project management platform built 
 - ⚡ **Full Free-Text System Management** - Create, update, reassign, postpone, complete, archive, or delete tasks and projects using natural conversational prompts (e.g. *"תשני את המשימה 82 בתהליך"*, *"תוסיף משימה דחופה לפרויקט אבטחה"*).
 - 🧠 **Dual AI Provider Architecture**:
   - **Local & Air-Gapped AI**: Compatible with local LLM gateways (Ollama, vLLM, LocalAI) using standard OpenAI API format (zero external data leaks).
-  - **Cloudflare Workers AI**: Serverless cloud option using `@cf/meta/llama-3.1-8b-instruct`.
+  - **Cloudflare Workers AI**: Serverless cloud option using `@cf/google/gemma-4-26b-a4b-it` (or `@cf/qwen/qwen3.8-27b`, `@cf/meta/llama-3.3-70b-instruct-fp8-fast`).
 - 🛡️ **Built-in Guardrails & Fallbacks** - Deterministic validation ensures the LLM never executes hallucinated mutations or invents non-existent entity IDs.
 - 📊 **Executive Insights & Deadline Monitoring** - Instant executive summaries, delayed task alerts, and workload distribution breakdowns.
 - 🔄 **Conversational Memory** - Remembers referenced tasks, ordinals (*"הראשונה"*, *"השנייה"*), and follow-up commands across the conversation.
@@ -125,7 +125,7 @@ A modern, bilingual (Hebrew/English) task and project management platform built 
                      │  │ (Ollama, vLLM, LocalAI)        │  │
                      │  ├────────────────────────────────┤  │
                      │  │ Cloudflare Workers AI          │  │
-                     │  │ (@cf/meta/llama-3.1-8b)        │  │
+                     │  │ (@cf/google/gemma-4-26b)       │  │
                      │  └────────────────────────────────┘  │
                      └──────────────────────────────────────┘
 ```
@@ -340,7 +340,7 @@ Visit:
 | `OPENAI_API_KEY` | Optional API key for Local Gateway / OpenAI | *empty* |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID | *empty* |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API Token | *empty* |
-| `CLOUDFLARE_MODEL` | Cloudflare Workers AI model tag | `@cf/meta/llama-3.1-8b-instruct` |
+| `CLOUDFLARE_MODEL` | Cloudflare Workers AI model tag (e.g. `@cf/google/gemma-4-26b-a4b-it`, `@cf/qwen/qwen3.8-27b`, `@cf/meta/llama-3.3-70b-instruct-fp8-fast`) | `@cf/google/gemma-4-26b-a4b-it` |
 | `MCP_API_KEY` | Optional Bearer authorization token for remote MCP endpoints (`/mcp`, `/mcp/sse`) | *empty (open access)* |
 | `TEAMTASKS_API_URL` | Base API URL when running MCP server in remote proxy mode | *empty (direct SQLite mode)* |
 
