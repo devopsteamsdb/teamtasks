@@ -70,6 +70,12 @@ project_teams = db.Table('project_teams',
     db.Column('team_id', db.Integer, db.ForeignKey('team.id', ondelete='CASCADE'), primary_key=True)
 )
 
+# Association table for Many-to-Many relationship between Project and TeamMember (Project Leaders)
+project_leaders = db.Table('project_leaders',
+    db.Column('project_id', db.Integer, db.ForeignKey('project.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('member_id', db.Integer, db.ForeignKey('team_member.id', ondelete='CASCADE'), primary_key=True)
+)
+
 
 class Project(db.Model):
     """Project model - represents a project associated with one or more teams"""
@@ -80,6 +86,8 @@ class Project(db.Model):
     # Relationships
     teams = db.relationship('Team', secondary=project_teams, lazy='subquery',
                             backref=db.backref('projects', lazy=True))
+    leaders = db.relationship('TeamMember', secondary=project_leaders, lazy='subquery',
+                              backref=db.backref('led_projects', lazy=True))
     tasks = db.relationship('Task', backref='project_rel', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
@@ -88,7 +96,13 @@ class Project(db.Model):
             'name': self.name,
             'is_archived': self.is_archived,
             'teams': [{'id': t.id, 'name_en': t.name_en, 'name_he': t.name_he} for t in self.teams],
-            'team_ids': [t.id for t in self.teams]
+            'team_ids': [t.id for t in self.teams],
+            'leaders': [
+                {'id': m.id, 'name_en': m.name_en, 'name_he': m.name_he, 'avatar_path': m.avatar_path}
+                for m in self.leaders
+            ],
+            'leader_ids': [m.id for m in self.leaders],
+            'leader_names': [m.name_en for m in self.leaders]
         }
     
     def __repr__(self):

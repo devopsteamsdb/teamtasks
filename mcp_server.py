@@ -527,7 +527,7 @@ MCP_TOOLS = [
         "name": "list_projects",
         "category": "projects",
         "title": "רשימת פרויקטים",
-        "description": "List projects with their assigned teams, task counts, completion percentages, and status breakdown.",
+        "description": "List projects with their assigned teams, leaders, task counts, completion percentages, and status breakdown.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -536,7 +536,8 @@ MCP_TOOLS = [
                     "enum": ["active", "archive", "all"],
                     "description": "Filter by archive mode: 'active' (default), 'archive', or 'all'"
                 },
-                "team": {"type": "string", "description": "Filter projects belonging to a specific team (ID or name)"}
+                "team": {"type": "string", "description": "Filter projects belonging to a specific team (ID or name)"},
+                "leader": {"type": "string", "description": "Filter projects led by a specific team member (ID or name)"}
             }
         }
     },
@@ -544,7 +545,7 @@ MCP_TOOLS = [
         "name": "get_project",
         "category": "projects",
         "title": "קבלת פרטי פרויקט ומשימותיו",
-        "description": "Get full details of a project by ID or name, including its teams, progress statistics, and all tasks belonging to it.",
+        "description": "Get full details of a project by ID or name, including its teams, leaders, progress statistics, and all tasks belonging to it.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -557,7 +558,7 @@ MCP_TOOLS = [
         "name": "create_project",
         "category": "projects",
         "title": "יצירת פרויקט חדש",
-        "description": "Create a new project and associate it with one or more teams.",
+        "description": "Create a new project and associate it with one or more teams and optional leaders.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -566,6 +567,11 @@ MCP_TOOLS = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "List of team names (Hebrew or English) or team IDs to assign the project to"
+                },
+                "leaders": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of project leader member names (Hebrew or English) or member IDs"
                 }
             },
             "required": ["name"]
@@ -574,8 +580,8 @@ MCP_TOOLS = [
     {
         "name": "update_project",
         "category": "projects",
-        "title": "עדכון פרויקט ושיוך צוותים",
-        "description": "Rename a project (automatically updating all its tasks) and/or update its assigned teams.",
+        "title": "עדכון פרויקט, צוותים ומובילים",
+        "description": "Rename a project (automatically updating all its tasks) and/or update its assigned teams and project leaders.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -596,6 +602,21 @@ MCP_TOOLS = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Remove these teams from the project"
+                },
+                "leaders": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Replace project's leaders with this list of member names or IDs (pass empty list to clear)"
+                },
+                "add_leaders": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Add these members as project leaders without removing existing leaders"
+                },
+                "remove_leaders": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Remove these members from project leaders"
                 }
             }
         }
@@ -1182,12 +1203,26 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                             conds.append(Task.members.ilike(f"%{m_en}%"))
                         query = query.filter(or_(*conds))
 
-                # Member filter
+                # Member filter (assigned to task OR leader of task's project)
                 member_val = arguments.get("member")
                 if member_val:
                     resolved_m = ai_tools.resolve_member_names([member_val])
                     if resolved_m:
-                        query = query.filter(Task.members.ilike(f"%{resolved_m[0]}%"))
+                        m_en = resolved_m[0]
+                        led_projects = Project.query.filter(
+                            Project.leaders.any(db.func.lower(TeamMember.name_en) == m_en.lower())
+                        ).all()
+                        if led_projects:
+                            from sqlalchemy import or_
+                            led_ids = [p.id for p in led_projects]
+                            led_names = [p.name for p in led_projects]
+                            query = query.filter(or_(
+                                Task.members.ilike(f"%{m_en}%"),
+                                Task.project_id.in_(led_ids),
+                                Task.project.in_(led_names)
+                            ))
+                        else:
+                            query = query.filter(Task.members.ilike(f"%{m_en}%"))
 
                 # Status filter
                 status_val = arguments.get("status")
@@ -1775,6 +1810,13 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                     if t_obj:
                         query = query.filter(Project.teams.any(Team.id == t_obj.id))
 
+                leader_val = arguments.get("leader")
+                if leader_val:
+                    resolved_leaders = ai_tools._resolve_leader_members({"leaders": [leader_val]})
+                    if resolved_leaders:
+                        leader_ids_filter = [m.id for m in resolved_leaders]
+                        query = query.filter(Project.leaders.any(TeamMember.id.in_(leader_ids_filter)))
+
                 projects = query.order_by(Project.name).all()
                 results = []
                 for p in projects:
@@ -1839,14 +1881,16 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                     if first_team:
                         teams_to_add.append(first_team)
 
-                project = Project(name=name, teams=teams_to_add)
+                leaders_to_add = ai_tools._resolve_leader_members(arguments)
+                project = Project(name=name, teams=teams_to_add, leaders=leaders_to_add)
                 db.session.add(project)
                 db.session.commit()
                 _notify_db_change(app, _bump_data_version)
                 teams_str = ', '.join([t.name_he for t in project.teams])
+                leaders_str = f", מוביל/ים: {', '.join([m.name_he for m in project.leaders])}" if project.leaders else ""
                 return {
                     "success": True,
-                    "message": f'נוצר פרויקט חדש: "{project.name}" (צוותים: {teams_str})',
+                    "message": f'נוצר פרויקט חדש: "{project.name}" (צוותים: {teams_str}{leaders_str})',
                     "project": project.to_dict(),
                     "project_id": project.id
                 }
@@ -1902,12 +1946,28 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                             if t_obj and t_obj in p_obj.teams and len(p_obj.teams) > 1:
                                 p_obj.teams.remove(t_obj)
 
+                # Handle project leaders
+                if "leaders" in arguments or "leader_ids" in arguments or "leader" in arguments:
+                    p_obj.leaders = ai_tools._resolve_leader_members(arguments)
+                else:
+                    if arguments.get("add_leaders") or arguments.get("add_leader"):
+                        add_l = arguments.get("add_leaders") or arguments.get("add_leader")
+                        for m in ai_tools._resolve_leader_members({"leaders": add_l}):
+                            if m not in p_obj.leaders:
+                                p_obj.leaders.append(m)
+                    if arguments.get("remove_leaders") or arguments.get("remove_leader"):
+                        rem_l = arguments.get("remove_leaders") or arguments.get("remove_leader")
+                        for m in ai_tools._resolve_leader_members({"leaders": rem_l}):
+                            if m in p_obj.leaders:
+                                p_obj.leaders.remove(m)
+
                 db.session.commit()
                 _notify_db_change(app, _bump_data_version)
                 teams_str = ', '.join([t.name_he for t in p_obj.teams])
+                leaders_str = f", מוביל/ים: {', '.join([m.name_he for m in p_obj.leaders])}" if p_obj.leaders else ""
                 return {
                     "success": True,
-                    "message": f'עודכן פרויקט "{p_obj.name}" (צוותים: {teams_str})',
+                    "message": f'עודכן פרויקט "{p_obj.name}" (צוותים: {teams_str}{leaders_str})',
                     "project": p_obj.to_dict()
                 }
 
@@ -2426,9 +2486,12 @@ def execute_mcp_tool(tool_name: str, arguments: dict) -> dict:
                     "task_comments": TaskComment
                 }
                 if table_name == "all":
+                    from models import project_leaders
                     full_data = {name: [r.to_dict() for r in model.query.all()] for name, model in models_map.items()}
                     pt_rows = db.session.execute(project_teams.select()).fetchall()
                     full_data["project_teams"] = [{"project_id": r[0], "team_id": r[1]} for r in pt_rows]
+                    pl_rows = db.session.execute(project_leaders.select()).fetchall()
+                    full_data["project_leaders"] = [{"project_id": r[0], "member_id": r[1]} for r in pl_rows]
                     mt_rows = db.session.execute(member_teams.select()).fetchall()
                     full_data["member_teams"] = [{"member_id": r[0], "team_id": r[1]} for r in mt_rows]
                     return {

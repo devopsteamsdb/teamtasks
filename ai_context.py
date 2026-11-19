@@ -49,6 +49,7 @@ def build_system_context():
             'id': p.id,
             'name': p.name,
             'teams': [{'id': t.id, 'name_he': t.name_he, 'name_en': t.name_en} for t in p.teams],
+            'leaders': [{'id': m.id, 'name_he': m.name_he, 'name_en': m.name_en} for m in p.leaders],
             'task_count': len([t for t in p.tasks if not t.is_archived])
         })
 
@@ -129,7 +130,8 @@ def get_executive_summary():
             'name_he': m.name_he,
             'team': m.team.name_he if m.team else 'ללא צוות',
             'count': 0,
-            'hours': 0.0
+            'hours': 0.0,
+            'led_projects': [p.name for p in projects if m in p.leaders]
         } for m in members
     }
     unassigned_count = 0
@@ -137,7 +139,13 @@ def get_executive_summary():
     # Project status
     project_stats = {}
     for p in projects:
-        project_stats[p.name] = {'total': 0, 'done': 0, 'in_progress': 0, 'remaining': 0}
+        project_stats[p.name] = {
+            'total': 0,
+            'done': 0,
+            'in_progress': 0,
+            'remaining': 0,
+            'leaders': [m.name_he for m in p.leaders]
+        }
 
     for t in tasks:
         # Status

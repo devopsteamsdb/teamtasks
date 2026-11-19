@@ -58,6 +58,15 @@
                 {% endfor %}
             </select>
 
+            <select id="memberFilter" class="no-print" onchange="updateFilter('member', this.value)"
+                style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 5px;">
+                <option value="">כל חברי הצוות</option>
+                {% for m in members %}
+                <option value="{{ m.name_en }}" {% if request.args.get('member')==m.name_en %}selected{% endif %}>{{
+                    m.name_he }}</option>
+                {% endfor %}
+            </select>
+
             <select id="projectFilter" class="no-print" onchange="updateFilter('project', this.value)"
                 style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; margin-left: 5px; max-width: 150px;">
                 <option value="">כל הפרויקטים</option>

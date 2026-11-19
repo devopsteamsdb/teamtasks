@@ -6,20 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>לוח משימות</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
-    <link href="{{ url_for('static', filename='style.css') }}?v=8" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}?v=9" rel="stylesheet">
     <link href="{{ url_for('static', filename='flatpickr.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/ai_assistant.css') }}?v=2" rel="stylesheet">
-    <link rel="modulepreload" href="{{ url_for('static', filename='js/main.js') }}?v=8">
+    <link rel="modulepreload" href="{{ url_for('static', filename='js/main.js') }}?v=9">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/api.js') }}">
-    <link rel="modulepreload" href="{{ url_for('static', filename='js/ui.js') }}?v=8">
-    <link rel="modulepreload" href="{{ url_for('static', filename='js/events.js') }}?v=8">
+    <link rel="modulepreload" href="{{ url_for('static', filename='js/ui.js') }}?v=9">
+    <link rel="modulepreload" href="{{ url_for('static', filename='js/events.js') }}?v=9">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/utils.js') }}">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/state.js') }}">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/live_sync.js') }}">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/gantt.js') }}">
     <link rel="modulepreload" href="{{ url_for('static', filename='js/kanban.js') }}">
-    <link rel="modulepreload" href="{{ url_for('static', filename='js/report.js') }}?v=8">
-    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <link rel="modulepreload" href="{{ url_for('static', filename='js/report.js') }}?v=9">
+    <script src="{{ url_for('static', filename='js/theme.js') }}?v=2"></script>
 </head>
 
 <body>
@@ -255,10 +255,14 @@
             } %}
             {% set color = project_colors[(loop.index0) % project_colors|length] %}
 
+            {% set project_leader_names = project.leaders|map(attribute='name_en')|list %}
+            {% set project_leader_ids = project.leaders|map(attribute='id')|list %}
             <div class="project-card {% if not project_visible %}filtered-hidden{% endif %}"
                 data-project-id="{{ project.id }}"
                 data-project-name="{{ project.name }}"
                 data-team-ids="{{ project_team_ids|join(',') }}"
+                data-leader-names="{{ project_leader_names|join(',') }}"
+                data-leader-ids="{{ project_leader_ids|join(',') }}"
                 data-is-empty="{% if project_tasks|length == 0 %}true{% else %}false{% endif %}"
                 style="border-top-color: {{ color.color }};">
                 <div class="project-header">
@@ -284,6 +288,12 @@
                             </span>
                             {% else %}
                             <span class="project-badge">כללי</span>
+                            {% endfor %}
+                            {% for leader in project.leaders %}
+                            <span class="project-leader-badge" data-leader-name="{{ leader.name_en }}" title="מוביל פרויקט: {{ leader.name_he }}" style="background-color: {{ color.bg }}; color: {{ color.color }}; border-color: {{ color.color }}33;">
+                                <img src="/uploads/avatars/{{ leader.avatar_path }}" onerror="this.src='{{ url_for('static', filename='images/default.png') }}'" class="project-leader-avatar" alt="">
+                                <span>מוביל: {{ leader.name_he }}</span>
+                            </span>
                             {% endfor %}
                         </div>
                         <span class="project-tasks-count" title="{{ project_tasks|length }} משימות בפרויקט זה">
@@ -323,6 +333,7 @@
                             data-task-name="{{ task.task }}"
                             data-notes="{{ task.notes|default('') }}"
                             data-priority="{{ task.priority|default('none') }}" data-team-id="{{ task.team_id }}"
+                            data-project-leaders="{{ project_leader_names|join(',') }}"
                             data-start-date="{{ task.start_date.isoformat() if task.start_date else '' }}"
                             data-end-date="{{ task.end_date.isoformat() if task.end_date else '' }}"
                             data-is-archived="{{ task.is_archived|lower }}" data-status="{{ task.status }}"
@@ -439,6 +450,7 @@
                             data-task-name="{{ task.task }}"
                             data-notes="{{ task.notes|default('') }}"
                             data-project="{{ task.project }}"
+                            data-project-leaders="{{ project_leaders_map.get(task.project, [])|join(',') }}"
                             data-start-date="{{ task.start_date.strftime('%Y-%m-%d') if task.start_date else '' }}"
                             data-end-date="{{ task.end_date.strftime('%Y-%m-%d') if task.end_date else '' }}"
                             data-priority="{{ task.priority or 'none' }}"
@@ -537,6 +549,7 @@
                             data-task-name="{{ task.task }}"
                             data-notes="{{ task.notes|default('') }}"
                             data-project="{{ task.project }}"
+                            data-project-leaders="{{ project_leaders_map.get(task.project, [])|join(',') }}"
                             data-start-date="{{ task.start_date.strftime('%Y-%m-%d') if task.start_date else '' }}"
                             data-end-date="{{ task.end_date.strftime('%Y-%m-%d') if task.end_date else '' }}"
                             data-priority="{{ task.priority or 'none' }}"
@@ -635,6 +648,7 @@
                             data-task-name="{{ task.task }}"
                             data-notes="{{ task.notes|default('') }}"
                             data-project="{{ task.project }}"
+                            data-project-leaders="{{ project_leaders_map.get(task.project, [])|join(',') }}"
                             data-start-date="{{ task.start_date.strftime('%Y-%m-%d') if task.start_date else '' }}"
                             data-end-date="{{ task.end_date.strftime('%Y-%m-%d') if task.end_date else '' }}"
                             data-priority="{{ task.priority or 'none' }}"
@@ -733,6 +747,7 @@
                             data-task-name="{{ task.task }}"
                             data-notes="{{ task.notes|default('') }}"
                             data-project="{{ task.project }}"
+                            data-project-leaders="{{ project_leaders_map.get(task.project, [])|join(',') }}"
                             data-start-date="{{ task.start_date.strftime('%Y-%m-%d') if task.start_date else '' }}"
                             data-end-date="{{ task.end_date.strftime('%Y-%m-%d') if task.end_date else '' }}"
                             data-priority="{{ task.priority or 'none' }}"
@@ -874,6 +889,12 @@
                     <!-- Populated dynamically by JavaScript -->
                 </div>
             </div>
+            <div class="form-group">
+                <label>מוביל/י פרויקט (אופציונלי):</label>
+                <div id="projectLeadersSelect" class="project-leaders-select">
+                    <!-- Populated dynamically by JavaScript -->
+                </div>
+            </div>
             <div class="modal-actions">
                 <button id="projectModalSaveBtn" class="btn btn-primary">שמור פרויקט</button>
                 <button id="projectModalArchiveBtn" class="btn btn-secondary" style="display: none;">העבר לארכיון</button>
@@ -976,7 +997,7 @@
 
     <script src="{{ url_for('static', filename='flatpickr.min.js') }}"></script>
     <script src="{{ url_for('static', filename='flatpickr.he.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/main.js') }}?v=8"></script>
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}?v=9"></script>
     {% include 'ai_assistant.html' %}
     <script src="{{ url_for('static', filename='js/ai_assistant.js') }}"></script>
 </body>

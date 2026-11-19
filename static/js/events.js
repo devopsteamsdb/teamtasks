@@ -1,6 +1,6 @@
 // Event Listeners
 import { state, setActiveTeamFilter, setActiveMemberFilter, setCurrentTaskItem, setStatusFilter, setPriorityFilter } from './state.js';
-import * as UI from './ui.js?v=8';
+import * as UI from './ui.js?v=9';
 import * as API from './api.js';
 import * as Utils from './utils.js';
 import { notifyDataChanged } from './live_sync.js';
@@ -8,6 +8,7 @@ import { initKanbanDragAndDrop } from './kanban.js';
 import { prevPeriod, nextPeriod, resetToToday } from './gantt.js';
 
 let searchTimeout;
+let searchRequestSeq = 0;
 
 export function attachGlobalListeners() {
     window.addEventListener('resetMemberFilter', function () {
@@ -208,6 +209,8 @@ export function attachEventListeners() {
 
     if (UI.elements.clearSearchBtn) {
         UI.elements.clearSearchBtn.onclick = () => {
+            clearTimeout(searchTimeout);
+            searchRequestSeq++;
             UI.elements.searchBox.value = '';
             UI.elements.clearSearchBtn.style.display = 'none';
             handleSearch('');
@@ -269,6 +272,10 @@ export function attachEventListeners() {
     // Clear All Filters
     if (UI.elements.clearFiltersBtn) {
         UI.elements.clearFiltersBtn.onclick = () => {
+            // Cancel any pending or in-flight search
+            clearTimeout(searchTimeout);
+            searchRequestSeq++;
+
             // Reset State
             setActiveTeamFilter(null);
             setActiveMemberFilter(null);
@@ -292,17 +299,37 @@ export function attachEventListeners() {
                 });
             }
 
-            // Reset Dropdowns
+            // Reset Dropdowns & Search
             if (UI.elements.filterStatus) UI.elements.filterStatus.value = 'all';
             if (UI.elements.filterPriority) UI.elements.filterPriority.value = 'all';
             if (UI.elements.searchBox) UI.elements.searchBox.value = '';
+            if (UI.elements.clearSearchBtn) UI.elements.clearSearchBtn.style.display = 'none';
+
+            // Clear any search-hidden classes left by previous search
+            document.querySelectorAll('.task-item.search-hidden').forEach(task => {
+                task.classList.remove('search-hidden');
+            });
 
             // Update URL
             const url = new URL(window.location);
+            const hadServerFilter = (
+                url.searchParams.get('mode') === 'archive' ||
+                url.searchParams.has('q') ||
+                url.searchParams.has('member') ||
+                url.searchParams.has('project')
+            );
             url.searchParams.delete('team');
-            if (url.searchParams.get('mode') === 'archive') {
-                url.searchParams.set('mode', 'active');
-                window.history.pushState({}, '', url);
+            url.searchParams.delete('q');
+            url.searchParams.delete('member');
+            url.searchParams.delete('project');
+            url.searchParams.delete('status');
+            url.searchParams.delete('priority');
+
+            if (hadServerFilter) {
+                if (url.searchParams.get('mode') === 'archive') {
+                    url.searchParams.set('mode', 'active');
+                }
+                window.history.replaceState({}, '', url);
                 UI.refreshContent(attachEventListeners);
                 return;
             }
@@ -354,6 +381,7 @@ async function handleSaveProject() {
     const id = UI.elements.projectModalId.value;
     const name = UI.elements.projectModalNameInput.value.trim();
     const teamIds = UI.getSelectedProjectTeamIds();
+    const leaderIds = UI.getSelectedProjectLeaderIds();
 
     if (!name) {
         UI.showToast('נא להזין שם פרויקט', 'error');
@@ -366,7 +394,8 @@ async function handleSaveProject() {
 
     const payload = {
         name: name,
-        team_ids: teamIds
+        team_ids: teamIds,
+        leader_ids: leaderIds
     };
 
     try {
@@ -635,11 +664,15 @@ async function handleDeleteTask() {
 }
 
 async function handleSearch(query) {
+    const reqId = ++searchRequestSeq;
     const url = new URL(window.location);
     if (query) {
         url.searchParams.set('q', query);
+        window.history.replaceState({}, '', url);
         try {
             const results = await API.searchTasks(query);
+            // Ignore stale response if search was cleared or superseded while in flight
+            if (reqId !== searchRequestSeq) return;
             const resultIds = new Set(results.map(r => r.id));
 
             document.querySelectorAll('.task-item').forEach(task => {
@@ -656,12 +689,16 @@ async function handleSearch(query) {
             console.error(e);
         }
     } else {
+        const hadQueryParam = url.searchParams.has('q');
         url.searchParams.delete('q');
+        window.history.replaceState({}, '', url);
         document.querySelectorAll('.task-item').forEach(task => task.classList.remove('search-hidden'));
-        UI.applyFilters();
+        if (hadQueryParam) {
+            await UI.refreshContent(attachEventListeners);
+        } else {
+            UI.applyFilters();
+        }
     }
-
-    window.history.replaceState({}, '', url);
 }
 
 async function handleTeamFilterClick(btn) {

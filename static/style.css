@@ -348,6 +348,27 @@ textarea {
     white-space: nowrap;
 }
 
+.project-leader-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    padding: 1px 7px 1px 3px;
+    border-radius: 9999px;
+    font-weight: 600;
+    line-height: 1.25;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.project-leader-avatar {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
 .project-tasks-count {
     font-size: 0.75rem;
     color: var(--secondary);
@@ -991,6 +1012,8 @@ html.dark-mode .modal-actions {
 .members-select {
     display: flex;
     flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
     gap: 0.4rem;
     margin-top: 0.35rem;
     min-height: 145px;
@@ -1040,6 +1063,10 @@ html.dark-mode .modal-actions {
     object-fit: cover;
     position: relative;
     top: 2px;
+}
+
+.member-checkbox .avatar-sm {
+    top: 0;
 }
 
 /* Filter Controls */
@@ -2224,6 +2251,49 @@ html.dark-mode .delete-project-btn:hover {
     margin: 0;
 }
 
+/* Project Leaders Select in Modal */
+.project-leaders-select {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.45rem;
+    padding: 0.65rem;
+    max-height: 180px;
+    overflow-y: auto;
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.project-leader-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.55rem;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md, 6px);
+    cursor: pointer;
+    font-size: 0.83rem;
+    font-weight: 500;
+    color: var(--dark);
+    user-select: none;
+    transition: all 0.15s ease;
+}
+
+.project-leader-checkbox:hover {
+    border-color: var(--primary);
+    background: rgba(79, 70, 229, 0.04);
+}
+
+.project-leader-checkbox input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    margin: 0;
+    flex-shrink: 0;
+}
+
 /* Dark Mode Overrides for Project Management */
 html.dark-mode .empty-project-placeholder {
     background-color: rgba(255, 255, 255, 0.03);
@@ -2243,20 +2313,29 @@ html.dark-mode .btn-empty-add-task:hover {
     color: #fff;
 }
 
-html.dark-mode .project-teams-select {
+html.dark-mode .project-teams-select,
+html.dark-mode .project-leaders-select {
     background-color: #1e293b;
     border-color: #334155;
 }
 
-html.dark-mode .project-team-checkbox {
+html.dark-mode .project-team-checkbox,
+html.dark-mode .project-leader-checkbox {
     background-color: #0f172a;
     border-color: #334155;
     color: var(--dark);
 }
 
-html.dark-mode .project-team-checkbox:hover {
+html.dark-mode .project-team-checkbox:hover,
+html.dark-mode .project-leader-checkbox:hover {
     background-color: rgba(99, 102, 241, 0.15);
     border-color: var(--primary);
+}
+
+html.dark-mode .project-leader-badge {
+    background-color: rgba(99, 102, 241, 0.16) !important;
+    color: #c7d2fe !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
 }
 
 html.dark-mode .edit-project-btn:hover {
@@ -4032,7 +4111,7 @@ html.dark-mode .side-box-title {
     margin-bottom: 0;
 }
 
-.task-modal-card-box .form-group label {
+.task-modal-card-box .form-group > label {
     font-size: 0.78rem;
     font-weight: 600;
     margin-bottom: 0.15rem;
@@ -4040,7 +4119,7 @@ html.dark-mode .side-box-title {
     display: block;
 }
 
-html.dark-mode .task-modal-card-box .form-group label {
+html.dark-mode .task-modal-card-box .form-group > label {
     color: #cbd5e1;
 }
 

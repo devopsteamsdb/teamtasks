@@ -1,7 +1,7 @@
 // Main Entry Point
 import * as API from './api.js';
-import * as UI from './ui.js?v=8';
-import * as Events from './events.js?v=8';
+import * as UI from './ui.js?v=9';
+import * as Events from './events.js?v=9';
 import * as Utils from './utils.js';
 import { state, setTeams, setMembers, setProjects, setSpecialDays, setLastUpdateTimestamp, setActiveTeamFilter, setActiveMemberFilter, setStatusFilter, setPriorityFilter, setCurrentTaskItem } from './state.js';
 import { subscribeLiveSync } from './live_sync.js';
@@ -64,6 +64,7 @@ async function init() {
     UI.populateDropdowns();
     UI.populateProjectDropdowns();
     UI.populateProjectTeamCheckboxes();
+    UI.populateProjectLeaderCheckboxes();
     UI.populateMemberCheckboxes();
     UI.setLastListenersCallback(Events.attachEventListeners);
     Events.attachEventListeners();

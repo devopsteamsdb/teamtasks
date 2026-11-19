@@ -578,11 +578,22 @@ def get_member_tasks_query_info(user_msg, ctx=None):
     is_open_only = bool(re.search(r'(?:\b(?:פתוח|פתוחה|פתוחות|פתוחים|open|פעיל|פעילה|פעילות|פעילים)\b|הכל\s+למעט\s+הושלם|למעט\s+הושלם|לא\s+הושלמ)', msg))
     is_count_query = bool(re.search(r'^(?:כמה|מה\s+מספר|מספר|כמות)\b', msg))
 
+    # Also find projects led by this member
+    led_project_names = set()
+    for p in ctx.get('projects', []):
+        for l in p.get('leaders', []):
+            l_he = (l.get('name_he') or '').lower()
+            if l_he and (found_member_he.lower() in l_he or l_he in found_member_he.lower()):
+                led_project_names.add(p.get('name'))
+                break
+
     matching = []
     for t in all_tasks:
         t_members = t.get('members', [])
         m_he = [members_lookup.get(m.lower().strip(), m) for m in t_members]
-        if any(found_member_he.lower() in m.lower() or m.lower() in found_member_he.lower() for m in m_he):
+        is_assigned = any(found_member_he.lower() in m.lower() or m.lower() in found_member_he.lower() for m in m_he)
+        is_led_project = t.get('project') in led_project_names
+        if is_assigned or is_led_project:
             matching.append(t)
 
     all_member_tasks = list(matching)
@@ -1704,13 +1715,25 @@ def _action_list_tasks(params):
             p_ids = [p.id for p in t_obj.projects]
             query = query.filter((Task.team_id == t_obj.id) | (Task.project_id.in_(p_ids)))
             
-    # Filter by member
+    # Filter by member (assigned to task OR leader of task's project)
     member_val = params.get('member') or params.get('user') or params.get('assigned')
     if member_val:
         m_res = resolve_member_names([member_val])
         if m_res:
             m_en = m_res[0]
-            query = query.filter(Task.members.like(f"%{m_en}%"))
+            led_projects = Project.query.filter(
+                Project.leaders.any(db.func.lower(TeamMember.name_en) == m_en.lower())
+            ).all()
+            if led_projects:
+                led_ids = [p.id for p in led_projects]
+                led_names = [p.name for p in led_projects]
+                query = query.filter(
+                    (Task.members.like(f"%{m_en}%")) |
+                    (Task.project_id.in_(led_ids)) |
+                    (Task.project.in_(led_names))
+                )
+            else:
+                query = query.filter(Task.members.like(f"%{m_en}%"))
             
     tasks = query.order_by(Task.id.desc()).limit(25).all()
     if not tasks:
@@ -1744,8 +1767,14 @@ def _action_list_projects(params):
     lines = [f"קיימים {len(projects)} פרויקטים פעילים במערכת:"]
     for p in projects:
         t_names = [t.name_he for t in p.teams]
-        t_str = f" (צוותים: {', '.join(t_names)})" if t_names else ""
-        lines.append(f"• {p.name}{t_str} - {len(p.tasks)} משימות")
+        l_names = [m.name_he for m in p.leaders]
+        meta_parts = []
+        if t_names:
+            meta_parts.append(f"צוותים: {', '.join(t_names)}")
+        if l_names:
+            meta_parts.append(f"מוביל/ים: {', '.join(l_names)}")
+        meta_str = f" ({', '.join(meta_parts)})" if meta_parts else ""
+        lines.append(f"• {p.name}{meta_str} - {len(p.tasks)} משימות")
     return {
         'action': 'list_projects',
         'status': 'success',
@@ -1948,6 +1977,41 @@ def _action_archive_task(params, is_archived=True):
         'description': f'משימה #{task.id} "{task.task}" {action_text}'
     }
 
+def _resolve_leader_members(params):
+    """Resolve leader_ids / leaders / leader params (IDs or Hebrew/English names) to TeamMember objects."""
+    leaders = []
+    leader_ids = params.get('leader_ids') or []
+    if isinstance(leader_ids, (int, str)):
+        leader_ids = [leader_ids]
+    for lid in leader_ids:
+        try:
+            m = db.session.get(TeamMember, int(lid))
+            if m and m not in leaders:
+                leaders.append(m)
+        except (ValueError, TypeError):
+            pass
+
+    leaders_input = params.get('leaders') if 'leaders' in params else params.get('leader')
+    if leaders_input is not None:
+        if isinstance(leaders_input, str):
+            leaders_input = [x.strip() for x in leaders_input.split(',') if x.strip()]
+        elif isinstance(leaders_input, int):
+            leaders_input = [leaders_input]
+        if isinstance(leaders_input, list):
+            for val in leaders_input:
+                if isinstance(val, int) or (isinstance(val, str) and val.strip().isdigit()):
+                    m = db.session.get(TeamMember, int(val))
+                    if m and m not in leaders:
+                        leaders.append(m)
+                else:
+                    resolved_en = resolve_member_names([str(val)])
+                    for name_en in resolved_en:
+                        m = TeamMember.query.filter(db.func.lower(TeamMember.name_en) == name_en.lower()).first()
+                        if m and m not in leaders:
+                            leaders.append(m)
+    return leaders
+
+
 def _action_create_project(params):
     name = (params.get('name') or params.get('name_he') or params.get('project_name') or params.get('title') or '').strip()
     if not name:
@@ -1994,16 +2058,18 @@ def _action_create_project(params):
         if first_t:
             teams.append(first_t)
 
-    project = Project(name=name, teams=teams)
+    leaders = _resolve_leader_members(params)
+    project = Project(name=name, teams=teams, leaders=leaders)
     db.session.add(project)
     db.session.commit()
 
     teams_str = ', '.join([t.name_he for t in teams])
+    leaders_str = f", מוביל/ים: {', '.join([m.name_he for m in leaders])}" if leaders else ""
     return {
         'action': 'create_project',
         'status': 'success',
         'project_id': project.id,
-        'description': f'נוצר פרויקט חדש: "{name}" (שויך לצוותים: {teams_str})'
+        'description': f'נוצר פרויקט חדש: "{name}" (שויך לצוותים: {teams_str}{leaders_str})'
     }
 
 def _action_edit_project(params):
@@ -2058,12 +2124,17 @@ def _action_edit_project(params):
         else:
             project.teams = teams_to_add
 
+    # Handle project leaders
+    if 'leader_ids' in params or 'leaders' in params or 'leader' in params:
+        project.leaders = _resolve_leader_members(params)
+
     db.session.commit()
     teams_str = ', '.join([t.name_he for t in project.teams])
+    leaders_str = f", מוביל/ים: {', '.join([m.name_he for m in project.leaders])}" if project.leaders else ""
     return {
         'action': 'edit_project',
         'status': 'success',
-        'description': f'עודכן פרויקט: "{project.name}" (צוותים: {teams_str})'
+        'description': f'עודכן פרויקט: "{project.name}" (צוותים: {teams_str}{leaders_str})'
     }
 
 def _action_delete_project(params):
@@ -2344,9 +2415,12 @@ def get_fallback_read_reply(user_msg, ctx=None):
             if p.name.lower() in clean_msg.lower():
                 tasks = [t for t in p.tasks if not t.is_archived]
                 teams_names = [t.name_he for t in p.teams]
+                leaders_names = [m.name_he for m in p.leaders]
+                leaders_line = f"* **מוביל/י פרויקט:** {', '.join(leaders_names)}\n" if leaders_names else ""
                 return (
                     f"**פרויקט {p.name}:**\n\n"
                     f"* **צוותים אחראיים:** {', '.join(teams_names) if teams_names else 'ללא צוות'}\n"
+                    f"{leaders_line}"
                     f"* **סה\"כ משימות פעילות:** {len(tasks)}\n"
                     f"* **משימות מובילות:** {', '.join([t.task for t in tasks[:3]]) if tasks else 'אין משימות'}"
                 )

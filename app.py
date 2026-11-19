@@ -51,7 +51,7 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 # Import models and initialize db
-from models import db, Team, TeamMember, Task, SpecialDay, Project, project_teams, member_teams, Subtask, TaskComment
+from models import db, Team, TeamMember, Task, SpecialDay, Project, project_teams, project_leaders, member_teams, Subtask, TaskComment
 from datetime import datetime, date, timedelta
 db.init_app(app)
 
@@ -162,6 +162,23 @@ def api_version():
         return jsonify({'timestamp': _last_data_version})
 
 # API endpoint to get tasks
+def _get_member_task_filter(member_en):
+    """Return a SQLAlchemy filter matching tasks assigned to member_en OR in projects led by member_en."""
+    if not member_en:
+        return None
+    member_key = str(member_en).strip().lower()
+    led_projects = Project.query.filter(
+        Project.leaders.any(db.func.lower(TeamMember.name_en) == member_key)
+    ).all()
+    conditions = [Task.members.contains(member_en)]
+    if led_projects:
+        led_ids = [p.id for p in led_projects]
+        led_names = [p.name for p in led_projects]
+        conditions.append(Task.project_id.in_(led_ids))
+        conditions.append(Task.project.in_(led_names))
+    return or_(*conditions)
+
+
 @app.route('/api/tasks', methods=['GET'])
 def api_get_tasks():
     status = request.args.get('status')
@@ -169,6 +186,7 @@ def api_get_tasks():
     search = request.args.get('search')
     project_id = request.args.get('project_id')
     team_id = request.args.get('team_id')
+    member_filter = request.args.get('member')
     mode = request.args.get('mode', 'active')
     include_archived = request.args.get('include_archived', '').lower() in ('true', '1')
     
@@ -187,6 +205,10 @@ def api_get_tasks():
         query = query.filter_by(project_id=project_id)
     if team_id:
         query = query.filter_by(team_id=team_id)
+    if member_filter:
+        m_cond = _get_member_task_filter(member_filter)
+        if m_cond is not None:
+            query = query.filter(m_cond)
     if search:
         search_term = f"%{search}%"
         query = query.filter(Task.task.ilike(search_term) | Task.notes.ilike(search_term))
@@ -471,6 +493,7 @@ def api_create_project():
     data = request.json or {}
     name = data.get('name', '').strip()
     team_ids = data.get('team_ids', [])
+    leader_ids = data.get('leader_ids', [])
     
     if not name:
         return jsonify({'success': False, 'error': 'שם פרויקט הוא שדה חובה'}), 400
@@ -487,12 +510,23 @@ def api_create_project():
         try:
             tid_int = int(tid)
             team = db.session.get(Team, tid_int)
-            if team:
+            if team and team not in teams:
                 teams.append(team)
         except (ValueError, TypeError):
             continue
+
+    leaders = []
+    if isinstance(leader_ids, list):
+        for lid in leader_ids:
+            try:
+                lid_int = int(lid)
+                member = db.session.get(TeamMember, lid_int)
+                if member and member not in leaders:
+                    leaders.append(member)
+            except (ValueError, TypeError):
+                continue
             
-    project = Project(name=name, teams=teams)
+    project = Project(name=name, teams=teams, leaders=leaders)
     db.session.add(project)
     db.session.commit()
     
@@ -513,6 +547,7 @@ def api_update_project(id):
     old_name = project.name
     new_name = data.get('name', '').strip()
     team_ids = data.get('team_ids')
+    leader_ids = data.get('leader_ids')
     
     if new_name and new_name != old_name:
         existing = Project.query.filter_by(name=new_name).first()
@@ -528,11 +563,24 @@ def api_update_project(id):
             try:
                 tid_int = int(tid)
                 team = db.session.get(Team, tid_int)
-                if team:
+                if team and team not in teams:
                     teams.append(team)
             except (ValueError, TypeError):
                 continue
         project.teams = teams
+
+    if leader_ids is not None:
+        leaders = []
+        if isinstance(leader_ids, list):
+            for lid in leader_ids:
+                try:
+                    lid_int = int(lid)
+                    member = db.session.get(TeamMember, lid_int)
+                    if member and member not in leaders:
+                        leaders.append(member)
+                except (ValueError, TypeError):
+                    continue
+        project.leaders = leaders
                 
     db.session.commit()
     return jsonify({'success': True, 'project': project.to_dict()})
@@ -1278,7 +1326,9 @@ def _generate_ai_system_prompt():
     projects_summary = []
     for p in ctx['projects']:
         t_names = [t['name_he'] for t in p['teams']]
-        projects_summary.append(f"פרויקט '{p['name']}' (צוותים: {', '.join(t_names) if t_names else 'ללא'}, משימות פתוחות: {p['task_count']})")
+        l_names = [l['name_he'] for l in p.get('leaders', [])]
+        leaders_desc = f", מוביל/ים: {', '.join(l_names)}" if l_names else ""
+        projects_summary.append(f"פרויקט '{p['name']}' (צוותים: {', '.join(t_names) if t_names else 'ללא'}{leaders_desc}, משימות פתוחות: {p['task_count']})")
 
     status_map_he = {
         'status-inprogress': 'בתהליך',
@@ -1481,8 +1531,8 @@ def _generate_ai_system_prompt():
 - delete_task: מחיקת משימה (params: {{"id": <REAL_TASK_ID>}})
 - archive_task: העברת משימה לארכיון (params: {{"id": <REAL_TASK_ID>}})
 - unarchive_task: שחזור משימה מהארכיון (params: {{"id": <REAL_TASK_ID>}})
-- create_project: יצירת פרויקט (params: {{"name": "שם הפרויקט", "teams": ["פיתוח"]}})
-- edit_project: עריכת פרויקט (params: {{"name": "שם הפרויקט", "new_name": "שם חדש"}})
+- create_project: יצירת פרויקט (params: {{"name": "שם הפרויקט", "teams": ["פיתוח"], "leaders": ["שם מוביל"]}})
+- edit_project: עריכת פרויקט (params: {{"name": "שם הפרויקט", "new_name": "שם חדש", "teams": ["פיתוח"], "leaders": ["שם מוביל"]}})
 - delete_project: מחיקת פרויקט (params: {{"name": "שם הפרויקט"}})
 - archive_project: העברת פרויקט לארכיון (params: {{"name": "שם הפרויקט"}})
 - unarchive_project: שחזור פרויקט מהארכיון (params: {{"name": "שם הפרויקט"}})
@@ -1825,6 +1875,10 @@ def api_backup_table(table_name):
         full_data['project_teams'] = [{'project_id': r[0], 'team_id': r[1]} for r in pt_rows]
         total_count += len(pt_rows)
 
+        pl_rows = db.session.execute(project_leaders.select()).fetchall()
+        full_data['project_leaders'] = [{'project_id': r[0], 'member_id': r[1]} for r in pl_rows]
+        total_count += len(pl_rows)
+
         mt_rows = db.session.execute(member_teams.select()).fetchall()
         full_data['member_teams'] = [{'member_id': r[0], 'team_id': r[1]} for r in mt_rows]
         total_count += len(mt_rows)
@@ -1946,6 +2000,7 @@ def api_restore_table(table_name):
             # 1. Clear existing data in reverse foreign key dependency order
             try:
                 db.session.execute(project_teams.delete())
+                db.session.execute(project_leaders.delete())
                 db.session.execute(member_teams.delete())
                 Task.query.delete()
                 SpecialDay.query.delete()
@@ -2071,6 +2126,26 @@ def api_restore_table(table_name):
                 db.session.execute(member_teams.insert().values(member_id=mid, team_id=tid))
             restored_counts['member_teams'] = len(mt_pairs)
 
+            # 5c. project_leaders
+            pl_pairs = set()
+            for row in data.get('project_leaders', []):
+                pid = parse_int(row.get('project_id'))
+                mid = parse_int(row.get('member_id'))
+                if pid in valid_project_ids and mid in valid_member_ids:
+                    pl_pairs.add((pid, mid))
+            for p_item in projects_data:
+                pid = parse_int(p_item.get('id'))
+                if pid in valid_project_ids:
+                    l_ids = p_item.get('leader_ids')
+                    if isinstance(l_ids, list):
+                        for lid in l_ids:
+                            lid_int = parse_int(lid)
+                            if lid_int in valid_member_ids:
+                                pl_pairs.add((pid, lid_int))
+            for pid, mid in pl_pairs:
+                db.session.execute(project_leaders.insert().values(project_id=pid, member_id=mid))
+            restored_counts['project_leaders'] = len(pl_pairs)
+
             # 6. Restore Tasks
             tasks_data = data.get('tasks', [])
             task_count = 0
@@ -2144,6 +2219,7 @@ def api_restore_table(table_name):
 
             valid_team_ids = set(r[0] for r in db.session.query(Team.id).all())
             valid_project_ids = set(r[0] for r in db.session.query(Project.id).all())
+            valid_member_ids = set(r[0] for r in db.session.query(TeamMember.id).all())
             count = 0
 
             if table_name == 'teams':
@@ -2187,6 +2263,14 @@ def api_restore_table(table_name):
                             tid_int = parse_int(tid)
                             if tid_int in valid_team_ids:
                                 db.session.execute(project_teams.insert().values(project_id=proj_id, team_id=tid_int))
+                    if 'leader_ids' in item and isinstance(item['leader_ids'], list):
+                        db.session.execute(project_leaders.delete().where(project_leaders.c.project_id == proj_id))
+                        seen_lids = set()
+                        for lid in item['leader_ids']:
+                            lid_int = parse_int(lid)
+                            if lid_int in valid_member_ids and lid_int not in seen_lids:
+                                seen_lids.add(lid_int)
+                                db.session.execute(project_leaders.insert().values(project_id=proj_id, member_id=lid_int))
                     count += 1
 
             elif table_name == 'members':
@@ -3082,7 +3166,9 @@ def index():
     if project_filter:
         query = query.filter(Task.project == project_filter)
     if member_filter:
-        query = query.filter(Task.members.contains(member_filter))
+        m_cond = _get_member_task_filter(member_filter)
+        if m_cond is not None:
+            query = query.filter(m_cond)
     
     # Team filtering context
     active_team_id = None
@@ -3110,15 +3196,17 @@ def index():
     teams = Team.query.all()
     members = TeamMember.query.order_by(TeamMember.name_he).all()
     
-    # Create a mapping of project names to team names
+    # Create a mapping of project names to team names and leader English names
     project_teams = {}
+    project_leaders_map = {}
     for project in projects:
         if project.teams:
             project_teams[project.name] = ", ".join([t.name_he for t in project.teams])
         else:
             project_teams[project.name] = "כללי"
+        project_leaders_map[project.name] = [m.name_en for m in project.leaders if m.name_en]
     
-    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams, active_team_id=active_team_id, active_team_members=active_team_members, q=query_str, mode=mode)
+    return render_template('index.html', tasks=tasks, projects=projects, members=members, teams=teams, project_teams=project_teams, project_leaders_map=project_leaders_map, active_team_id=active_team_id, active_team_members=active_team_members, q=query_str, mode=mode)
 
 
 
@@ -3142,7 +3230,9 @@ def print_view():
     # Apply filters that limit the SCOPE of projects (Team, Member, Status, Priority)
     # We apply these FIRST so we can get the list of relevant projects.
     if member_filter:
-        query = query.filter(Task.members.contains(member_filter))
+        m_cond = _get_member_task_filter(member_filter)
+        if m_cond is not None:
+            query = query.filter(m_cond)
     if team_filter and str(team_filter).isdigit():
         tid = int(team_filter)
         team_obj = db.session.get(Team, tid)
@@ -3185,7 +3275,7 @@ def print_view():
     
     # Get all teams and members dynamically
     teams = Team.query.all()
-    members = TeamMember.query.all()
+    members = TeamMember.query.order_by(TeamMember.name_he).all()
     
         # Defaults for Gantt calculations if view_mode == 'gantt'
     gantt_dates = []

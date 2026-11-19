@@ -3,7 +3,7 @@ import { state, setTeams, setMembers, setProjects, setSpecialDays, setLastUpdate
 import { formatDateFromISO, getStatusFromClass, getFlatpickrConfig } from './utils.js';
 import { renderGantt } from './gantt.js';
 import { updateKanbanCounters } from './kanban.js';
-import { renderReport } from './report.js?v=8';
+import { renderReport } from './report.js?v=9';
 import {
     fetchPageContent,
     fetchTeams,
@@ -17,7 +17,8 @@ import {
     deleteSubtask,
     fetchTaskComments,
     createTaskComment,
-    deleteTaskComment
+    deleteTaskComment,
+    searchTasks
 } from './api.js';
 
 // DOM Elements Cache
@@ -53,6 +54,7 @@ export function updateDOMElements() {
     elements.projectModalId = document.getElementById('projectModalId');
     elements.projectModalNameInput = document.getElementById('projectModalNameInput');
     elements.projectTeamsSelect = document.getElementById('projectTeamsSelect');
+    elements.projectLeadersSelect = document.getElementById('projectLeadersSelect');
     elements.projectModalSaveBtn = document.getElementById('projectModalSaveBtn');
     elements.projectModalArchiveBtn = document.getElementById('projectModalArchiveBtn');
     elements.projectModalDeleteBtn = document.getElementById('projectModalDeleteBtn');
@@ -165,6 +167,19 @@ export function populateProjectTeamCheckboxes() {
     `).join('');
 }
 
+export function populateProjectLeaderCheckboxes() {
+    const members = state.members || [];
+    if (!elements.projectLeadersSelect) return;
+    elements.projectLeadersSelect.innerHTML = members.map(member => `
+        <label class="project-leader-checkbox" title="${member.name_he}${member.team_name ? ' - ' + member.team_name : ''}">
+            <input type="checkbox" value="${member.id}">
+            <img src="/uploads/avatars/${member.avatar_path}" class="avatar-sm"
+                onerror="this.src='/static/images/default.png'">
+            <span>${member.name_he}</span>
+        </label>
+    `).join('');
+}
+
 export function populateMemberCheckboxes() {
     const members = state.members || [];
     const containers = document.querySelectorAll('.members-select');
@@ -199,6 +214,13 @@ export function openCreateProjectModal() {
             } else {
                 cb.checked = false;
             }
+        });
+    }
+
+    if (elements.projectLeadersSelect) {
+        const leaderCheckboxes = elements.projectLeadersSelect.querySelectorAll('input[type="checkbox"]');
+        leaderCheckboxes.forEach(cb => {
+            cb.checked = false;
         });
     }
 
@@ -238,6 +260,14 @@ export function openEditProjectModal(projectId) {
         });
     }
 
+    const leaderIds = (project.leader_ids || (project.leaders ? project.leaders.map(l => l.id) : [])).map(String);
+    if (elements.projectLeadersSelect) {
+        const leaderCheckboxes = elements.projectLeadersSelect.querySelectorAll('input[type="checkbox"]');
+        leaderCheckboxes.forEach(cb => {
+            cb.checked = leaderIds.includes(String(cb.value));
+        });
+    }
+
     elements.projectModal.style.display = 'block';
     if (elements.projectModalNameInput) elements.projectModalNameInput.focus();
 }
@@ -245,6 +275,12 @@ export function openEditProjectModal(projectId) {
 export function getSelectedProjectTeamIds() {
     if (!elements.projectTeamsSelect) return [];
     const checked = elements.projectTeamsSelect.querySelectorAll('input[type="checkbox"]:checked');
+    return Array.from(checked).map(cb => parseInt(cb.value));
+}
+
+export function getSelectedProjectLeaderIds() {
+    if (!elements.projectLeadersSelect) return [];
+    const checked = elements.projectLeadersSelect.querySelectorAll('input[type="checkbox"]:checked');
     return Array.from(checked).map(cb => parseInt(cb.value));
 }
 
@@ -480,6 +516,7 @@ export function switchViewMode(mode) {
     if (printLink) {
         printLink.href = (mode === 'gantt') ? '/print?view=gantt' : '/print';
     }
+    updatePrintLink(mode);
 
     if (mode === 'kanban') {
         updateKanbanCounters();
@@ -488,6 +525,30 @@ export function switchViewMode(mode) {
     } else if (mode === 'report') {
         renderReport();
     }
+}
+
+export function updatePrintLink(mode = null) {
+    const printLink = document.querySelector('.navbar-meta .print-link');
+    if (!printLink) return;
+    const activeMode = mode || state.viewMode || 'grid';
+    const params = new URLSearchParams();
+    if (activeMode === 'gantt') {
+        params.set('view', 'gantt');
+    }
+    if (state.activeTeamFilter && state.activeTeamFilter !== 'archive') {
+        params.set('team', state.activeTeamFilter);
+    }
+    if (state.activeMemberFilter) {
+        params.set('member', state.activeMemberFilter);
+    }
+    if (state.statusFilter && state.statusFilter !== 'all') {
+        params.set('status', state.statusFilter);
+    }
+    if (state.priorityFilter && state.priorityFilter !== 'all') {
+        params.set('priority', state.priorityFilter);
+    }
+    const qs = params.toString();
+    printLink.href = qs ? `/print?${qs}` : '/print';
 }
 
 export function openCreateModal(projectName = null, teamId = null, initialStatus = null) {
@@ -909,17 +970,39 @@ export function applyFilters() {
             }
         }
 
-        // Check Member Filter
+        // Check Member Filter (assigned to task OR leader of task's project)
         if (state.activeMemberFilter && visible) {
+            const activeMemberLower = String(state.activeMemberFilter).trim().toLowerCase();
             const avatars = task.querySelectorAll('.avatar');
             let hasMember = false;
             avatars.forEach(avatar => {
-                const memberName = avatar.dataset.memberName;
-                if (memberName && memberName === state.activeMemberFilter) {
+                const memberName = (avatar.dataset.memberName || '').trim().toLowerCase();
+                if (memberName && memberName === activeMemberLower) {
                     hasMember = true;
                 }
             });
-            if (!hasMember) visible = false;
+
+            let isProjectLeader = false;
+            if (!hasMember) {
+                let leaderList = (task.dataset.projectLeaders || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+                if (leaderList.length === 0) {
+                    const parentCard = task.closest('.project-card');
+                    if (parentCard && parentCard.dataset.leaderNames) {
+                        leaderList = parentCard.dataset.leaderNames.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+                    } else if (state.projects && state.projects.length > 0) {
+                        const projName = task.dataset.project || (parentCard ? parentCard.dataset.projectName : '');
+                        const projObj = state.projects.find(p => p.name === projName);
+                        if (projObj && Array.isArray(projObj.leader_names)) {
+                            leaderList = projObj.leader_names.map(s => String(s).trim().toLowerCase()).filter(Boolean);
+                        }
+                    }
+                }
+                if (leaderList.includes(activeMemberLower)) {
+                    isProjectLeader = true;
+                }
+            }
+
+            if (!hasMember && !isProjectLeader) visible = false;
         }
 
         // Check Status Filter
@@ -953,16 +1036,21 @@ export function applyFilters() {
         }
     });
 
-    const isTaskFilterActive = (state.activeMemberFilter !== null) || (state.statusFilter && state.statusFilter !== 'all') || (state.priorityFilter && state.priorityFilter !== 'all');
+    const hasStatusOrPriorityFilter = (state.statusFilter && state.statusFilter !== 'all') || (state.priorityFilter && state.priorityFilter !== 'all');
+    const isTaskFilterActive = (state.activeMemberFilter !== null) || hasStatusOrPriorityFilter;
     const searchQuery = (elements.searchBox ? elements.searchBox.value.trim().toLowerCase() : '');
 
     let visibleProjectsCount = 0;
 
     document.querySelectorAll('.project-card').forEach(card => {
         const cardTeamIds = (card.dataset.teamIds || '').split(',').map(s => s.trim()).filter(Boolean);
+        const cardLeaderNames = (card.dataset.leaderNames || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
         const cardProjName = (card.dataset.projectName || '').toLowerCase();
         const totalTasksInCard = card.querySelectorAll('.task-item').length;
         const visibleTasks = card.querySelectorAll('.task-item:not(.filtered-hidden):not(.search-hidden)');
+        const isMemberLeaderOfCard = Boolean(
+            state.activeMemberFilter && cardLeaderNames.includes(String(state.activeMemberFilter).trim().toLowerCase())
+        );
 
         let cardVisible = true;
 
@@ -983,6 +1071,8 @@ export function applyFilters() {
                 // Empty project
                 if (searchQuery) {
                     cardVisible = cardProjName.includes(searchQuery);
+                } else if (isMemberLeaderOfCard && !hasStatusOrPriorityFilter) {
+                    cardVisible = true;
                 } else if (isTaskFilterActive) {
                     cardVisible = false;
                 } else {
@@ -1019,6 +1109,7 @@ export function applyFilters() {
 
     updateMemberFiltersVisibility();
     updateFilterValidationUI();
+    updatePrintLink();
     updateKanbanCounters();
     if (state.viewMode === 'gantt') {
         renderGantt();
@@ -1124,7 +1215,11 @@ export async function refreshContent(attachedListenersCallback) {
             setLastUpdateTimestamp(versionData.timestamp);
         }
 
-        const html = await fetchPageContent(window.location.href);
+        const fetchUrl = new URL(window.location.href);
+        fetchUrl.searchParams.delete('q');
+        fetchUrl.searchParams.delete('member');
+        fetchUrl.searchParams.delete('project');
+        const html = await fetchPageContent(fetchUrl.toString());
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
 
@@ -1157,6 +1252,7 @@ export async function refreshContent(attachedListenersCallback) {
         populateDropdowns();
         populateProjectDropdowns();
         populateProjectTeamCheckboxes();
+        populateProjectLeaderCheckboxes();
         populateMemberCheckboxes();
 
         if (typeof lastListenersCallback === 'function') {
@@ -1168,6 +1264,26 @@ export async function refreshContent(attachedListenersCallback) {
         }
         if (elements.filterPriority && state.priorityFilter) {
             elements.filterPriority.value = state.priorityFilter;
+        }
+        if (elements.clearSearchBtn) {
+            elements.clearSearchBtn.style.display = searchVal.trim() ? 'block' : 'none';
+        }
+
+        if (searchVal.trim()) {
+            try {
+                const results = await searchTasks(searchVal.trim());
+                const resultIds = new Set(results.map(r => r.id));
+                document.querySelectorAll('.task-item').forEach(task => {
+                    const taskId = parseInt(task.dataset.id);
+                    if (resultIds.has(taskId)) {
+                        task.classList.remove('search-hidden');
+                    } else {
+                        task.classList.add('search-hidden');
+                    }
+                });
+            } catch (err) {
+                console.error('Error re-applying search after refresh:', err);
+            }
         }
 
         applyFilters();
